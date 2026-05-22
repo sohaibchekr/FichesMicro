@@ -1,19 +1,21 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MICROBIO v1.7.5 - Labo</title>
-    
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
+
     <!-- SEO & Icons -->
-    <meta name="description" content="Application de consultation des fiches signalétiques de laboratoire microbiologique.">
+    <meta name="description"
+        content="Application de consultation des fiches signalétiques de laboratoire microbiologique.">
     <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="manifest.json">
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -44,7 +46,7 @@
         body {
             font-family: 'Outfit', sans-serif;
             background-color: var(--bg-dark);
-            background-image: 
+            background-image:
                 radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
                 radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
             color: var(--text-main);
@@ -56,8 +58,15 @@
 
         /* Animations */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* App Layout */
@@ -191,8 +200,15 @@
             font-weight: 800;
         }
 
-        .badge-app { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
-        .badge-dilution { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
+        .badge-app {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+
+        .badge-dilution {
+            background: rgba(14, 165, 233, 0.2);
+            color: #38bdf8;
+        }
 
         .resource-stack {
             display: flex;
@@ -211,17 +227,26 @@
             border-radius: 6px;
             font-size: 0.7rem;
             font-weight: 700;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .badge-blue { background: rgba(14, 165, 233, 0.1); color: #38bdf8; border-color: rgba(14, 165, 233, 0.2); }
-        .badge-green { background: rgba(34, 197, 94, 0.1); color: #4ade80; border-color: rgba(34, 197, 94, 0.2); }
+        .badge-blue {
+            background: rgba(14, 165, 233, 0.1);
+            color: #38bdf8;
+            border-color: rgba(14, 165, 233, 0.2);
+        }
+
+        .badge-green {
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+            border-color: rgba(34, 197, 94, 0.2);
+        }
 
         .logistics-box {
-            background: rgba(255,255,255,0.03);
+            background: rgba(255, 255, 255, 0.03);
             border-radius: 12px;
             padding: 12px;
-            border: 1px solid rgba(255,255,255,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .logistics-label {
@@ -572,7 +597,9 @@
             cursor: pointer;
         }
 
-        .checkbox-item:last-child { margin-bottom: 0; }
+        .checkbox-item:last-child {
+            margin-bottom: 0;
+        }
 
         .checkbox-item input {
             width: 18px;
@@ -593,6 +620,7 @@
         .dynamic-list::-webkit-scrollbar {
             width: 4px;
         }
+
         .dynamic-list::-webkit-scrollbar-thumb {
             background: var(--glass-border);
             border-radius: 10px;
@@ -689,7 +717,7 @@
             border-radius: 12px;
             overflow: hidden;
             margin: 15px 0;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         .norm-table-header {
@@ -742,7 +770,7 @@
             white-space: pre-wrap;
             color: rgba(255, 255, 255, 0.95);
             position: relative;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .qty-input {
@@ -795,13 +823,16 @@
             font-size: 0.85rem;
             color: var(--text-dim);
         }
+
         @media (min-width: 768px) {
             #fiches-list {
                 grid-template-columns: repeat(2, 1fr);
             }
+
             .header {
                 padding: 40px 15% 20px;
             }
+
             #fiches-list {
                 padding: 20px 15%;
             }
@@ -814,15 +845,18 @@
         }
     </style>
 </head>
+
 <body>
 
     <header class="header">
         <div class="header-top">
             <div class="logo-container">
-                <img src="https://ui-avatars.com/api/?name=MB&background=0ea5e9&color=fff&bold=true" class="logo-img" alt="Logo">
+                <img src="https://ui-avatars.com/api/?name=MB&background=0ea5e9&color=fff&bold=true" class="logo-img"
+                    alt="Logo">
                 <span class="logo-text">MICROBIO</span>
             </div>
-            <div class="status-badge" style="font-size: 0.7rem; color: var(--success); font-weight: 700; text-transform: uppercase; background: rgba(34, 197, 94, 0.1); padding: 4px 10px; border-radius: 20px;">
+            <div class="status-badge"
+                style="font-size: 0.7rem; color: var(--success); font-weight: 700; text-transform: uppercase; background: rgba(34, 197, 94, 0.1); padding: 4px 10px; border-radius: 20px;">
                 ● En ligne / Offline
             </div>
         </div>
@@ -838,7 +872,9 @@
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
         <div class="footer-version">MICROBIO v1.7.5 • Synchronisation Cloud Firebase</div>
-        <span style="letter-spacing: 2px; margin-top: 5px; display: block; font-weight: 800; color: var(--primary);">CREATED BY SOHAIB CHEKRI</span>
+        <span
+            style="letter-spacing: 2px; margin-top: 5px; display: block; font-weight: 800; color: var(--primary);">CREATED
+            BY SOHAIB CHEKRI</span>
     </footer>
 
     <button class="fab" id="addBtn">＋</button>
@@ -848,15 +884,16 @@
         <div class="modal-content">
             <button class="close-modal" id="closeModal">✕</button>
             <h2 id="modalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem;">Nouvelle Fiche</h2>
-            
+
             <form id="ficheForm">
                 <input type="hidden" id="editId">
-                
+
                 <div class="form-group">
                     <label>Désignation</label>
-                    <input type="text" id="designation" class="form-input" placeholder="ex: BIOTANIDE 1 mg comprimé" required>
+                    <input type="text" id="designation" class="form-input" placeholder="ex: BIOTANIDE 1 mg comprimé"
+                        required>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Code / Référence</label>
                     <input type="text" id="code" class="form-input" placeholder="ex: FS/BT519/PF/00">
@@ -864,7 +901,8 @@
 
                 <div class="form-group">
                     <label>Méthode d'analyse</label>
-                    <textarea id="methode" class="form-input" style="height: 60px; resize: none;" placeholder="ex: Méthode par diffusion..."></textarea>
+                    <textarea id="methode" class="form-input" style="height: 60px; resize: none;"
+                        placeholder="ex: Méthode par diffusion..."></textarea>
                 </div>
 
                 <div class="section-divider"><span class="section-label">Normes & Paramètres Micro</span></div>
@@ -882,8 +920,10 @@
                     <label>Germes Spécifiés (Nom uniquement)</label>
                     <div id="germes-catalog" class="dynamic-list"></div>
                     <div class="add-catalog-ui">
-                        <input type="text" id="new-germe" class="add-catalog-input" placeholder="ex: E.coli, Salmonella...">
-                        <button type="button" class="add-catalog-btn" onclick="addToCatalog('germes', 'new-germe')">＋</button>
+                        <input type="text" id="new-germe" class="add-catalog-input"
+                            placeholder="ex: E.coli, Salmonella...">
+                        <button type="button" class="add-catalog-btn"
+                            onclick="addToCatalog('germes', 'new-germe')">＋</button>
                     </div>
                 </div>
 
@@ -893,8 +933,10 @@
                     <label>Diluant(s)</label>
                     <div id="diluants-catalog" class="dynamic-list"></div>
                     <div class="add-catalog-ui">
-                        <input type="text" id="new-diluant" class="add-catalog-input" placeholder="ex: SNT 90ML, PH7...">
-                        <button type="button" class="add-catalog-btn" onclick="addToCatalog('diluants', 'new-diluant')">＋</button>
+                        <input type="text" id="new-diluant" class="add-catalog-input"
+                            placeholder="ex: SNT 90ML, PH7...">
+                        <button type="button" class="add-catalog-btn"
+                            onclick="addToCatalog('diluants', 'new-diluant')">＋</button>
                     </div>
                 </div>
 
@@ -925,8 +967,10 @@
                     <label>Consommables</label>
                     <div id="consommables-catalog" class="dynamic-list"></div>
                     <div class="add-catalog-ui">
-                        <input type="text" id="new-consommable" class="add-catalog-input" placeholder="Référence consommable...">
-                        <button type="button" class="add-catalog-btn" onclick="addToCatalog('consommables', 'new-consommable')">＋</button>
+                        <input type="text" id="new-consommable" class="add-catalog-input"
+                            placeholder="Référence consommable...">
+                        <button type="button" class="add-catalog-btn"
+                            onclick="addToCatalog('consommables', 'new-consommable')">＋</button>
                     </div>
                 </div>
 
@@ -934,19 +978,24 @@
                     <label>Réactifs</label>
                     <div id="reactifs-catalog" class="dynamic-list"></div>
                     <div class="add-catalog-ui">
-                        <input type="text" id="new-reactif" class="add-catalog-input" placeholder="Réactif (PH7, Tween80, etc.)...">
-                        <button type="button" class="add-catalog-btn" onclick="addToCatalog('reactifs', 'new-reactif')">＋</button>
+                        <input type="text" id="new-reactif" class="add-catalog-input"
+                            placeholder="Réactif (PH7, Tween80, etc.)...">
+                        <button type="button" class="add-catalog-btn"
+                            onclick="addToCatalog('reactifs', 'new-reactif')">＋</button>
                     </div>
-                    <input type="text" id="reactifs-custom" class="form-input" style="margin-top: 10px; border-style: dashed;" placeholder="Note sur les réactifs...">
+                    <input type="text" id="reactifs-custom" class="form-input"
+                        style="margin-top: 10px; border-style: dashed;" placeholder="Note sur les réactifs...">
                 </div>
 
                 <div class="form-group">
                     <label>Observations & Méthodologie</label>
-                    <textarea id="observation" class="form-input" style="height: 120px; resize: none;" placeholder="Détaillez ici la préparation, le dénombrement, l'expression des résultats..."></textarea>
+                    <textarea id="observation" class="form-input" style="height: 120px; resize: none;"
+                        placeholder="Détaillez ici la préparation, le dénombrement, l'expression des résultats..."></textarea>
                 </div>
 
                 <button type="submit" class="save-btn">Enregistrer la fiche</button>
-                <button type="button" class="delete-btn" id="deleteBtn" style="display: none;">Supprimer cette fiche</button>
+                <button type="button" class="delete-btn" id="deleteBtn" style="display: none;">Supprimer cette
+                    fiche</button>
             </form>
         </div>
     </div>
@@ -966,7 +1015,7 @@
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        
+
         // Use persistence for offline access
         db.enablePersistence().catch((err) => {
             console.warn("Persistence failed", err.code);
@@ -995,7 +1044,7 @@
         db.collection(FICHES_COL).orderBy('updatedAt', 'desc').onSnapshot(snapshot => {
             fiches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             render();
-            
+
             // Auto-migration from localStorage if needed
             const localData = JSON.parse(localStorage.getItem('MICRO_BIO_FICHES') || '[]');
             if (localData.length > 0 && fiches.length < 2) {
@@ -1017,11 +1066,11 @@
             db.collection("settings").doc(CATALOGS_DOC).set(catalogs);
         }
 
-        window.addToCatalog = function(type, inputId) {
+        window.addToCatalog = function (type, inputId) {
             const input = document.getElementById(inputId);
             if (!input) return;
             const val = input.value.trim();
-            
+
             if (val && catalogs[type] && !catalogs[type].includes(val)) {
                 // 1. Mise à jour locale immédiate pour la réactivité
                 catalogs[type].push(val);
@@ -1038,7 +1087,7 @@
             }
         };
 
-        window.deleteFromCatalog = function(type, val) {
+        window.deleteFromCatalog = function (type, val) {
             if (confirm(`Supprimer "${val}" du catalogue permanent ?`)) {
                 const newCatalogs = JSON.parse(JSON.stringify(catalogs));
                 newCatalogs[type] = newCatalogs[type].filter(v => v !== val);
@@ -1051,13 +1100,24 @@
             types.forEach(type => {
                 const container = document.getElementById(`${type}-catalog`);
                 if (container) {
+                    // 1. Sauvegarder l'état actuel (ce qui est coché et les valeurs saisies)
+                    const currentState = {};
+                    container.querySelectorAll(`.${type}-check:checked`).forEach(cb => {
+                        const val = cb.dataset.val;
+                        currentState[val] = {
+                            qty: container.querySelector(`.qty-input[data-for="${val}"]`)?.value || 1,
+                            norm: container.querySelector(`.germ-norm-input[data-for="${val}"]`)?.value || 'Absence'
+                        };
+                    });
+
+                    // 2. Reconstruire la liste
                     container.innerHTML = catalogs[type].map(val => `
                         <div class="list-item">
                             <label class="list-item-main" style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                                <input type="checkbox" class="${type}-check" data-val="${val}">
+                                <input type="checkbox" class="${type}-check" data-val="${val}" ${currentState[val] ? 'checked' : ''}>
                                 <span style="flex: 1;">${val}</span>
-                                ${type === 'consommables' ? `<input type="number" class="qty-input" data-for="${val}" value="1" min="1" onClick="event.stopPropagation()">` : ''}
-                                ${type === 'germes' ? `<input type="text" class="germ-norm-input" data-for="${val}" placeholder="Norme (ex: Absence)" style="width: 100px; font-size: 0.7rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 2px 5px;" onClick="event.stopPropagation()">` : ''}
+                                ${type === 'consommables' ? `<input type="number" class="qty-input" data-for="${val}" value="${currentState[val]?.qty || 1}" min="1" onClick="event.stopPropagation()">` : ''}
+                                ${type === 'germes' ? `<input type="text" class="germ-norm-input" data-for="${val}" placeholder="Norme" value="${currentState[val]?.norm || 'Absence'}" style="width: 100px; font-size: 0.7rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 2px 5px;" onClick="event.stopPropagation()">` : ''}
                             </label>
                             <button type="button" class="delete-item-btn" onclick="deleteFromCatalog('${type}', '${val}')" title="Supprimer du catalogue">✕</button>
                         </div>
@@ -1072,7 +1132,7 @@
             document.querySelectorAll('.chip-group').forEach(group => {
                 // Multi-sélection autorisée pour les dilutions et les types d'application
                 const isMulti = group.id === 'dilution-group' || group.id === 'application-group';
-                
+
                 group.addEventListener('click', (e) => {
                     const chip = e.target.closest('.chip');
                     if (chip) {
@@ -1094,7 +1154,7 @@
         function setChipsActive(groupId, valuesStr) {
             const values = (valuesStr || '').split('|');
             const group = document.getElementById(groupId);
-            if(group) {
+            if (group) {
                 group.nextElementSibling.value = valuesStr;
                 group.querySelectorAll('.chip').forEach(c => {
                     if (values.includes(c.dataset.val)) c.classList.add('active');
@@ -1106,8 +1166,8 @@
         // Render List
         function render() {
             const query = searchInput.value.toLowerCase().trim();
-            const filtered = fiches.filter(f => 
-                (f.designation && f.designation.toLowerCase().includes(query)) || 
+            const filtered = fiches.filter(f =>
+                (f.designation && f.designation.toLowerCase().includes(query)) ||
                 (f.code && f.code.toLowerCase().includes(query)) ||
                 (f.methode && f.methode.toLowerCase().includes(query))
             );
@@ -1199,7 +1259,7 @@
             document.getElementById('editId').value = '';
             document.getElementById('modalTitle').innerText = 'Nouvelle Fiche';
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-            renderCatalogs(); 
+            renderCatalogs();
             deleteBtn.style.display = 'none';
             modalOverlay.classList.add('active');
         });
@@ -1208,7 +1268,7 @@
             modalOverlay.classList.remove('active');
         });
 
-        window.openEdit = function(id) {
+        window.openEdit = function (id) {
             const f = fiches.find(x => x.id === id);
             if (!f) return;
 
@@ -1220,7 +1280,7 @@
             document.getElementById('dmlt').value = f.dmlt || '';
             document.getElementById('observation').value = f.observation || '';
             document.getElementById('reactifs-custom').value = f.reactifsCustom || '';
-            
+
             setChipsActive('dilution-group', f.dilution || '');
             setChipsActive('application-group', f.application || '');
 
@@ -1259,9 +1319,9 @@
         ficheForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const id = document.getElementById('editId').value;
-            
+
             const getChecked = type => Array.from(document.querySelectorAll(`.${type}-check:checked`)).map(cb => cb.dataset.val);
-            
+
             const germesDetails = Array.from(document.querySelectorAll('.germes-check:checked')).map(cb => {
                 const normInput = cb.closest('.list-item').querySelector('.germ-norm-input');
                 return { name: cb.dataset.val, norm: normInput.value || 'Absence' };
@@ -1269,7 +1329,7 @@
 
             const diluants = getChecked('diluants');
             const reactifs = getChecked('reactifs');
-            
+
             const materiels = Array.from(document.querySelectorAll('.consommables-check:checked')).map(cb => {
                 const qtyInput = cb.closest('.list-item').querySelector('.qty-input');
                 return {
@@ -1345,4 +1405,5 @@
         }
     </script>
 </body>
+
 </html>

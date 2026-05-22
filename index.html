@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MICROBIO - Consultation Labo</title>
     
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
     <!-- SEO & Icons -->
     <meta name="description" content="Application de consultation des fiches signalétiques de laboratoire microbiologique.">
     <meta name="theme-color" content="#0f172a">
@@ -836,16 +840,36 @@
     </div>
 
     <script>
-        // --- Core Logic ---
-        let fiches = JSON.parse(localStorage.getItem('MICRO_BIO_FICHES') || '[]');
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAH5ES9JEQ1Uu7QMcoABW-6kTWiNZ7nTh8",
+            authDomain: "fichesmicro-d8f6d.firebaseapp.com",
+            projectId: "fichesmicro-d8f6d",
+            storageBucket: "fichesmicro-d8f6d.firebasestorage.app",
+            messagingSenderId: "568653816244",
+            appId: "1:568653816244:web:10886d67fb1a002fd8d2e1",
+            measurementId: "G-5ZE6ZJFBF6"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
         
-        // --- Catalog Logic ---
-        let catalogs = JSON.parse(localStorage.getItem('MICRO_BIO_CATALOGS') || JSON.stringify({
+        // Use persistence for offline access
+        db.enablePersistence().catch((err) => {
+            console.warn("Persistence failed", err.code);
+        });
+
+        const FICHES_COL = "fiches";
+        const CATALOGS_DOC = "catalogs";
+
+        let fiches = [];
+        let catalogs = {
             germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
             consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
             diluants: ['SNT 90ML', 'PH7', 'Eau Peptonée'],
             reactifs: ['TWEEN 80', 'IPA 70%']
-        }));
+        };
 
         const fichesList = document.getElementById('fiches-list');
         const searchInput = document.getElementById('searchInput');
@@ -855,9 +879,30 @@
         const closeModal = document.getElementById('closeModal');
         const deleteBtn = document.getElementById('deleteBtn');
 
+        // --- Real-time Sync ---
+        db.collection(FICHES_COL).orderBy('updatedAt', 'desc').onSnapshot(snapshot => {
+            fiches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            render();
+            
+            // Auto-migration from localStorage if needed
+            const localData = JSON.parse(localStorage.getItem('MICRO_BIO_FICHES') || '[]');
+            if (localData.length > 0 && fiches.length < 2) {
+                localData.forEach(f => db.collection(FICHES_COL).doc(f.id).set(f));
+                localStorage.removeItem('MICRO_BIO_FICHES');
+            }
+        });
+
+        db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
+            if (doc.exists()) {
+                catalogs = doc.data();
+                renderCatalogs();
+            } else {
+                db.collection("settings").doc(CATALOGS_DOC).set(catalogs);
+            }
+        });
+
         function saveCatalogs() {
-            localStorage.setItem('MICRO_BIO_CATALOGS', JSON.stringify(catalogs));
-            renderCatalogs();
+            db.collection("settings").doc(CATALOGS_DOC).set(catalogs);
         }
 
         window.addToCatalog = function(type, inputId) {
@@ -1120,49 +1165,23 @@
             };
 
             if (id) {
-                const idx = fiches.findIndex(x => x.id === id);
-                fiches[idx] = data;
+                db.collection(FICHES_COL).doc(id).update(data);
             } else {
-                fiches.unshift(data);
+                db.collection(FICHES_COL).add(data);
             }
 
-            saveAndClose();
+            modalOverlay.classList.remove('active');
         });
 
         deleteBtn.addEventListener('click', () => {
             const id = document.getElementById('editId').value;
             if (confirm('Voulez-vous vraiment supprimer cette fiche ?')) {
-                fiches = fiches.filter(x => x.id !== id);
-                saveAndClose();
+                db.collection(FICHES_COL).doc(id).delete();
+                modalOverlay.classList.remove('active');
             }
         });
 
-        function saveAndClose() {
-            localStorage.setItem('MICRO_BIO_FICHES', JSON.stringify(fiches));
-            modalOverlay.classList.remove('active');
-            render();
-        }
-
-        // Initialize with samples if empty
-        if (fiches.length === 0) {
-            fiches = [{
-                id: '1',
-                designation: 'BIOTANIDE 1 mg comprimé',
-                code: 'FS/BT519/PF/00',
-                methode: 'Méthode par diffusion sur gélose TSA.',
-                dgat: '10³',
-                dmlt: '10²',
-                germes: ['E.coli'],
-                diluant: 'SNT. 90ML',
-                dilution: '10-1|10-2',
-                application: 'Routine',
-                materiels: ['Boîte Petri 90', 'Pipette Pasteur'],
-                reactifs: ['PH7'],
-                observation: 'Préparation de la solution mère : Introduire 10g de produit dans 90ml de PH7.\nDénombrement : Utiliser la solution A.'
-            }];
-            render();
-        }
-
+        // Initialize
         render();
 
         // Service Worker Registration for PWA Offline & Auto-Update

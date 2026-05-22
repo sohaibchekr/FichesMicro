@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MICROBIO v2.5.0 - Labo</title>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <!-- SEO & Icons -->
+    <meta name="description"
+        content="Application de consultation des fiches signalétiques de laboratoire microbiologique.">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --primary-dark: #0284c7;
+            --secondary: #6366f1;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.1) 0%, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* App Layout */
+        .header {
+            padding: 40px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-img {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            padding: 16px 20px 16px 50px;
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+        }
+
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dim);
+            font-size: 1.2rem;
+        }
+
+        /* Content List */
+        #fiches-list {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .fiche-card {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            animation: fadeIn 0.4s ease-out backwards;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        @media (min-width: 900px) {
+            .card-layout {
+                display: grid;
+                grid-template-columns: 1fr 1.1fr 1fr;
+                gap: 25px;
+            }
+        }
+
+        .card-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .badges-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .badge {
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 800;
+        }
+
+        .badge-app {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+        }
+
+        .badge-dilution {
+            background: rgba(14, 165, 233, 0.2);
+            color: #38bdf8;
+        }
+
+        .resource-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .badge-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .resource-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .badge-blue {
+            background: rgba(14, 165, 233, 0.1);
+            color: #38bdf8;
+            border-color: rgba(14, 165, 233, 0.2);
+        }
+
+        .badge-green {
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .logistics-box {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logistics-label {
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-weight: 900;
+        }
+
+        .logistics-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin-bottom: 4px;
+        }
+
+        .qty-pill {
+            color: var(--primary);
+            font-weight: 900;
+        }
+
+        .methode-box-mini {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+            border-left: 3px solid var(--secondary);
+            height: 100%;
+        }
+
+        .obs-box-mini {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--primary);
+            padding: 10px;
+            border-radius: 4px 12px 12px 4px;
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .obs-inline {
+            color: #4ade80;
+            font-size: 0.65rem;
+            font-style: italic;
+            align-self: center;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .designation {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.3;
+            max-width: 80%;
+        }
+
+        .code-badge {
+            background: rgba(14, 165, 233, 0.1);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+
+        .norm-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .norm-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 10px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .norm-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .norm-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .methode-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+            border-left: 3px solid var(--secondary);
+        }
+
+        .germe-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #fb8c00;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-dim);
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 200;
+            border: none;
+        }
+
+        .fab:hover {
+            transform: translateY(-5px) rotate(90deg);
+            background: var(--primary-dark);
+        }
+
+        .fab:active {
+            transform: scale(0.9);
+        }
+
+        /* Modal / Form */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            width: 100%;
+            max-width: 500px;
+            margin: 40px auto;
+            border-radius: 32px;
+            padding: 30px;
+            position: relative;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+            border: 1px solid var(--glass-border);
+        }
+
+        .modal-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 14px;
+            color: white;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 18px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .save-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .delete-btn {
+            width: 100%;
+            padding: 14px;
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .chip {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .chip.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+        }
+
+        .section-divider {
+            height: 1px;
+            background: var(--glass-border);
+            margin: 30px 0 20px;
+            position: relative;
+        }
+
+        .section-label {
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #1e293b;
+            padding: 0 10px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .checkbox-group {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            padding: 15px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            cursor: pointer;
+        }
+
+        .checkbox-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .checkbox-item input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .dynamic-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .dynamic-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .dynamic-list::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 10px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px 16px;
+            border-radius: 14px;
+            border: 1px solid var(--glass-border);
+            transition: all 0.2s;
+        }
+
+        .list-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(14, 165, 233, 0.3);
+        }
+
+        .list-item-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .list-item-main input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .delete-item-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+
+        .delete-item-btn:hover {
+            background: var(--danger);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .add-catalog-ui {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .add-catalog-input {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px dashed var(--glass-border);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: white;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .add-catalog-input:focus {
+            border-color: var(--primary);
+            border-style: solid;
+        }
+
+        .add-catalog-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 15px;
+            border-radius: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        .norm-table {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 15px 0;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .norm-table-header {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 12px 15px;
+            font-weight: 900;
+            font-size: 0.7rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .norm-table-row {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+            align-items: center;
+        }
+
+        .norm-table-row:last-child {
+            border-bottom: none;
+        }
+
+        .norm-table-row span:first-child {
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .norm-table-row span:last-child {
+            font-weight: 900;
+            color: var(--success);
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+        }
+
+        .observation-box {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            border-radius: 4px 12px 12px 4px;
+            margin-top: 15px;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: rgba(255, 255, 255, 0.95);
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .qty-input {
+            width: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 4px;
+            padding: 2px 5px;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .resource-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .observation-label-box {
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .observation-label-box::before {
+            content: "📝";
+            font-size: 0.9rem;
+        }
+
+        .norm-input-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .norm-label-fix {
+            min-width: 80px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        @media (min-width: 768px) {
+            #fiches-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header {
+                padding: 40px 15% 20px;
+            }
+
+            #fiches-list {
+                padding: 20px 15%;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            #fiches-list {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="header-top">
+            <div class="logo-container">
+                <img src="https://ui-avatars.com/api/?name=MB&background=f59e0b&color=fff&bold=true" class="logo-img"
+                    alt="Logo">
+                <span class="logo-text" style="color: #f59e0b !important;">MICROBIO</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="toggleSelectBtn" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer;">SÉLECTIONNER</button>
+            </div>
+        </div>
+        <div class="search-container">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="Chercher un produit ou un code...">
+        </div>
+        <div id="selectionActions" style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center;">
+            <span id="selectedCount" style="color: #ef4444; font-weight: 800; font-size: 0.8rem;">0 sélectionnée(s)</span>
+            <button onclick="window.runBatchDelete()" style="background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 800; font-size: 0.7rem; cursor: pointer;">SUPPRIMER DÉFINITIVEMENT</button>
+        </div>
+    </header>
+
+    <main id="fiches-list">
+        <!-- JS renders cards here -->
+    </main>
+
+    <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
+        <div class="footer-version">MICROBIO v2.5.0 • Synchronisation Cloud Firebase</div>
+        <span
+            style="letter-spacing: 2px; margin-top: 5px; display: block; font-weight: 800; color: var(--primary);">CREATED
+            BY SOHAIB CHEKRI</span>
+    </footer>
+
+    <button class="fab" id="addBtn">＋</button>
+
+    <!-- Fiche Editor Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal">✕</button>
+            <h2 id="modalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem;">Nouvelle Fiche</h2>
+
+            <form id="ficheForm">
+                <input type="hidden" id="editId">
+
+                <div class="form-group">
+                    <label>Désignation</label>
+                    <input type="text" id="designation" class="form-input" placeholder="ex: BIOTANIDE 1 mg comprimé"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label>Code / Référence</label>
+                    <input type="text" id="code" class="form-input" placeholder="ex: FS/BT519/PF/00">
+                </div>
+
+                <div class="form-group">
+                    <label>Méthode d'analyse</label>
+                    <textarea id="methode" class="form-input" style="height: 60px; resize: none;"
+                        placeholder="ex: Méthode par diffusion..."></textarea>
+                </div>
+
+                <div class="section-divider"><span class="section-label">Normes & Paramètres Micro</span></div>
+
+                <div class="norm-input-row">
+                    <span class="norm-label-fix">DGAT</span>
+                    <input type="text" id="dgat" class="form-input" placeholder="ex: 10³" style="margin: 0;">
+                </div>
+                <div class="norm-input-row">
+                    <span class="norm-label-fix">DMLT</span>
+                    <input type="text" id="dmlt" class="form-input" placeholder="ex: 10²" style="margin: 0;">
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Germes Spécifiés (Nom uniquement)</label>
+                    <div id="germes-catalog" class="dynamic-list"></div>
+                    <div class="add-catalog-ui">
+                        <input type="text" id="new-germe" class="add-catalog-input"
+                            placeholder="ex: E.coli, Salmonella...">
+                        <button type="button" class="add-catalog-btn"
+                            onclick="addToCatalog('germes', 'new-germe')">＋</button>
+                    </div>
+                </div>
+
+                <div class="section-divider"><span class="section-label">Protocole & Dilution</span></div>
+
+                <div class="form-group">
+                    <label>Diluant(s)</label>
+                    <div id="diluants-catalog" class="dynamic-list"></div>
+                    <div class="add-catalog-ui">
+                        <input type="text" id="new-diluant" class="add-catalog-input"
+                            placeholder="ex: SNT 90ML, PH7...">
+                        <button type="button" class="add-catalog-btn"
+                            onclick="addToCatalog('diluants', 'new-diluant')">＋</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Dilution (Multi-sélection)</label>
+                    <div class="chip-group" id="dilution-group">
+                        <div class="chip" data-val="10-1">10⁻¹</div>
+                        <div class="chip" data-val="10-2">10⁻²</div>
+                        <div class="chip" data-val="10-3">10⁻³</div>
+                        <div class="chip" data-val="PUR">PUR</div>
+                    </div>
+                    <input type="hidden" id="dilution-val">
+                </div>
+
+                <div class="form-group">
+                    <label>Application / Type</label>
+                    <div class="chip-group" id="application-group">
+                        <div class="chip" data-val="Validation">Validation</div>
+                        <div class="chip" data-val="Routine">Routine</div>
+                        <div class="chip" data-val="Stabilité">Stabilité</div>
+                    </div>
+                    <input type="hidden" id="application-val">
+                </div>
+
+                <div class="section-divider"><span class="section-label">Logistique & Catalogues</span></div>
+
+                <div class="form-group">
+                    <label>Consommables</label>
+                    <div id="consommables-catalog" class="dynamic-list"></div>
+                    <div class="add-catalog-ui">
+                        <input type="text" id="new-consommable" class="add-catalog-input"
+                            placeholder="Référence consommable...">
+                        <button type="button" class="add-catalog-btn"
+                            onclick="addToCatalog('consommables', 'new-consommable')">＋</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Réactifs</label>
+                    <div id="reactifs-catalog" class="dynamic-list"></div>
+                    <div class="add-catalog-ui">
+                        <input type="text" id="new-reactif" class="add-catalog-input"
+                            placeholder="Réactif (PH7, Tween80, etc.)...">
+                        <button type="button" class="add-catalog-btn"
+                            onclick="addToCatalog('reactifs', 'new-reactif')">＋</button>
+                    </div>
+                    <input type="text" id="reactifs-custom" class="form-input"
+                        style="margin-top: 10px; border-style: dashed;" placeholder="Note sur les réactifs...">
+                </div>
+
+                <div class="form-group">
+                    <label>Observations & Méthodologie</label>
+                    <textarea id="observation" class="form-input" style="height: 120px; resize: none;"
+                        placeholder="Détaillez ici la préparation, le dénombrement, l'expression des résultats..."></textarea>
+                </div>
+
+                <button type="submit" class="save-btn">Enregistrer la fiche</button>
+                <button type="button" class="delete-btn" id="deleteBtn" style="display: none;">Supprimer cette
+                    fiche</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Alerte de test pour le cache
+        alert("💡 MICROBIO v2.5.0 : Suppression magique activée (Bypass Firebase) !");
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAH5ES9JEQ1Uu7QMcoABW-6kTWiNZ7nTh8",
+            authDomain: "fichesmicro-d8f6d.firebaseapp.com",
+            projectId: "fichesmicro-d8f6d",
+            storageBucket: "fichesmicro-d8f6d.firebasestorage.app",
+            messagingSenderId: "568653816244",
+            appId: "1:568653816244:web:10886d67fb1a002fd8d2e1",
+            measurementId: "G-5ZE6ZJFBF6"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Use persistence for offline access
+        db.enablePersistence().catch((err) => {
+            console.warn("Persistence failed", err.code);
+        });
+
+        const FICHES_COL = "fiches";
+        const CATALOGS_DOC = "catalogs";
+
+        let fiches = [];
+        let catalogs = {
+            germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
+            consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
+            diluants: ['SNT 90ML', 'PH7', 'Eau Peptonée'],
+            reactifs: ['TWEEN 80', 'IPA 70%']
+        };
+
+        const fichesList = document.getElementById('fiches-list');
+        const searchInput = document.getElementById('searchInput');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const ficheForm = document.getElementById('ficheForm');
+        const addBtn = document.getElementById('addBtn');
+        const closeModal = document.getElementById('closeModal');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const toggleSelectBtn = document.getElementById('toggleSelectBtn');
+        const selectionActions = document.getElementById('selectionActions');
+        const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+        const selectedCountLabel = document.getElementById('selectedCount');
+
+        let isSelectionMode = false;
+        let selectedFiches = new Set();
+
+        // --- Real-time Sync ---
+        db.collection(FICHES_COL).orderBy('updatedAt', 'desc').onSnapshot(snapshot => {
+            fiches = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(f => f.deleted !== true); // SOFT DELETE : On cache les fiches supprimées
+            render();
+
+            // La synchronisation Firestore est maintenant le seul maître
+        });
+
+        db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
+            if (doc.exists()) {
+                catalogs = doc.data();
+                renderCatalogs();
+            } else {
+                db.collection("settings").doc(CATALOGS_DOC).set(catalogs);
+            }
+        });
+
+        function saveCatalogs() {
+            db.collection("settings").doc(CATALOGS_DOC).set(catalogs);
+        }
+
+        window.addToCatalog = function (type, inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const val = input.value.trim();
+
+            if (val && catalogs[type] && !catalogs[type].includes(val)) {
+                // 1. Mise à jour locale immédiate pour la réactivité
+                catalogs[type].push(val);
+                renderCatalogs();
+                input.value = '';
+
+                // 2. Synchronisation Cloud en arrière-plan
+                const newCatalogs = JSON.parse(JSON.stringify(catalogs));
+                db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs)
+                    .catch(err => {
+                        console.error("Erreur Sync Cloud:", err);
+                        alert("Note: Enregistré localement, mais vérifiez vos règles Firebase pour le Cloud.");
+                    });
+            }
+        };
+
+        window.deleteFromCatalog = function (type, val) {
+            if (confirm(`Supprimer "${val}" du catalogue permanent ?`)) {
+                const newCatalogs = JSON.parse(JSON.stringify(catalogs));
+                newCatalogs[type] = newCatalogs[type].filter(v => v !== val);
+                db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs);
+            }
+        };
+
+        function renderCatalogs() {
+            const types = ['germes', 'consommables', 'diluants', 'reactifs'];
+            types.forEach(type => {
+                const container = document.getElementById(`${type}-catalog`);
+                if (container) {
+                    // 1. Sauvegarder l'état actuel (ce qui est coché et les valeurs saisies)
+                    const currentState = {};
+                    container.querySelectorAll(`.${type}-check:checked`).forEach(cb => {
+                        const val = cb.dataset.val;
+                        currentState[val] = {
+                            qty: container.querySelector(`.qty-input[data-for="${val}"]`)?.value || 1,
+                            norm: container.querySelector(`.germ-norm-input[data-for="${val}"]`)?.value || 'Absence'
+                        };
+                    });
+
+                    // 2. Reconstruire la liste
+                    container.innerHTML = catalogs[type].map(val => `
+                        <div class="list-item">
+                            <label class="list-item-main" style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                                <input type="checkbox" class="${type}-check" data-val="${val}" ${currentState[val] ? 'checked' : ''}>
+                                <span style="flex: 1;">${val}</span>
+                                ${type === 'consommables' ? `<input type="number" class="qty-input" data-for="${val}" value="${currentState[val]?.qty || 1}" min="1" onClick="event.stopPropagation()">` : ''}
+                                ${type === 'germes' ? `<input type="text" class="germ-norm-input" data-for="${val}" placeholder="Norme" value="${currentState[val]?.norm || 'Absence'}" style="width: 100px; font-size: 0.7rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 2px 5px;" onClick="event.stopPropagation()">` : ''}
+                            </label>
+                            <button type="button" class="delete-item-btn" onclick="deleteFromCatalog('${type}', '${val}')" title="Supprimer du catalogue">✕</button>
+                        </div>
+                    `).join('');
+                }
+            });
+        }
+        renderCatalogs();
+
+        // Chips Logic
+        function setupChips() {
+            document.querySelectorAll('.chip-group').forEach(group => {
+                // Multi-sélection autorisée pour les dilutions et les types d'application
+                const isMulti = group.id === 'dilution-group' || group.id === 'application-group';
+
+                group.addEventListener('click', (e) => {
+                    const chip = e.target.closest('.chip');
+                    if (chip) {
+                        if (isMulti) {
+                            chip.classList.toggle('active');
+                            const activeVals = Array.from(group.querySelectorAll('.chip.active')).map(c => c.dataset.val);
+                            group.nextElementSibling.value = activeVals.join('|');
+                        } else {
+                            group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                            chip.classList.add('active');
+                            group.nextElementSibling.value = chip.dataset.val;
+                        }
+                    }
+                });
+            });
+        }
+        setupChips();
+
+        function setChipsActive(groupId, valuesStr) {
+            const values = (valuesStr || '').split('|');
+            const group = document.getElementById(groupId);
+            if (group) {
+                group.nextElementSibling.value = valuesStr;
+                group.querySelectorAll('.chip').forEach(c => {
+                    if (values.includes(c.dataset.val)) c.classList.add('active');
+                    else c.classList.remove('active');
+                });
+            }
+        }
+
+        // --- SELECTION MODE LOGIC ---
+        toggleSelectBtn.onclick = () => {
+            isSelectionMode = !isSelectionMode;
+            toggleSelectBtn.innerText = isSelectionMode ? "ANNULER" : "SÉLECTIONNER";
+            toggleSelectBtn.style.background = isSelectionMode ? "#ef4444" : "rgba(255,255,255,0.1)";
+            selectionActions.style.display = isSelectionMode ? "flex" : "none";
+            if (!isSelectionMode) {
+                selectedFiches.clear();
+                updateSelectionUI();
+            }
+            render();
+        };
+
+        function updateSelectionUI() {
+            selectedCountLabel.innerText = `${selectedFiches.size} sélectionnée(s)`;
+        }
+
+        window.toggleFicheSelection = function(id, event) {
+            event.stopPropagation();
+            if (selectedFiches.has(id)) selectedFiches.delete(id);
+            else selectedFiches.add(id);
+            updateSelectionUI();
+        };
+
+        window.runBatchDelete = function() {
+            if (selectedFiches.size === 0) return;
+            if (confirm(`Attention : Supprimer définitivement ces ${selectedFiches.size} fiches ?`)) {
+                const ids = Array.from(selectedFiches);
+                
+                // SOFT DELETE : On met à jour au lieu de supprimer pour contourner Firebase
+                ids.forEach(id => {
+                    db.collection("fiches").doc(id).update({ deleted: true }).catch(err => console.error(err));
+                });
+                
+                alert("✅ Fiches effacées de votre écran !");
+                
+                isSelectionMode = false;
+                selectedFiches.clear();
+                toggleSelectBtn.innerText = "SÉLECTIONNER";
+                toggleSelectBtn.style.background = "rgba(255,255,255,0.1)";
+                selectionActions.style.display = "none";
+                render();
+            }
+        };
+
+        // Render List
+        function render() {
+            const query = searchInput.value.toLowerCase().trim();
+            const filtered = fiches.filter(f => 
+                (f.designation && f.designation.toLowerCase().includes(query)) || 
+                (f.code && f.code.toLowerCase().includes(query)) ||
+                (f.methode && f.methode.toLowerCase().includes(query))
+            );
+
+            if (filtered.length === 0) {
+                fichesList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📂</div>
+                        <h3>Aucune fiche</h3>
+                    </div>
+                `;
+                return;
+            }
+
+            fichesList.innerHTML = filtered.map(f => `
+                <div class="fiche-card ${selectedFiches.has(f.id) ? 'selected' : ''}" onclick="${isSelectionMode ? `toggleFicheSelection('${f.id}', event); render();` : `openEdit('${f.id}')`}">
+                    ${isSelectionMode ? `
+                        <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+                            <input type="checkbox" ${selectedFiches.has(f.id) ? 'checked' : ''} style="width: 24px; height: 24px;">
+                        </div>
+                    ` : ''}
+                    <div class="card-layout">
+                        <div class="card-col">
+                            <div class="card-header">
+                                <div class="designation">${f.designation}</div>
+                                <div class="code-badge">${f.code || 'SANS'}</div>
+                            </div>
+                            <div class="norm-table">
+                                ${f.dgat ? `<div class="norm-table-row"><span>DGAT</span><span>${f.dgat}</span></div>` : ''}
+                                ${(f.germesDetails || []).slice(0, 3).map(g => `
+                                    <div class="norm-table-row"><span>${g.name}</span><span>${g.norm}</span></div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // CSS additionnel pour la sélection
+        const style = document.createElement('style');
+        style.textContent = `
+            .fiche-card.selected {
+                border-color: #ef4444 !important;
+                background: rgba(239, 68, 68, 0.05) !important;
+                transform: scale(0.98);
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Search events
+        searchInput.addEventListener('input', render);
+
+        // Modal Logic
+        addBtn.addEventListener('click', () => {
+            ficheForm.reset();
+            document.getElementById('editId').value = '';
+            document.getElementById('modalTitle').innerText = 'Nouvelle Fiche';
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            renderCatalogs();
+            deleteBtn.style.display = 'none';
+            modalOverlay.classList.add('active');
+        });
+
+        closeModal.addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+        });
+
+        window.openEdit = function (id) {
+            const f = fiches.find(x => x.id === id);
+            if (!f) return;
+
+            document.getElementById('editId').value = f.id;
+            document.getElementById('designation').value = f.designation || '';
+            document.getElementById('code').value = f.code || '';
+            document.getElementById('methode').value = f.methode || '';
+            document.getElementById('dgat').value = f.dgat || '';
+            document.getElementById('dmlt').value = f.dmlt || '';
+            document.getElementById('observation').value = f.observation || '';
+            document.getElementById('reactifs-custom').value = f.reactifsCustom || '';
+
+            setChipsActive('dilution-group', f.dilution || '');
+            setChipsActive('application-group', f.application || '');
+
+            renderCatalogs();
+
+            const checkItems = (type, selectedArr) => {
+                document.querySelectorAll(`.${type}-check`).forEach(cb => {
+                    const val = cb.dataset.val;
+                    if (type === 'germes') {
+                        const detail = (selectedArr || []).find(g => (g.name || g) === val);
+                        cb.checked = !!detail;
+                        const normInput = cb.closest('.list-item').querySelector('.germ-norm-input');
+                        if (normInput) normInput.value = detail ? detail.norm : 'Absence';
+                    } else if (type === 'consommables') {
+                        const mat = (selectedArr || []).find(m => (m.name || m) === val);
+                        cb.checked = !!mat;
+                        const qtyInput = cb.closest('.list-item').querySelector('.qty-input');
+                        if (qtyInput) qtyInput.value = mat ? mat.qty : 1;
+                    } else {
+                        cb.checked = (selectedArr || []).includes(val);
+                    }
+                });
+            };
+
+            checkItems('germes', f.germesDetails || f.germes);
+            checkItems('diluants', f.diluants || (f.diluant ? [f.diluant] : []));
+            checkItems('reactifs', f.reactifs);
+            checkItems('consommables', f.materiels);
+
+            document.getElementById('modalTitle').innerText = 'Modifier la Fiche';
+            deleteBtn.style.display = 'block';
+            modalOverlay.classList.add('active');
+        };
+
+        // CRUD Operations
+        ficheForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+
+            const getChecked = type => Array.from(document.querySelectorAll(`.${type}-check:checked`)).map(cb => cb.dataset.val);
+
+            const germesDetails = Array.from(document.querySelectorAll('.germes-check:checked')).map(cb => {
+                const normInput = cb.closest('.list-item').querySelector('.germ-norm-input');
+                return { name: cb.dataset.val, norm: normInput.value || 'Absence' };
+            });
+
+            const diluants = getChecked('diluants');
+            const reactifs = getChecked('reactifs');
+
+            const materiels = Array.from(document.querySelectorAll('.consommables-check:checked')).map(cb => {
+                const qtyInput = cb.closest('.list-item').querySelector('.qty-input');
+                return {
+                    name: cb.dataset.val,
+                    qty: parseInt(qtyInput.value) || 1
+                };
+            });
+
+            const data = {
+                id: id || Date.now().toString(),
+                designation: document.getElementById('designation').value,
+                code: document.getElementById('code').value,
+                methode: document.getElementById('methode').value,
+                observation: document.getElementById('observation').value,
+                dgat: document.getElementById('dgat').value,
+                dmlt: document.getElementById('dmlt').value,
+                germesDetails: germesDetails,
+                diluants: diluants,
+                dilution: document.getElementById('dilution-val').value,
+                application: document.getElementById('application-val').value,
+                materiels: materiels,
+                reactifs: reactifs,
+                reactifsCustom: document.getElementById('reactifs-custom').value,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (id) {
+                db.collection(FICHES_COL).doc(id).update(data);
+            } else {
+                db.collection(FICHES_COL).add(data);
+            }
+
+            modalOverlay.classList.remove('active');
+        });
+
+        // --- FONCTION DE SUPPRESSION GLOBALE ---
+        window.confirmDeleteFiche = function() {
+            const idToDel = document.getElementById('editId').value;
+            
+            if (!idToDel) return;
+
+            if (confirm("⚠️ Masquer et supprimer cette fiche ?")) {
+                // SOFT DELETE : Si la règle "delete" est bloquée, "update" fonctionnera !
+                db.collection("fiches").doc(idToDel).update({ deleted: true })
+                  .catch(err => console.error("Update fail:", err));
+                
+                alert("✅ Fiche supprimée !");
+                modalOverlay.classList.remove('active');
+                render();
+            }
+        };
+
+        // On branche le bouton PHYSIQUE sur la fonction GLOBALE
+        deleteBtn.onclick = window.confirmDeleteFiche;
+
+        // Service Worker pour le mode Hors-ligne / PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => {
+                        reg.onupdatefound = () => {
+                            const installingWorker = reg.installing;
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    if (confirm('Nouvelle version disponible ! Recharger ?')) {
+                                        window.location.reload();
+                                    }
+                                }
+                            };
+                        };
+                    })
+                    .catch(err => console.log('Erreur SW:', err));
+            });
+
+            // Recharger la page automatiquement quand le nouveau SW prend le contrôle
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    window.location.reload();
+                    refreshing = true;
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

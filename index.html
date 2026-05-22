@@ -1165,12 +1165,31 @@
 
         render();
 
-        // Service Worker Registration for PWA Offline
+        // Service Worker Registration for PWA Offline & Auto-Update
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker enregistré !'))
+                    .then(reg => {
+                        console.log('Service Worker enregistré !');
+                        reg.onupdatefound = () => {
+                            const installingWorker = reg.installing;
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Une nouvelle version est prête ! Le SW skipWaiting() fera le reste
+                                }
+                            };
+                        };
+                    })
                     .catch(err => console.log('Erreur SW:', err));
+            });
+
+            // Recharger la page automatiquement quand le nouveau SW prend le contrôle
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    window.location.reload();
+                    refreshing = true;
+                }
             });
         }
     </script>

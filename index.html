@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MicroBio Fiches - Consultation Labo</title>
+    <title>MICROBIO - Consultation Labo</title>
     
     <!-- SEO & Icons -->
     <meta name="description" content="Application de consultation des fiches signalétiques de laboratoire microbiologique.">
@@ -567,7 +567,118 @@
             font-size: 1.1rem;
         }
 
-        /* Desktop Optimization */
+        .norm-table {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 15px 0;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .norm-table-header {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 12px 15px;
+            font-weight: 900;
+            font-size: 0.7rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .norm-table-row {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+            align-items: center;
+        }
+
+        .norm-table-row:last-child {
+            border-bottom: none;
+        }
+
+        .norm-table-row span:first-child {
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .norm-table-row span:last-child {
+            font-weight: 900;
+            color: var(--success);
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+        }
+
+        .observation-box {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            border-radius: 4px 12px 12px 4px;
+            margin-top: 15px;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: rgba(255, 255, 255, 0.95);
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .qty-input {
+            width: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 4px;
+            padding: 2px 5px;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .resource-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .observation-label-box {
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .observation-label-box::before {
+            content: "📝";
+            font-size: 0.9rem;
+        }
+
+        .norm-input-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .norm-label-fix {
+            min-width: 80px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
         @media (min-width: 768px) {
             #fiches-list {
                 grid-template-columns: repeat(2, 1fr);
@@ -593,7 +704,7 @@
         <div class="header-top">
             <div class="logo-container">
                 <img src="https://ui-avatars.com/api/?name=MB&background=0ea5e9&color=fff&bold=true" class="logo-img" alt="Logo">
-                <span class="logo-text">MicroBio Fiches</span>
+                <span class="logo-text">MICROBIO</span>
             </div>
             <div class="status-badge" style="font-size: 0.7rem; color: var(--success); font-weight: 700; text-transform: uppercase; background: rgba(34, 197, 94, 0.1); padding: 4px 10px; border-radius: 20px;">
                 ● En ligne / Offline
@@ -610,7 +721,8 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        MicroBio Fiches v1.3 • Mode Hors-ligne Catalogues
+        MICROBIO v1.4.2 • Synchronisation Locale<br>
+        <span style="letter-spacing: 2px; margin-top: 5px; display: block; font-weight: 800; color: var(--primary);">CREATED BY SOHAIB CHEKRI</span>
     </footer>
 
     <button class="fab" id="addBtn">＋</button>
@@ -639,24 +751,22 @@
                     <textarea id="methode" class="form-input" style="height: 60px; resize: none;" placeholder="ex: Méthode par diffusion..."></textarea>
                 </div>
 
-                <div class="section-divider"><span class="section-label">Paramètres Micro</span></div>
+                <div class="section-divider"><span class="section-label">Normes & Paramètres Micro</span></div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>DGAT</label>
-                        <input type="text" id="dgat" class="form-input" placeholder="ex: 10³">
-                    </div>
-                    <div class="form-group">
-                        <label>DMLT</label>
-                        <input type="text" id="dmlt" class="form-input" placeholder="ex: 10²">
-                    </div>
+                <div class="norm-input-row">
+                    <span class="norm-label-fix">DGAT</span>
+                    <input type="text" id="dgat" class="form-input" placeholder="ex: 10³" style="margin: 0;">
+                </div>
+                <div class="norm-input-row">
+                    <span class="norm-label-fix">DMLT</span>
+                    <input type="text" id="dmlt" class="form-input" placeholder="ex: 10²" style="margin: 0;">
                 </div>
 
-                <div class="form-group">
-                    <label>Germes Spécifiés (Multi)</label>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Germes Spécifiés (Nom uniquement)</label>
                     <div id="germes-catalog" class="dynamic-list"></div>
                     <div class="add-catalog-ui">
-                        <input type="text" id="new-germe" class="add-catalog-input" placeholder="Ajouter un germe au catalogue...">
+                        <input type="text" id="new-germe" class="add-catalog-input" placeholder="ex: E.coli, Salmonella...">
                         <button type="button" class="add-catalog-btn" onclick="addToCatalog('germes', 'new-germe')">＋</button>
                     </div>
                 </div>
@@ -664,8 +774,12 @@
                 <div class="section-divider"><span class="section-label">Protocole & Dilution</span></div>
 
                 <div class="form-group">
-                    <label>Diluant</label>
-                    <input type="text" id="diluant" class="form-input" placeholder="ex: SNT. 90ML">
+                    <label>Diluant(s)</label>
+                    <div id="diluants-catalog" class="dynamic-list"></div>
+                    <div class="add-catalog-ui">
+                        <input type="text" id="new-diluant" class="add-catalog-input" placeholder="ex: SNT 90ML, PH7...">
+                        <button type="button" class="add-catalog-btn" onclick="addToCatalog('diluants', 'new-diluant')">＋</button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -707,7 +821,12 @@
                         <input type="text" id="new-reactif" class="add-catalog-input" placeholder="Réactif (PH7, Tween80, etc.)...">
                         <button type="button" class="add-catalog-btn" onclick="addToCatalog('reactifs', 'new-reactif')">＋</button>
                     </div>
-                    <input type="text" id="reactifs-custom" class="form-input" style="margin-top: 10px; border-style: dashed;" placeholder="Autre note particulière...">
+                    <input type="text" id="reactifs-custom" class="form-input" style="margin-top: 10px; border-style: dashed;" placeholder="Note sur les réactifs...">
+                </div>
+
+                <div class="form-group">
+                    <label>Observations & Méthodologie</label>
+                    <textarea id="observation" class="form-input" style="height: 120px; resize: none;" placeholder="Détaillez ici la préparation, le dénombrement, l'expression des résultats..."></textarea>
                 </div>
 
                 <button type="submit" class="save-btn">Enregistrer la fiche</button>
@@ -722,9 +841,10 @@
         
         // --- Catalog Logic ---
         let catalogs = JSON.parse(localStorage.getItem('MICRO_BIO_CATALOGS') || JSON.stringify({
-            germes: ['Absence E.coli', 'Absence Salmonella', 'Absence Staph. aureus'],
+            germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
             consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
-            reactifs: ['PH7', 'TWEEN 80', 'IPA 70%']
+            diluants: ['SNT 90ML', 'PH7', 'Eau Peptonée'],
+            reactifs: ['TWEEN 80', 'IPA 70%']
         }));
 
         const fichesList = document.getElementById('fiches-list');
@@ -759,15 +879,16 @@
         };
 
         function renderCatalogs() {
-            const types = ['germes', 'consommables', 'reactifs'];
+            const types = ['germes', 'consommables', 'diluants', 'reactifs'];
             types.forEach(type => {
                 const container = document.getElementById(`${type}-catalog`);
                 if (container) {
                     container.innerHTML = catalogs[type].map(val => `
                         <div class="list-item">
-                            <label class="list-item-main">
-                                <input type="checkbox" class="${type}-check" value="${val}">
-                                <span>${val}</span>
+                            <label class="list-item-main" style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                                <input type="checkbox" class="${type}-check" data-val="${val}">
+                                <span style="flex: 1;">${val}</span>
+                                ${type === 'consommables' ? `<input type="number" class="qty-input" data-for="${val}" value="1" min="1" onClick="event.stopPropagation()">` : ''}
                             </label>
                             <button type="button" class="delete-item-btn" onclick="deleteFromCatalog('${type}', '${val}')" title="Supprimer du catalogue">✕</button>
                         </div>
@@ -780,7 +901,9 @@
         // Chips Logic
         function setupChips() {
             document.querySelectorAll('.chip-group').forEach(group => {
-                const isMulti = group.id === 'dilution-group';
+                // Multi-sélection autorisée pour les dilutions et les types d'application
+                const isMulti = group.id === 'dilution-group' || group.id === 'application-group';
+                
                 group.addEventListener('click', (e) => {
                     const chip = e.target.closest('.chip');
                     if (chip) {
@@ -802,11 +925,13 @@
         function setChipsActive(groupId, valuesStr) {
             const values = (valuesStr || '').split('|');
             const group = document.getElementById(groupId);
-            group.nextElementSibling.value = valuesStr;
-            group.querySelectorAll('.chip').forEach(c => {
-                if (values.includes(c.dataset.val)) c.classList.add('active');
-                else c.classList.remove('active');
-            });
+            if(group) {
+                group.nextElementSibling.value = valuesStr;
+                group.querySelectorAll('.chip').forEach(c => {
+                    if (values.includes(c.dataset.val)) c.classList.add('active');
+                    else c.classList.remove('active');
+                });
+            }
         }
 
         // Render List
@@ -838,38 +963,54 @@
                     </div>
                     
                     <div style="display: flex; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
-                        ${f.application ? `<span style="font-size: 0.65rem; background: rgba(99, 102, 241, 0.2); color: #818cf8; padding: 2px 8px; border-radius: 4px; font-weight: 800;">${f.application.toUpperCase()}</span>` : ''}
+                        ${(f.application || '').split('|').filter(x => x).map(app => `<span style="font-size: 0.65rem; background: rgba(99, 102, 241, 0.2); color: #818cf8; padding: 2px 8px; border-radius: 4px; font-weight: 800;">${app.toUpperCase()}</span>`).join('')}
                         ${(f.dilution || '').split('|').filter(x => x).map(d => `<span style="font-size: 0.65rem; background: rgba(14, 165, 233, 0.2); color: #38bdf8; padding: 2px 8px; border-radius: 4px; font-weight: 800;">${d}</span>`).join('')}
                     </div>
 
-                    <div class="norm-grid">
-                        <div class="norm-item">
-                            <span class="norm-label">DGAT</span>
-                            <span class="norm-value">${f.dgat || '---'}</span>
+                    <div class="norm-table">
+                        <div class="norm-table-header">
+                            <span>Paramètre</span>
+                            <span>Norme</span>
                         </div>
-                        <div class="norm-item">
-                            <span class="norm-label">DMLT</span>
-                            <span class="norm-value">${f.dmlt || '---'}</span>
-                        </div>
+                        ${f.dgat ? `<div class="norm-table-row"><span>DGAT</span><span>${f.dgat}</span></div>` : ''}
+                        ${f.dmlt ? `<div class="norm-table-row"><span>DMLT</span><span>${f.dmlt}</span></div>` : ''}
+                        ${(f.germes || []).map(g => `<div class="norm-table-row"><span>${g}</span><span>Absence</span></div>`).join('')}
                     </div>
 
-                    ${f.methode || f.diluant ? `
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                        ${(f.diluants || (f.diluant ? [f.diluant] : [])).length ? `
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${(f.diluants || [f.diluant]).filter(x => x).map(d => `<span style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(14, 165, 233, 0.2);">🧪 ${d}</span>`).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${(f.materiels || []).length ? `
+                            <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px;">
+                                <div style="font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 8px; font-weight: 900;">Logistique :</div>
+                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                    ${f.materiels.map(m => `
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem;">
+                                            <span style="color: rgba(255,255,255,0.8);">📦 ${m.name || m}</span>
+                                            <span style="color: var(--primary); font-weight: 900;">x${m.qty || 1}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${f.methode ? `
                         <div class="methode-box">
-                            ${f.diluant ? `<div style="color: var(--primary); font-weight: 800; margin-bottom: 4px; font-size: 0.75rem;">🧪 ${f.diluant}</div>` : ''}
-                            ${f.methode || ''}
+                            ${f.methode}
                         </div>
                     ` : ''}
 
-                    <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px;">
-                        ${(f.materiels || []).map(m => `<span style="font-size: 0.65rem; border: 1px solid var(--glass-border); padding: 2px 6px; border-radius: 4px; color: var(--text-dim);">📦 ${m}</span>`).join('')}
-                        ${(f.reactifs || []).map(r => `<span style="font-size: 0.65rem; border: 1px solid rgba(34, 197, 94, 0.2); padding: 2px 6px; border-radius: 4px; color: #4ade80;">🧪 ${r}</span>`).join('')}
-                    </div>
-
-                    ${(f.germes || []).length > 0 ? `
-                        <div class="germe-box" style="margin-top: 5px; border-top: 1px solid var(--glass-border); padding-top: 10px; flex-wrap: wrap;">
-                            <span style="font-size: 0.8rem;">🧬 ${f.germes.join(', ')}</span>
+                    ${f.observation ? `
+                        <div class="observation-box">
+                            <div class="observation-label-box">Observations :</div>
+                            ${f.observation}
                         </div>
-                    ` : (f.germe ? `<div class="germe-box" style="border-top: 1px solid var(--glass-border); padding-top: 10px;">🧬 ${f.germe}</div>` : '')}
+                    ` : ''}
                 </div>
             `).join('');
         }
@@ -883,7 +1024,7 @@
             document.getElementById('editId').value = '';
             document.getElementById('modalTitle').innerText = 'Nouvelle Fiche';
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-            renderCatalogs(); // Refresh checkboxes
+            renderCatalogs(); 
             deleteBtn.style.display = 'none';
             modalOverlay.classList.add('active');
         });
@@ -902,20 +1043,39 @@
             document.getElementById('methode').value = f.methode || '';
             document.getElementById('dgat').value = f.dgat || '';
             document.getElementById('dmlt').value = f.dmlt || '';
-            document.getElementById('diluant').value = f.diluant || '';
+            document.getElementById('observation').value = f.observation || '';
+            document.getElementById('reactifs-custom').value = f.reactifsCustom || '';
             
             setChipsActive('dilution-group', f.dilution || '');
             setChipsActive('application-group', f.application || '');
 
-            // Render fresh checkboxes first
             renderCatalogs();
 
-            // Checkboxes persistence
-            document.querySelectorAll('.germes-check').forEach(cb => cb.checked = (f.germes || []).includes(cb.value));
-            document.querySelectorAll('.consommables-check').forEach(cb => cb.checked = (f.materiels || []).includes(cb.value));
-            document.querySelectorAll('.reactifs-check').forEach(cb => cb.checked = (f.reactifs || []).includes(cb.value));
+            const checkItems = (type, selectedArr) => {
+                document.querySelectorAll(`.${type}-check`).forEach(cb => {
+                    const val = cb.dataset.val;
+                    cb.checked = (selectedArr || []).includes(val);
+                });
+            };
+
+            checkItems('germes', f.germes);
+            checkItems('diluants', f.diluants || (f.diluant ? [f.diluant] : []));
+            checkItems('reactifs', f.reactifs);
             
-            document.getElementById('reactifs-custom').value = f.reactifsCustom || '';
+            // Consommables quantities
+            const mats = f.materiels || [];
+            document.querySelectorAll('.consommables-check').forEach(cb => {
+                const val = cb.dataset.val;
+                const qtyInput = cb.closest('.list-item').querySelector('.qty-input');
+                const mat = mats.find(m => (m.name || m) === val);
+                if (mat) {
+                    cb.checked = true;
+                    if (qtyInput) qtyInput.value = mat.qty || 1;
+                } else {
+                    cb.checked = false;
+                    if (qtyInput) qtyInput.value = 1;
+                }
+            });
 
             document.getElementById('modalTitle').innerText = 'Modifier la Fiche';
             deleteBtn.style.display = 'block';
@@ -927,25 +1087,35 @@
             e.preventDefault();
             const id = document.getElementById('editId').value;
             
-            const germes = Array.from(document.querySelectorAll('.germes-check:checked')).map(cb => cb.value);
-            const materiels = Array.from(document.querySelectorAll('.consommables-check:checked')).map(cb => cb.value);
-            const reactifs = Array.from(document.querySelectorAll('.reactifs-check:checked')).map(cb => cb.value);
-            const reactifsCustom = document.getElementById('reactifs-custom').value;
+            const getChecked = type => Array.from(document.querySelectorAll(`.${type}-check:checked`)).map(cb => cb.dataset.val);
+            
+            const germes = getChecked('germes');
+            const diluants = getChecked('diluants');
+            const reactifs = getChecked('reactifs');
+            
+            const materiels = Array.from(document.querySelectorAll('.consommables-check:checked')).map(cb => {
+                const qtyInput = cb.closest('.list-item').querySelector('.qty-input');
+                return {
+                    name: cb.dataset.val,
+                    qty: parseInt(qtyInput.value) || 1
+                };
+            });
 
             const data = {
                 id: id || Date.now().toString(),
                 designation: document.getElementById('designation').value,
                 code: document.getElementById('code').value,
                 methode: document.getElementById('methode').value,
+                observation: document.getElementById('observation').value,
                 dgat: document.getElementById('dgat').value,
                 dmlt: document.getElementById('dmlt').value,
                 germes: germes,
-                diluant: document.getElementById('diluant').value,
+                diluants: diluants,
                 dilution: document.getElementById('dilution-val').value,
                 application: document.getElementById('application-val').value,
                 materiels: materiels,
                 reactifs: reactifs,
-                reactifsCustom: reactifsCustom,
+                reactifsCustom: document.getElementById('reactifs-custom').value,
                 updatedAt: new Date().toISOString()
             };
 
@@ -982,12 +1152,13 @@
                 methode: 'Méthode par diffusion sur gélose TSA.',
                 dgat: '10³',
                 dmlt: '10²',
-                germes: ['Absence E.coli'],
+                germes: ['E.coli'],
                 diluant: 'SNT. 90ML',
                 dilution: '10-1|10-2',
                 application: 'Routine',
                 materiels: ['Boîte Petri 90', 'Pipette Pasteur'],
-                reactifs: ['PH7']
+                reactifs: ['PH7'],
+                observation: 'Préparation de la solution mère : Introduire 10g de produit dans 90ml de PH7.\nDénombrement : Utiliser la solution A.'
             }];
             render();
         }

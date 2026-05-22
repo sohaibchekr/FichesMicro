@@ -725,7 +725,7 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        MICROBIO v1.4.2 • Synchronisation Locale<br>
+        MICROBIO v1.6 • Synchronisation Cloud Firebase<br>
         <span style="letter-spacing: 2px; margin-top: 5px; display: block; font-weight: 800; color: var(--primary);">CREATED BY SOHAIB CHEKRI</span>
     </footer>
 
@@ -906,22 +906,28 @@
         }
 
         window.addToCatalog = function(type, inputId) {
+            console.log("Tentative d'ajout :", type, inputId);
             const input = document.getElementById(inputId);
+            if (!input) {
+                console.error("Champ introuvable :", inputId);
+                return;
+            }
             const val = input.value.trim();
             if (val && catalogs[type] && !catalogs[type].includes(val)) {
-                // Créer une copie propre pour Firebase
                 const newCatalogs = JSON.parse(JSON.stringify(catalogs));
                 newCatalogs[type].push(val);
                 
                 db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs)
                     .then(() => {
                         input.value = '';
-                        console.log(`${val} ajouté au catalogue ${type}`);
+                        console.log(`${val} ajouté avec succès !`);
                     })
                     .catch(err => {
-                        alert("Erreur Firebase : Vérifiez vos règles de sécurité (Rules) !");
+                        alert("Erreur Firebase : Avez-vous configuré les 'Rules' sur la console Firebase ?");
                         console.error(err);
                     });
+            } else if (val) {
+                console.warn("Valeur vide ou déjà existante");
             }
         };
 

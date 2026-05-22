@@ -158,18 +158,120 @@
             backdrop-filter: blur(10px);
         }
 
-        /* Responsive Layout for wide screens */
+        .card-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
         @media (min-width: 900px) {
-            .fiche-card {
+            .card-layout {
                 display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 20px;
-                align-items: start;
+                grid-template-columns: 1fr 1.1fr 1fr;
+                gap: 25px;
             }
         }
 
-        .fiche-card:active {
-            transform: scale(0.98);
+        .card-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .badges-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .badge {
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 800;
+        }
+
+        .badge-app { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
+        .badge-dilution { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
+
+        .resource-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .badge-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .resource-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .badge-blue { background: rgba(14, 165, 233, 0.1); color: #38bdf8; border-color: rgba(14, 165, 233, 0.2); }
+        .badge-green { background: rgba(34, 197, 94, 0.1); color: #4ade80; border-color: rgba(34, 197, 94, 0.2); }
+
+        .logistics-box {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .logistics-label {
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-weight: 900;
+        }
+
+        .logistics-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin-bottom: 4px;
+        }
+
+        .qty-pill {
+            color: var(--primary);
+            font-weight: 900;
+        }
+
+        .methode-box-mini {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+            border-left: 3px solid var(--secondary);
+            height: 100%;
+        }
+
+        .obs-box-mini {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--primary);
+            padding: 10px;
+            border-radius: 4px 12px 12px 4px;
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .obs-inline {
+            color: #4ade80;
+            font-size: 0.65rem;
+            font-style: italic;
+            align-self: center;
         }
 
         .card-header {
@@ -1007,7 +1109,6 @@
             const filtered = fiches.filter(f => 
                 (f.designation && f.designation.toLowerCase().includes(query)) || 
                 (f.code && f.code.toLowerCase().includes(query)) ||
-                (f.germes && f.germes.some(g => g.toLowerCase().includes(query))) ||
                 (f.methode && f.methode.toLowerCase().includes(query))
             );
 
@@ -1016,7 +1117,7 @@
                     <div class="empty-state">
                         <div class="empty-icon">📂</div>
                         <h3>Aucune fiche trouvée</h3>
-                        <p>Essayez une autre recherche ou ajoutez une nouvelle fiche.</p>
+                        <p>Ajoutez une nouvelle fiche pour commencer.</p>
                     </div>
                 `;
                 return;
@@ -1024,67 +1125,67 @@
 
             fichesList.innerHTML = filtered.map(f => `
                 <div class="fiche-card" onclick="openEdit('${f.id}')">
-                    <div class="card-header">
-                        <div class="designation">${f.designation}</div>
-                        <div class="code-badge">${f.code || 'SANS CODE'}</div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
-                        ${(f.application || '').split('|').filter(x => x).map(app => `<span style="font-size: 0.65rem; background: rgba(99, 102, 241, 0.2); color: #818cf8; padding: 2px 8px; border-radius: 4px; font-weight: 800;">${app.toUpperCase()}</span>`).join('')}
-                        ${(f.dilution || '').split('|').filter(x => x).map(d => `<span style="font-size: 0.65rem; background: rgba(14, 165, 233, 0.2); color: #38bdf8; padding: 2px 8px; border-radius: 4px; font-weight: 800;">${d}</span>`).join('')}
-                    </div>
-                    <div class="norm-table">
-                        ${f.dgat ? `<div class="norm-table-row"><span>DGAT</span><span>${f.dgat}</span></div>` : ''}
-                        ${f.dmlt ? `<div class="norm-table-row"><span>DMLT</span><span>${f.dmlt}</span></div>` : ''}
-                        ${(f.germesDetails || (f.germes || []).map(g => ({name: g, norm: 'Absence'}))).map(g => `
-                            <div class="norm-table-row">
-                                <span>${g.name || g}</span>
-                                <span>${g.norm || 'Absence'}</span>
+                    <div class="card-layout">
+                        <!-- Colonne 1: Infos & Normes -->
+                        <div class="card-col">
+                            <div class="card-header">
+                                <div class="designation">${f.designation}</div>
+                                <div class="code-badge">${f.code || 'SANS CODE'}</div>
                             </div>
-                        `).join('')}
-                    </div>
-
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
-                        ${(f.diluants || (f.diluant ? [f.diluant] : [])).length ? `
-                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                                ${(f.diluants || [f.diluant]).filter(x => x).map(d => `<span style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(14, 165, 233, 0.2);">🧪 ${d}</span>`).join('')}
+                            
+                            <div class="badges-row">
+                                ${(f.application || '').split('|').filter(x => x).map(app => `<span class="badge badge-app">${app.toUpperCase()}</span>`).join('')}
+                                ${(f.dilution || '').split('|').filter(x => x).map(d => `<span class="badge badge-dilution">${d}</span>`).join('')}
                             </div>
-                        ` : ''}
 
-                        ${(f.reactifs || []).length || f.reactifsCustom ? `
-                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                                ${(f.reactifs || []).map(r => `<span style="background: rgba(34, 197, 94, 0.1); color: #4ade80; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(34, 197, 94, 0.2);">⚗️ ${r}</span>`).join('')}
-                                ${f.reactifsCustom ? `<span style="color: #4ade80; font-size: 0.7rem; font-style: italic; align-self: center;">${f.reactifsCustom}</span>` : ''}
+                            <div class="norm-table">
+                                ${f.dgat ? `<div class="norm-table-row"><span>DGAT</span><span>${f.dgat}</span></div>` : ''}
+                                ${f.dmlt ? `<div class="norm-table-row"><span>DMLT</span><span>${f.dmlt}</span></div>` : ''}
+                                ${(f.germesDetails || []).map(g => `
+                                    <div class="norm-table-row">
+                                        <span>${g.name}</span>
+                                        <span>${g.norm || 'Absence'}</span>
+                                    </div>
+                                `).join('')}
                             </div>
-                        ` : ''}
-
-                        ${(f.materiels || []).length ? `
-                            <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px;">
-                                <div style="font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 8px; font-weight: 900;">Logistique :</div>
-                                <div style="display: flex; flex-direction: column; gap: 5px;">
-                                    ${f.materiels.map(m => `
-                                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem;">
-                                            <span style="color: rgba(255,255,255,0.8);">📦 ${m.name || m}</span>
-                                            <span style="color: var(--primary); font-weight: 900;">x${m.qty || 1}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    ${f.methode ? `
-                        <div class="methode-box">
-                            ${f.methode}
                         </div>
-                    ` : ''}
 
-                    ${f.observation ? `
-                        <div class="observation-box">
-                            <div class="observation-label-box">Observations :</div>
-                            ${f.observation}
+                        <!-- Colonne 2: Badges & Logistique -->
+                        <div class="card-col">
+                            <div class="resource-stack">
+                                ${(f.diluants || []).length ? `
+                                    <div class="badge-cloud">
+                                        ${f.diluants.map(d => `<span class="resource-badge badge-blue">🧪 ${d}</span>`).join('')}
+                                    </div>
+                                ` : ''}
+
+                                ${(f.reactifs || []).length || f.reactifsCustom ? `
+                                    <div class="badge-cloud">
+                                        ${(f.reactifs || []).map(r => `<span class="resource-badge badge-green">⚗️ ${r}</span>`).join('')}
+                                        ${f.reactifsCustom ? `<span class="obs-inline">${f.reactifsCustom}</span>` : ''}
+                                    </div>
+                                ` : ''}
+
+                                ${(f.materiels || []).length ? `
+                                    <div class="logistics-box">
+                                        <div class="logistics-label">Logistique</div>
+                                        ${f.materiels.map(m => `
+                                            <div class="logistics-row">
+                                                <span>📦 ${m.name}</span>
+                                                <span class="qty-pill">x${m.qty}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
                         </div>
-                    ` : ''}
+
+                        <!-- Colonne 3: Méthode & Obs -->
+                        <div class="card-col">
+                            ${f.methode ? `<div class="methode-box-mini">${f.methode}</div>` : ''}
+                            ${f.observation ? `<div class="obs-box-mini">${f.observation}</div>` : ''}
+                        </div>
+                    </div>
                 </div>
             `).join('');
         }

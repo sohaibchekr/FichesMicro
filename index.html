@@ -908,18 +908,28 @@
         window.addToCatalog = function(type, inputId) {
             const input = document.getElementById(inputId);
             const val = input.value.trim();
-            if (val && !catalogs[type].includes(val)) {
-                catalogs[type].push(val);
-                input.value = '';
-                saveCatalogs();
+            if (val && catalogs[type] && !catalogs[type].includes(val)) {
+                // Créer une copie propre pour Firebase
+                const newCatalogs = JSON.parse(JSON.stringify(catalogs));
+                newCatalogs[type].push(val);
+                
+                db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs)
+                    .then(() => {
+                        input.value = '';
+                        console.log(`${val} ajouté au catalogue ${type}`);
+                    })
+                    .catch(err => {
+                        alert("Erreur Firebase : Vérifiez vos règles de sécurité (Rules) !");
+                        console.error(err);
+                    });
             }
         };
 
         window.deleteFromCatalog = function(type, val) {
-            event.stopPropagation();
             if (confirm(`Supprimer "${val}" du catalogue permanent ?`)) {
-                catalogs[type] = catalogs[type].filter(v => v !== val);
-                saveCatalogs();
+                const newCatalogs = JSON.parse(JSON.stringify(catalogs));
+                newCatalogs[type] = newCatalogs[type].filter(v => v !== val);
+                db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs);
             }
         };
 

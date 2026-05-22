@@ -1367,26 +1367,27 @@
 
         deleteBtn.addEventListener('click', () => {
             const id = document.getElementById('editId').value;
-            if (confirm('Voulez-vous vraiment supprimer cette fiche ?')) {
-                db.collection(FICHES_COL).doc(id).delete();
-                modalOverlay.classList.remove('active');
+            if (id && confirm('Voulez-vous vraiment supprimer cette fiche ?')) {
+                db.collection(FICHES_COL).doc(id).delete().then(() => {
+                    modalOverlay.classList.remove('active');
+                }).catch(err => {
+                    alert("Erreur lors de la suppression : " + err.message);
+                });
             }
         });
 
-        // Initialize
-        render();
-
-        // Service Worker Registration for PWA Offline & Auto-Update
+        // Service Worker pour le mode Hors-ligne / PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
                     .then(reg => {
-                        console.log('Service Worker enregistré !');
                         reg.onupdatefound = () => {
                             const installingWorker = reg.installing;
                             installingWorker.onstatechange = () => {
                                 if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // Une nouvelle version est prête ! Le SW skipWaiting() fera le reste
+                                    if (confirm('Nouvelle version disponible ! Recharger ?')) {
+                                        window.location.reload();
+                                    }
                                 }
                             };
                         };

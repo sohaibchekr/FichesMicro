@@ -1,6 +1,6 @@
 {
-  "name": "MicroBio Fiches",
-  "short_name": "MicroBio",
+  "name": "MICROBIO",
+  "short_name": "MICROBIO",
   "description": "Consultation des fiches signalétiques labo offline",
   "start_url": "index.html",
   "display": "standalone",

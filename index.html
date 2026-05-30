@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MICROBIO v3.5.0 - Labo</title>
+    <title>MICROBIO v3.6.0 - Labo</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -264,17 +264,16 @@
         .obs-card-footer {
             margin-top: 10px;
             padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.7rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem; /* Agrandissement de l'observation */
             color: #fbbf24;
             font-style: italic;
             display: flex;
-            gap: 8px;
+            gap: 10px;
+            line-height: 1.4;
         }
 
-        .obs-card-footer span:first-child {
-            opacity: 0.7;
-        }
+        .obs-card-footer span:first-child { opacity: 0.8; font-size: 1.1rem; }
 
         .empty-state {
             display: flex;
@@ -782,7 +781,7 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version">MICROBIO v3.5.0 • Synchronisation Cloud Firebase</div>
+        <div class="footer-version">MICROBIO v3.6.0 • Synchronisation Cloud Firebase</div>
         <div onclick="localStorage.clear(); location.reload();"
             style="opacity: 0.1; font-size: 0.5rem; cursor: pointer; margin-top: 5px;">reset</div>
         <span
@@ -1126,11 +1125,14 @@
         // Render List
         function render() {
             const query = searchInput.value.toLowerCase().trim();
-            const filtered = fiches.filter(f =>
+            let filtered = fiches.filter(f =>
                 (f.designation && f.designation.toLowerCase().includes(query)) ||
                 (f.code && f.code.toLowerCase().includes(query)) ||
                 (f.methode && f.methode.toLowerCase().includes(query))
             );
+
+            // TRI ALPHABÉTIQUE (A-Z)
+            filtered.sort((a, b) => (a.designation || "").localeCompare(b.designation || ""));
 
             if (filtered.length === 0) {
                 fichesList.innerHTML = `
@@ -1176,9 +1178,9 @@
                         </div>
                         <div class="prep-box">
                             <span class="prep-label">⚗️ Réactifs</span>
-                            <div class="prep-tags">
-                                ${(f.reactifs || []).map(r => `<span class="mini-tag">${r}</span>`).join('')}
-                                ${f.reactifsCustom ? `<span class="mini-tag">${f.reactifsCustom}</span>` : ''}
+                            <div class="prep-tags" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                                ${(f.reactifs || []).sort().map(r => `<span class="mini-tag" style="width: 100%;">${r}</span>`).join('')}
+                                ${f.reactifsCustom ? `<span class="mini-tag" style="width: 100%; border-color: var(--primary);">${f.reactifsCustom}</span>` : ''}
                                 ${!(f.reactifs?.length) && !f.reactifsCustom ? '<span style="font-size:0.5rem; opacity:0.5;">-</span>' : ''}
                             </div>
                         </div>

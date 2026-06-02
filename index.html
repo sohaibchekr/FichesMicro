@@ -140,6 +140,66 @@
             font-size: 1.2rem;
         }
 
+        /* Tabs for Calculator */
+        .calc-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 5px;
+            border-radius: 12px;
+        }
+
+        .calc-tab {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            font-weight: 800;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .calc-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .calc-section {
+            display: none;
+        }
+
+        .calc-section.active {
+            display: block;
+        }
+
+        .quick-pick {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
+
+        .pick-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .pick-btn:hover {
+            border-color: var(--primary);
+            color: white;
+        }
+
         /* Content List */
         #fiches-list {
             padding: 20px;
@@ -755,9 +815,14 @@
             <div class="logo-container">
                 <img src="https://ui-avatars.com/api/?name=MB&background=0ea5e9&color=fff&bold=true" class="logo-img"
                     alt="Logo">
-                <span class="logo-text">MICROBIO</span>
+                <div style="display: flex; flex-direction: column;">
+                    <span class="logo-text">MICROBIO</span>
+                    <span style="font-size: 0.5rem; font-weight: 900; color: var(--primary); letter-spacing: 1px; margin-top: -4px; opacity: 0.8;">BY SOHAIB CHEKRI</span>
+                </div>
             </div>
             <div style="display: flex; gap: 10px;">
+                <button id="openCalcBtn"
+                    style="background: rgba(14, 165, 233, 0.2); color: var(--primary); border: 1px solid var(--primary); padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">CALCULATRICE</button>
                 <button id="toggleSelectBtn"
                     style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer;">SÉLECTIONNER</button>
             </div>
@@ -790,6 +855,118 @@
     </footer>
 
     <button class="fab" id="addBtn">＋</button>
+
+    <!-- Calculator Modal -->
+    <div class="modal-overlay" id="calcOverlay">
+        <div class="modal-content">
+            <button class="close-modal" id="closeCalc">✕</button>
+            <h2 id="calcTitle" style="margin-bottom: 20px; font-weight: 800; font-size: 1.3rem; color: var(--primary);">Assistant Préparation</h2>
+            
+            <div class="calc-tabs">
+                <button class="calc-tab active" onclick="window.setCalcMode('dose')">Dosage</button>
+                <button class="calc-tab" onclick="window.setCalcMode('molar')">Molarité</button>
+                <button class="calc-tab" onclick="window.setCalcMode('percent')">% Massique</button>
+                <button class="calc-tab" onclick="window.setCalcMode('dilution')">Dilution</button>
+            </div>
+
+            <!-- MODE : DOSAGE (Règle de 3) -->
+            <div id="section-dose" class="calc-section active">
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div class="form-group">
+                        <label>Si (Quantité Référence)</label>
+                        <input type="number" id="refQty" class="form-input" placeholder="ex: 30" oninput="window.calculateThree()">
+                    </div>
+                    <div class="form-group">
+                        <label>Est dans (Volume Référence ml)</label>
+                        <input type="number" id="refVol" class="form-input" placeholder="ex: 1000" oninput="window.calculateThree()">
+                    </div>
+                    <div style="text-align: center; margin: 10px 0; color: var(--text-dim); font-weight: 800; font-size: 0.6rem;">ALORS POUR</div>
+                    <div class="form-group">
+                        <label>Volume Souhaité (ml)</label>
+                        <input type="number" id="targetVol" class="form-input" placeholder="ex: 600" oninput="window.calculateThree()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE : MOLARITE (M = n/V) -->
+            <div id="section-molar" class="calc-section">
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div class="form-group">
+                        <label>Molarité Souhaitée (mol/L ou N)</label>
+                        <input type="number" id="molTarget" class="form-input" placeholder="ex: 0.1" oninput="window.calculateMolar()">
+                        <div class="quick-pick">
+                            <button class="pick-btn" onclick="document.getElementById('molTarget').value=0.1; window.calculateMolar()">0.1N</button>
+                            <button class="pick-btn" onclick="document.getElementById('molTarget').value=1; window.calculateMolar()">1N</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Masse Molaire (g/mol)</label>
+                        <input type="number" id="molWeight" class="form-input" placeholder="ex: 40" oninput="window.calculateMolar()">
+                        <div class="quick-pick">
+                            <button class="pick-btn" onclick="document.getElementById('molWeight').value=39.99; window.calculateMolar()">NaOH</button>
+                            <button class="pick-btn" onclick="document.getElementById('molWeight').value=36.46; window.calculateMolar()">HCl</button>
+                            <button class="pick-btn" onclick="document.getElementById('molWeight').value=58.44; window.calculateMolar()">NaCl</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Volume à préparer (ml)</label>
+                        <input type="number" id="molVol" class="form-input" placeholder="ex: 1000" oninput="window.calculateMolar()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE : POURCENTAGE (% w/v) -->
+            <div id="section-percent" class="calc-section">
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div class="form-group">
+                        <label>Concentration Souhaitée (%)</label>
+                        <input type="number" id="perRate" class="form-input" placeholder="ex: 3" oninput="window.calculatePercent()">
+                        <div class="quick-pick">
+                            <button class="pick-btn" onclick="document.getElementById('perRate').value=0.9; window.calculatePercent()">0.9% (Physio)</button>
+                            <button class="pick-btn" onclick="document.getElementById('perRate').value=3; window.calculatePercent()">3%</button>
+                            <button class="pick-btn" onclick="document.getElementById('perRate').value=5; window.calculatePercent()">5%</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Volume Final (ml)</label>
+                        <input type="number" id="perVol" class="form-input" placeholder="ex: 100" oninput="window.calculatePercent()">
+                        <div class="quick-pick">
+                            <button class="pick-btn" onclick="document.getElementById('perVol').value=100; window.calculatePercent()">100 ml</button>
+                            <button class="pick-btn" onclick="document.getElementById('perVol').value=500; window.calculatePercent()">500 ml</button>
+                            <button class="pick-btn" onclick="document.getElementById('perVol').value=1000; window.calculatePercent()">1 Litre</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE : DILUTION (C1V1 = C2V2) -->
+            <div id="section-dilution" class="calc-section">
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div class="form-group">
+                        <label>Concentration Initiale (%)</label>
+                        <input type="number" id="dilC1" class="form-input" placeholder="ex: 37" oninput="window.calculateDilution()">
+                    </div>
+                    <div class="form-group">
+                        <label>Concentration Finale (%)</label>
+                        <input type="number" id="dilC2" class="form-input" placeholder="ex: 5" oninput="window.calculateDilution()">
+                    </div>
+                    <div class="form-group">
+                        <label>Volume Final souhaité (ml)</label>
+                        <input type="number" id="dilV2" class="form-input" placeholder="ex: 500" oninput="window.calculateDilution()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULTAT -->
+            <div style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 24px; text-align: center; box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);">
+                <div id="resultLabel" style="font-size: 0.6rem; text-transform: uppercase; color: rgba(255,255,255,0.8); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px;">Masse à prélever</div>
+                <div id="calcResult" style="font-size: 2.2rem; font-weight: 900; color: white;">0.00</div>
+                <div id="unitDisplay" style="font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.9); margin-top: 5px;">grammes (g)</div>
+            <div style="margin-top: 15px; text-align: center; border-top: 1px solid var(--glass-border); padding-top: 10px;">
+                <span style="font-size: 0.55rem; font-weight: 800; color: var(--text-dim); opacity: 0.5; letter-spacing: 1.5px;">DEVELOPED BY SOHAIB CHEKRI</span>
+            </div>
+        </div>
+    </div>
 
     <!-- Fiche Editor Modal -->
     <div class="modal-overlay" id="modalOverlay">
@@ -909,12 +1086,15 @@
                 <button type="button" class="delete-btn" id="deleteBtn" style="display: none;">Supprimer cette
                     fiche</button>
             </form>
+            <div style="margin-top: 25px; text-align: center; border-top: 1px solid var(--glass-border); padding-top: 15px;">
+                <span style="font-size: 0.55rem; font-weight: 800; color: var(--text-dim); opacity: 0.4; letter-spacing: 2px;">CREATED BY SOHAIB CHEKRI</span>
+            </div>
         </div>
     </div>
 
     <script>
         // Alerte de test pour le cache
-        console.log("✅ MICROBIO v3.2.0 : Design restauré & Suppression OK");
+        console.log("🚀 MICROBIO Pro v3.6.0 - CREATED BY SOHAIB CHEKRI");
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -958,6 +1138,105 @@
         const selectionActions = document.getElementById('selectionActions');
         const batchDeleteBtn = document.getElementById('batchDeleteBtn');
         const selectedCountLabel = document.getElementById('selectedCount');
+
+        const calcOverlay = document.getElementById('calcOverlay');
+        const openCalcBtn = document.getElementById('openCalcBtn');
+        const closeCalc = document.getElementById('closeCalc');
+
+        // --- Calculator Logic ---
+        openCalcBtn.onclick = () => {
+            calcOverlay.classList.add('active');
+        };
+
+        closeCalc.onclick = () => {
+            calcOverlay.classList.remove('active');
+        };
+
+        window.setCalcMode = function(mode) {
+            document.querySelectorAll('.calc-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.calc-section').forEach(s => s.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById('section-' + mode).classList.add('active');
+
+            // Reset result
+            document.getElementById('calcResult').innerText = "0.00";
+            const label = document.getElementById('resultLabel');
+            const unit = document.getElementById('unitDisplay');
+
+            if(mode === 'dose') {
+                label.innerText = "Quantité nécessaire";
+                unit.innerText = "unités (g, ml, etc.)";
+                window.calculateThree();
+            } else if (mode === 'molar') {
+                label.innerText = "Masse à peser";
+                unit.innerText = "grammes (g)";
+                window.calculateMolar();
+            } else if (mode === 'percent') {
+                label.innerText = "Masse de produit à peser";
+                unit.innerText = "grammes (g)";
+                window.calculatePercent();
+            } else if (mode === 'dilution') {
+                label.innerText = "Volume de Stock à prélever (V1)";
+                unit.innerText = "millilitres (ml)";
+                window.calculateDilution();
+            }
+        };
+
+        window.calculateThree = function () {
+            const qty = parseFloat(document.getElementById('refQty').value) || 0;
+            const ref = parseFloat(document.getElementById('refVol').value) || 1;
+            const target = parseFloat(document.getElementById('targetVol').value) || 0;
+
+            const result = (qty / ref) * target;
+            document.getElementById('calcResult').innerText = result.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 3
+            });
+        };
+
+        window.calculateMolar = function() {
+            const M = parseFloat(document.getElementById('molTarget').value) || 0;
+            const PM = parseFloat(document.getElementById('molWeight').value) || 0;
+            const Vml = parseFloat(document.getElementById('molVol').value) || 0;
+
+            // Formule : m = M * V(L) * PM
+            const result = M * (Vml / 1000) * PM;
+            document.getElementById('calcResult').innerText = result.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 3
+            });
+        };
+
+        window.calculatePercent = function() {
+            const rate = parseFloat(document.getElementById('perRate').value) || 0;
+            const vol = parseFloat(document.getElementById('perVol').value) || 0;
+
+            // Formule : Masse = (% / 100) * Volume
+            const result = (rate / 100) * vol;
+            document.getElementById('calcResult').innerText = result.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 3
+            });
+        };
+
+        window.calculateDilution = function() {
+            const C1 = parseFloat(document.getElementById('dilC1').value) || 0;
+            const C2 = parseFloat(document.getElementById('dilC2').value) || 0;
+            const V2 = parseFloat(document.getElementById('dilV2').value) || 0;
+
+            if (C1 === 0) {
+                document.getElementById('calcResult').innerText = "0.00";
+                return;
+            }
+
+            // Formule : V1 = (C2 * V2) / C1
+            const result = (C2 * V2) / C1;
+            document.getElementById('calcResult').innerText = result.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 3
+            });
+        };
 
         let isSelectionMode = false;
         let selectedFiches = new Set();

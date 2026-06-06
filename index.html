@@ -806,17 +806,40 @@
 
         @media (max-width: 600px) {
             .modal-content {
-                padding: 20px 15px;
+                padding: 15px;
                 margin: 10px auto;
-                border-radius: 24px;
+                border-radius: 20px;
+                width: 95% !important; /* Force la largeur sur mobile */
+                max-width: none;
             }
             #calcTitle { font-size: 1.1rem !important; }
             #calcResult { font-size: 1.8rem !important; }
-            .calc-tab { font-size: 0.6rem; padding: 8px 4px; }
+            .calc-tab { font-size: 0.6rem; padding: 8px 4px; min-width: 80px; }
             .form-input { padding: 10px; font-size: 0.85rem; }
+            .pick-btn { font-size: 0.6rem; padding: 5px 10px; }
         }
 
         /* Calculator Styles */
+        .quick-pick {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .pick-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .pick-btn:hover { background: rgba(14, 165, 233, 0.2); border-color: var(--primary); }
+
         .calc-tabs {
             display: flex;
             gap: 5px;

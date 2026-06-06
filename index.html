@@ -786,17 +786,21 @@
             color: var(--text-dim);
         }
 
+        #fiches-list {
+            display: grid;
+            gap: 20px;
+            padding: 20px;
+            min-height: 60vh;
+        }
+
         @media (min-width: 768px) {
             #fiches-list {
                 grid-template-columns: repeat(2, 1fr);
+                padding: 20px 15%;
             }
 
             .header {
                 padding: 40px 15% 20px;
-            }
-
-            #fiches-list {
-                padding: 20px 15%;
             }
         }
 
@@ -1161,32 +1165,8 @@
     </div>
 
     <script>
-        // === KILL SERVICE WORKER - FORCE FRESH CODE ===
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                var killed = false;
-                for (var r of registrations) {
-                    r.unregister();
-                    killed = true;
-                }
-                if (killed) {
-                    caches.keys().then(function(cacheNames) {
-                        return Promise.all(cacheNames.map(function(cacheName) {
-                            return caches.delete(cacheName);
-                        }));
-                    }).then(function() {
-                        window.location.reload(true);
-                    });
-                }
-            });
-        }
-        // === FIN KILL ===
-
-        window.onerror = function(msg, url, line) {
-            alert("Erreur JS ligne " + line + " : " + msg);
-            return false;
-        };
-        console.log("🚀 MICROBIO v4.3.0");
+        // === SCRIPTS RÉPARÉS ===
+        console.log("🚀 MICROBIO v4.4.0");
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -1790,15 +1770,6 @@
                         };
                     })
                     .catch(err => console.log('Erreur SW:', err));
-            });
-
-            // Recharger la page automatiquement quand le nouveau SW prend le contrôle
-            let refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshing) {
-                    window.location.reload();
-                    refreshing = true;
-                }
             });
         }
     </script>

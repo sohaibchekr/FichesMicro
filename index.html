@@ -1387,8 +1387,6 @@
             alert("Erreur de connexion Firestore. Vérifiez votre connexion.");
         });
 
-        // La synchronisation Firestore est maintenant le seul maître
-
         db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
                 catalogs = doc.data();
@@ -1398,12 +1396,7 @@
             }
         }, err => {
             console.error("Catalog Sync Error:", err);
-            // On ne bloque pas tout pour une erreur de catalogue
         });
-
-        function saveCatalogs() {
-            db.collection("settings").doc(CATALOGS_DOC).set(catalogs);
-        }
 
         window.addToCatalog = function (type, inputId) {
             const input = document.getElementById(inputId);
@@ -1411,12 +1404,9 @@
             const val = input.value.trim();
 
             if (val && catalogs[type] && !catalogs[type].includes(val)) {
-                // 1. Mise à jour locale immédiate pour la réactivité
                 catalogs[type].push(val);
                 renderCatalogs();
                 input.value = '';
-
-                // 2. Synchronisation Cloud en arrière-plan
                 const newCatalogs = JSON.parse(JSON.stringify(catalogs));
                 db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs)
                     .catch(err => {
@@ -1505,9 +1495,9 @@
             }
         }
 
-        // --- SELECTION MODE LOGIC ---
-        toggleSelectBtn.onclick = () => {
-            isSelectionMode = !isSelectionMode;
+        // --- SELECTION UI ---
+        window.toggleSelectionMode = function(forceState) {
+            isSelectionMode = (forceState !== undefined) ? forceState : !isSelectionMode;
             toggleSelectBtn.innerText = isSelectionMode ? "ANNULER" : "SÉLECTIONNER";
             toggleSelectBtn.style.background = isSelectionMode ? "#ef4444" : "rgba(255,255,255,0.1)";
             selectionActions.style.display = isSelectionMode ? "flex" : "none";
@@ -1518,6 +1508,8 @@
             render();
         };
 
+        toggleSelectBtn.onclick = () => window.toggleSelectionMode();
+
         function updateSelectionUI() {
             selectedCountLabel.innerText = `${selectedFiches.size} sélectionnée(s)`;
         }
@@ -1527,22 +1519,7 @@
             if (selectedFiches.has(id)) selectedFiches.delete(id);
             else selectedFiches.add(id);
             updateSelectionUI();
-        };
-
-        window.runBatchDelete = async function () {
-            if (selectedFiches.size === 0) return;
-            const count = selectedFiches.size;
-            if (confirm(`⚠️ Supprimer définitivement ces ${count} fiches ?`)) {
-                const ids = Array.from(selectedFiches);
-                for (const id of ids) {
-                    await db.collection("fiches").doc(id).delete().catch(err => alert("Erreur sur " + id + ": " + err));
-                }
-                alert("✅ Suppression terminée !");
-                isSelectionMode = false;
-                selectedFiches.clear();
-                window.location.reload();
-            }
-        };
+        };        
 
         // Render List
         function render() {
@@ -1765,11 +1742,32 @@
         window.confirmDeleteFiche = function () {
             const idToDel = document.getElementById('editId').value;
             if (!idToDel) return;
-            if (confirm("⚠️ Supprimer définitivement ?")) {
-                db.collection("fiches").doc(idToDel).delete().then(() => {
-                    alert("✅ Supprimé !");
-                    window.location.reload();
-                }).catch(err => alert("Erreur FIrebase: " + err.message));
+            if (confirm("⚠️ Supprimer cette fiche définitivement ?")) {
+                db.collection(FICHES_COL).doc(idToDel).delete().then(() => {
+                    alert("✅ Fiche supprimée !");
+                    window.closeAddModal();
+                }).catch(err => alert("Erreur Firebase: " + err.message));
+            }
+        };
+
+        // Supprimer la sélection
+        window.runBatchDelete = function() {
+            if (selectedFiches.size === 0) {
+                alert("Sélectionnez au moins une fiche.");
+                return;
+            }
+            
+            if (confirm(`⚠️ Supprimer définitivement ${selectedFiches.size} fiche(s) ?`)) {
+                const batch = db.batch();
+                selectedFiches.forEach(id => {
+                    batch.delete(db.collection(FICHES_COL).doc(id));
+                });
+                
+                batch.commit().then(() => {
+                    alert("✅ Sélection supprimée !");
+                    selectedFiches.clear();
+                    window.toggleSelectionMode(false);
+                }).catch(err => alert("Erreur lors de la suppression groupée: " + err.message));
             }
         };
 

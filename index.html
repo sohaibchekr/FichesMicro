@@ -1216,6 +1216,11 @@
                                 oninput="window.calculateBoites()" style="padding: 8px;">
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
+                            <label>Témoin Nég. Env. (boîte)</label>
+                            <input type="number" id="temoinNegEnv" class="form-input" value="1"
+                                oninput="window.calculateBoites()" style="padding: 8px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label>Condition Témoins</label>
                             <select id="temoinCond" class="form-input" onchange="window.calculateBoites()"
                                 style="padding: 8px; background: #0f172a;">
@@ -1224,12 +1229,12 @@
                                 <option value="42-44">42-44°C</option>
                             </select>
                         </div>
-                        <div class="form-group" style="margin-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 0; grid-column: span 2;">
                             <label>Format Témoins</label>
                             <select id="temoinFormat" class="form-input" onchange="window.calculateBoites()"
                                 style="padding: 8px; background: #0f172a;">
-                                <option value="Boîte 90mm" selected>Boîte 90mm</option>
-                                <option value="Boîte 55mm">Boîte 55mm</option>
+                                <option value="Boîte 90mm">Boîte 90mm</option>
+                                <option value="Boîte 55mm" selected>Boîte 55mm</option>
                                 <option value="Flacon">Flacon</option>
                                 <option value="Tube">Tube</option>
                             </select>
@@ -1545,8 +1550,8 @@
                     <option value="42-44">42-44°C</option>
                 </select>
                 <select class="form-input mil-format" onchange="window.calculateBoites()" style="background: #0f172a;">
-                    <option value="Boîte 90mm" selected>Boîte 90mm</option>
-                    <option value="Boîte 55mm">Boîte 55mm</option>
+                    <option value="Boîte 90mm">Boîte 90mm</option>
+                    <option value="Boîte 55mm" selected>Boîte 55mm</option>
                     <option value="Flacon">Flacon</option>
                     <option value="Tube">Tube</option>
                 </select>
@@ -1582,10 +1587,11 @@
             // Matériel et Environnement
             const mat = parseFloat(document.getElementById('temoinMat').value) || 0;
             const env = parseFloat(document.getElementById('temoinEnv').value) || 0;
+            const negEnv = parseFloat(document.getElementById('temoinNegEnv').value) || 0;
             const tCond = document.getElementById('temoinCond').value;
             const tFormat = document.getElementById('temoinFormat').value;
 
-            const totalControls = mat + env;
+            const totalControls = mat + env + negEnv;
             total += totalControls;
 
             if (!tempSummary[tCond]) tempSummary[tCond] = 0;

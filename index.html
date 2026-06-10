@@ -405,7 +405,7 @@
         .modal-content {
             background: #1e293b;
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
             margin: 40px auto;
             border-radius: 32px;
             padding: 30px;
@@ -915,7 +915,7 @@
         /* Boîtes Calculator Styles */
         .milieu-row {
             display: grid;
-            grid-template-columns: 1.5fr 70px 70px 1.2fr auto;
+            grid-template-columns: 1fr 75px 55px 95px 125px auto;
             gap: 8px;
             align-items: center;
             background: rgba(255, 255, 255, 0.05);
@@ -923,6 +923,16 @@
             border-radius: 12px;
             margin-bottom: 8px;
             border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .milieu-row .form-input {
+            padding: 10px 8px !important;
+            text-align: center;
+        }
+
+        .milieu-row .mil-name {
+            text-align: left !important;
+            padding-left: 15px !important;
         }
 
         .boites-summary {
@@ -1195,23 +1205,33 @@
 
                     <div
                         style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label>Témoin Matériel (boîte)</label>
                             <input type="number" id="temoinMat" class="form-input" value="1"
                                 oninput="window.calculateBoites()" style="padding: 8px;">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label>Témoins Env. (boîtes)</label>
                             <input type="number" id="temoinEnv" class="form-input" value="0"
                                 oninput="window.calculateBoites()" style="padding: 8px;">
                         </div>
-                        <div class="form-group" style="grid-column: span 2;">
-                            <label>Condition Témoins / Env.</label>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Condition Témoins</label>
                             <select id="temoinCond" class="form-input" onchange="window.calculateBoites()"
                                 style="padding: 8px; background: #0f172a;">
                                 <option value="20-25">20-25°C</option>
                                 <option value="30-35" selected>30-35°C</option>
                                 <option value="42-44">42-44°C</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Format Témoins</label>
+                            <select id="temoinFormat" class="form-input" onchange="window.calculateBoites()"
+                                style="padding: 8px; background: #0f172a;">
+                                <option value="Boîte 90mm" selected>Boîte 90mm</option>
+                                <option value="Boîte 55mm">Boîte 55mm</option>
+                                <option value="Flacon">Flacon</option>
+                                <option value="Tube">Tube</option>
                             </select>
                         </div>
                     </div>
@@ -1439,10 +1459,10 @@
             if (summaryDiv && summaryDiv.style.display !== 'none') {
                 // Extraire le texte du breakdown
                 summaryText = "\n\n📋 RÉPARTITION :";
-                summaryDiv.querySelectorAll('div[style*="display: flex"]').forEach(div => {
-                    const cond = div.querySelector('.condition-badge').innerText;
-                    const val = div.querySelector('span[style*="font-weight: 900"]').innerText;
-                    summaryText += `\n- ${cond}°C : ${val}`;
+                summaryDiv.querySelectorAll('.summary-item').forEach(div => {
+                    const label = div.querySelector('.label-text').innerText;
+                    const val = div.querySelector('.val-text').innerText;
+                    summaryText += `\n- ${label} : ${val}`;
                 });
             }
 
@@ -1524,6 +1544,12 @@
                     <option value="30-35" selected>30-35°C</option>
                     <option value="42-44">42-44°C</option>
                 </select>
+                <select class="form-input mil-format" onchange="window.calculateBoites()" style="background: #0f172a;">
+                    <option value="Boîte 90mm" selected>Boîte 90mm</option>
+                    <option value="Boîte 55mm">Boîte 55mm</option>
+                    <option value="Flacon">Flacon</option>
+                    <option value="Tube">Tube</option>
+                </select>
                 <button type="button" class="delete-milieu" onclick="document.getElementById('${rowId}').remove(); window.calculateBoites();" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-weight: 800;">✕</button>
             `;
             container.appendChild(div);
@@ -1533,31 +1559,40 @@
         window.calculateBoites = function () {
             const rows = document.querySelectorAll('.milieu-row');
             let total = 0;
-            const summary = {};
+            const tempSummary = {};
+            const formatSummary = {};
 
             // Témoins négatifs par milieu (1 par milieu)
             rows.forEach(row => {
                 const pts = parseFloat(row.querySelector('.mil-pts').value) || 0;
                 const mult = parseFloat(row.querySelector('.mil-mult').value) || 1;
                 const temp = row.querySelector('.mil-temp').value;
+                const format = row.querySelector('.mil-format').value;
 
                 const count = (pts * mult) + 1; // +1 pour témoin négatif
                 total += count;
 
-                if (!summary[temp]) summary[temp] = 0;
-                summary[temp] += count;
+                if (!tempSummary[temp]) tempSummary[temp] = 0;
+                tempSummary[temp] += count;
+
+                if (!formatSummary[format]) formatSummary[format] = 0;
+                formatSummary[format] += count;
             });
 
             // Matériel et Environnement
             const mat = parseFloat(document.getElementById('temoinMat').value) || 0;
             const env = parseFloat(document.getElementById('temoinEnv').value) || 0;
             const tCond = document.getElementById('temoinCond').value;
+            const tFormat = document.getElementById('temoinFormat').value;
 
             const totalControls = mat + env;
             total += totalControls;
 
-            if (!summary[tCond]) summary[tCond] = 0;
-            summary[tCond] += totalControls;
+            if (!tempSummary[tCond]) tempSummary[tCond] = 0;
+            tempSummary[tCond] += totalControls;
+
+            if (!formatSummary[tFormat]) formatSummary[tFormat] = 0;
+            formatSummary[tFormat] += totalControls;
 
             // Affichage Résultat Principal
             document.getElementById('calcResult').innerText = total;
@@ -1566,12 +1601,26 @@
             const summaryDiv = document.getElementById('boites-summary-display');
             if (total > 0) {
                 summaryDiv.style.display = 'block';
-                let html = '<div style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; font-size: 0.65rem;">Répartition par Température :</div>';
-                for (const temp in summary) {
-                    if (summary[temp] > 0) {
-                        html += `<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span><span class="condition-badge">${temp}°C</span></span>
-                            <span style="font-weight: 900; color: white;">${summary[temp]} boites</span>
+                let html = '<div style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; font-size: 0.65rem;">Températures :</div>';
+                for (const temp in tempSummary) {
+                    if (tempSummary[temp] > 0) {
+                        html += `<div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span class="label-text"><span class="condition-badge">${temp}°C</span></span>
+                            <span class="val-text" style="font-weight: 900; color: white;">${tempSummary[temp]} boîtes</span>
+                        </div>`;
+                    }
+                }
+                html += '<div style="font-weight: 800; color: var(--success); margin: 12px 0 8px; text-transform: uppercase; font-size: 0.65rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">Formats :</div>';
+                for (const format in formatSummary) {
+                    if (formatSummary[format] > 0) {
+                        let unitLabel = "unités";
+                        if (format.includes("Boîte")) unitLabel = "boîtes";
+                        else if (format.includes("Flacon")) unitLabel = "flacons";
+                        else if (format.includes("Tube")) unitLabel = "tubes";
+
+                        html += `<div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span class="label-text" style="color:var(--text-dim); font-size:0.75rem;">${format}</span>
+                            <span class="val-text" style="font-weight: 900; color: var(--success);">${formatSummary[format]} ${unitLabel}</span>
                         </div>`;
                     }
                 }

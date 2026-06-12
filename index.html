@@ -10,9 +10,13 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
     <!-- SEO & Icons -->
     <meta name="description"
-        content="Application de consultation des fiches signalétiques de laboratoire microbiologique.">
+        content="Application de consultation des résumés de laboratoire microbiologique.">
     <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="manifest.json">
 
@@ -252,6 +256,33 @@
             letter-spacing: 1px;
             text-transform: uppercase;
             border: 1px solid rgba(14, 165, 233, 0.1);
+        }
+
+        .pdf-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .pdf-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+            transform: scale(1.05);
+        }
+
+        .pdf-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
         }
 
         .card-stats-row {
@@ -982,10 +1013,7 @@
                 <img src="https://ui-avatars.com/api/?name=MB&background=0ea5e9&color=fff&bold=true" class="logo-img"
                     alt="Logo">
                 <div style="display: flex; flex-direction: column;">
-                    <span class="logo-text">MICROBIO</span>
-                    <span
-                        style="font-size: 0.5rem; font-weight: 900; color: var(--primary); letter-spacing: 1px; margin-top: -4px; opacity: 0.8;">BY
-                        SOHAIB CHEKRI</span>
+                    <span class="logo-text">RÉSUMÉS LABO</span>
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
@@ -1023,9 +1051,6 @@
         <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
-        <span
-            style="letter-spacing: 2px; margin-top: 5px; display: block; font-weight: 800; color: var(--primary);">CREATED
-            BY SOHAIB CHEKRI</span>
     </footer>
 
 
@@ -1261,12 +1286,6 @@
                     ➕ CRÉER UNE FICHE AVEC CE CALCUL
                 </button>
             </div>
-            <div
-                style="margin-top: 15px; text-align: center; border-top: 1px solid var(--glass-border); padding-top: 10px;">
-                <span
-                    style="font-size: 0.55rem; font-weight: 800; color: var(--text-dim); opacity: 0.5; letter-spacing: 1.5px;">DEVELOPED
-                    BY SOHAIB CHEKRI</span>
-            </div>
         </div>
     </div>
 
@@ -1390,12 +1409,6 @@
                 <button type="button" class="delete-btn" id="deleteBtn" style="display: none;">Supprimer cette
                     fiche</button>
             </form>
-            <div
-                style="margin-top: 25px; text-align: center; border-top: 1px solid var(--glass-border); padding-top: 15px;">
-                <span
-                    style="font-size: 0.55rem; font-weight: 800; color: var(--text-dim); opacity: 0.4; letter-spacing: 2px;">CREATED
-                    BY SOHAIB CHEKRI</span>
-            </div>
         </div>
     </div>
 
@@ -1889,10 +1902,16 @@
                     
                     <!-- HEADER : Titre & Code -->
                     <div class="card-header">
-                        <div class="card-title-group">
+                        <div class="card-title-group" style="flex: 1;">
                             <div class="designation">${f.designation}</div>
                         </div>
-                        <div class="code-badge">${f.code || 'SANS CODE'}</div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                            <div class="code-badge">${f.code || 'SANS CODE'}</div>
+                            <button class="pdf-btn" onclick="event.stopPropagation(); window.generatePDF('${f.id}')">
+                                <svg viewBox="0 0 24 24"><path d="M12 16L16 12H13V4H11V12H8L12 16ZM20 18H4V20H20V18Z"/></svg>
+                                PDF
+                            </button>
+                        </div>
                     </div>
 
                     <!-- STATS : DGAT / DMLT / Dilution -->
@@ -2131,6 +2150,137 @@
                     .catch(err => console.log('Erreur SW:', err));
             });
         }
+
+        // --- PDF GENERATION ---
+        window.generatePDF = function (id) {
+            const f = fiches.find(x => x.id === id);
+            if (!f) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.width;
+
+            let y = 20;
+
+            // Header Simple
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("RÉSUMÉ", 15, y);
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text(`Doc ID: ${f.code || 'N/A'}`, pageWidth - 15, y, { align: 'right' });
+            
+            y += 10;
+
+            // Main Info Table
+            doc.autoTable({
+                startY: y,
+                head: [['Désignation', 'Méthode d\'analyse']],
+                body: [[f.designation || 'N/A', f.methode || 'N/A']],
+                theme: 'grid',
+                headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold' },
+                styles: { fontSize: 10, cellPadding: 5, lineColor: [0, 0, 0], textColor: 0 }
+            });
+            y = doc.lastAutoTable.finalY + 10;
+
+            // Norms Table
+            doc.autoTable({
+                startY: y,
+                head: [['DGAT (Norme)', 'DMLT (Norme)', 'Application']],
+                body: [[f.dgat || '-', f.dmlt || '-', f.application || 'Routine']],
+                theme: 'grid',
+                headStyles: { fillColor: [255, 255, 255], textColor: 0 },
+                styles: { lineColor: [0, 0, 0], textColor: 0 }
+            });
+            y = doc.lastAutoTable.finalY + 10;
+
+            // Protocole Section
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text("Protocole & Préparation", 15, y);
+            y += 7;
+
+            doc.autoTable({
+                startY: y,
+                head: [['Dilution', 'Diluants']],
+                body: [[f.dilution || '-', (f.diluants || []).join(', ') || '-']],
+                theme: 'grid',
+                headStyles: { fillColor: [255, 255, 255], textColor: 0 },
+                styles: { lineColor: [0, 0, 0], textColor: 0 }
+            });
+            y = doc.lastAutoTable.finalY + 10;
+
+            // Germes Section
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(0, 0, 0);
+            doc.text("Germes Spécifiés", 15, y);
+            y += 7;
+
+            doc.autoTable({
+                startY: y,
+                head: [['Germe', 'Norme']],
+                body: (f.germesDetails || []).map(g => [g.name, g.norm]),
+                theme: 'grid',
+                headStyles: { fillColor: [255, 255, 255], textColor: 0 },
+                styles: { lineColor: [0, 0, 0], textColor: 0 }
+            });
+            y = doc.lastAutoTable.finalY + 10;
+
+            // Logistique
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(0, 0, 0);
+            doc.text("Logistique & Matériels", 15, y);
+            y += 7;
+
+            const matBody = (f.materiels || []).map(m => [m.name, m.qty]);
+            const reactBody = (f.reactifs || []).map(r => [r]);
+            if (f.reactifsCustom) reactBody.push([f.reactifsCustom]);
+
+            const maxRows = Math.max(matBody.length, reactBody.length);
+            const combinedBody = [];
+            for (let i = 0; i < maxRows; i++) {
+                const matRow = matBody[i] || ['', ''];
+                const reactRow = reactBody[i] || [''];
+                combinedBody.push([...matRow, reactRow[0]]);
+            }
+
+            doc.autoTable({
+                startY: y,
+                head: [['Consommables', 'Qté', 'Réactifs']],
+                body: combinedBody,
+                theme: 'grid',
+                headStyles: { fillColor: [255, 255, 255], textColor: 0 },
+                styles: { lineColor: [0, 0, 0], textColor: 0 }
+            });
+            y = doc.lastAutoTable.finalY + 15;
+
+            // Observation
+            if (f.observation) {
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(0, 0, 0);
+                doc.text("Observations & Méthodologie", 15, y);
+                y += 7;
+
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                const splitObs = doc.splitTextToSize(f.observation, pageWidth - 30);
+                doc.text(splitObs, 15, y);
+            }
+
+            // Footer
+            const pageHeight = doc.internal.pageSize.height;
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Imprimé le : ${new Date().toLocaleString()}`, 15, pageHeight - 10);
+
+            // Save PDF
+            const fileName = `Résumé_${(f.designation || 'fiche').replace(/[^a-z0-9]/gi, '_')}.pdf`;
+            doc.save(fileName);
+        };
     </script>
 </body>
 

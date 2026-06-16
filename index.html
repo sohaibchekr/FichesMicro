@@ -1043,9 +1043,14 @@
             <button onclick="switchTab('analyses')" id="tab-analyses" class="main-tab" style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">🧪 ANALYSES & INCUBATION</button>
         </div>
 
-        <div class="search-container" style="margin-top: 15px;">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" class="search-input" placeholder="Chercher un produit, lot ou code...">
+        <div style="display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 15px;">
+            <div class="search-container" style="flex: 1;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" class="search-input" placeholder="Chercher produit, lot, n° de contrôle...">
+            </div>
+            <button id="sortBtn" onclick="toggleSort()" title="Inverser l'ordre" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px; border-radius: 16px; color: var(--text-dim); cursor: pointer; transition: all 0.3s; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                ⇅
+            </button>
         </div>
         <div id="selectionActions"
             style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center;">
@@ -1331,22 +1336,29 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Produit</label>
-                    <input type="text" id="produitAnalyse" class="form-input" placeholder="Nom du produit..." list="produit-suggestions" required>
-                    <datalist id="produit-suggestions"></datalist>
+                <div id="analysisRows">
+                    <div class="analysis-row" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
+                        <div class="form-group">
+                            <label>Produit</label>
+                            <input type="text" class="form-input row-prod" placeholder="Nom du produit..." list="produit-suggestions" required>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Lot</label>
+                                <input type="text" class="form-input row-lot" placeholder="ex: L240601">
+                            </div>
+                            <div class="form-group">
+                                <label>N° de contrôle</label>
+                                <input type="text" class="form-input row-code" placeholder="ex: CTRL-001">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>Lot</label>
-                        <input type="text" id="lotAnalyse" class="form-input" placeholder="ex: L240601">
-                    </div>
-                    <div class="form-group">
-                        <label>N° de contrôle</label>
-                        <input type="text" id="codeControl" class="form-input" placeholder="ex: CTRL-001">
-                    </div>
-                </div>
+                <button type="button" id="addRowBtn" onclick="addAnalysisRow()" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px dashed var(--primary); color: var(--primary); padding: 10px; border-radius: 12px; cursor: pointer; margin-bottom: 20px; font-weight: 800; font-size: 0.7rem;">
+                    + AJOUTER UN AUTRE PRODUIT
+                </button>
 
                 <div class="form-group" style="margin-top:20px;">
                     <label>📅 Date de Sortie (Incubation)</label>
@@ -1373,6 +1385,7 @@
 
                 <button type="submit" class="save-btn">Enregistrer l'analyse</button>
                 <button type="button" class="delete-btn" id="deleteAnalysisBtn" style="display: none;" onclick="deleteAnalysis()">Supprimer cette analyse</button>
+                <datalist id="produit-suggestions"></datalist>
             </form>
         </div>
     </div>
@@ -1519,6 +1532,7 @@
 
         // Global State
         let currentTab = 'fiches';
+        let sortOrder = 'desc'; // newest to oldest
         let fiches = [];
         let analyses = [];
         let catalogs = {
@@ -1529,6 +1543,14 @@
         };
 
         const ANALYSES_COL = "analyses";
+
+        window.toggleSort = function() {
+            sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+            const btn = document.getElementById('sortBtn');
+            btn.style.color = sortOrder === 'asc' ? 'var(--primary)' : 'var(--text-dim)';
+            btn.style.transform = sortOrder === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)';
+            render();
+        };
 
         // Tab Switching Logic
         window.switchTab = function(tab) {
@@ -1583,6 +1605,24 @@
                 document.getElementById('analysisModalTitle').innerText = 'Nouvelle Analyse';
                 document.getElementById('analysisEditId').value = '';
                 document.getElementById('analysisForm').reset();
+                document.getElementById('analysisRows').innerHTML = `
+                    <div class="analysis-row" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
+                        <div class="form-group">
+                            <label>Produit</label>
+                            <input type="text" class="form-input row-prod" placeholder="Nom du produit..." list="produit-suggestions" required>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Lot</label>
+                                <input type="text" class="form-input row-lot" placeholder="ex: L240601">
+                            </div>
+                            <div class="form-group">
+                                <label>N° de contrôle</label>
+                                <input type="text" class="form-input row-code" placeholder="ex: CTRL-001">
+                            </div>
+                        </div>
+                    </div>`;
+                document.getElementById('addRowBtn').style.display = 'block';
                 document.getElementById('out5j').innerText = '--/--';
                 document.getElementById('out7j').innerText = '--/--';
                 document.getElementById('dateSortie').value = '';
@@ -2106,35 +2146,68 @@
                 `).join('');
             } else {
                 // ANALYSES TAB
-                let filtered = analyses.filter(a =>
+                let filtered = analyses.slice(); // Copy
+
+                // Sorting
+                filtered.sort((a, b) => {
+                    const da = new Date(a.dateAnalyse).getTime();
+                    const db = new Date(b.dateAnalyse).getTime();
+                    return sortOrder === 'desc' ? db - da : da - db;
+                });
+
+                // Filtering
+                filtered = filtered.filter(a =>
                     (a.produit && a.produit.toLowerCase().includes(query)) ||
                     (a.lot && a.lot.toLowerCase().includes(query)) ||
                     (a.codeControl && a.codeControl.toLowerCase().includes(query)) ||
                     (a.classe && a.classe.toLowerCase().includes(query))
                 );
 
-                if (filtered.length === 0) {
+                // Grouping
+                const groups = [];
+                const map = new Map();
+
+                filtered.forEach(a => {
+                    const key = a.batchId || a.id;
+                    if (!map.has(key)) {
+                        const group = {
+                            id: key,
+                            isBatch: !!a.batchId,
+                            dateAnalyse: a.dateAnalyse,
+                            dateSortie: a.dateSortie,
+                            classe: a.classe,
+                            observations: a.observations,
+                            resultats: a.resultats,
+                            items: []
+                        };
+                        groups.push(group);
+                        map.set(key, group);
+                    }
+                    map.get(key).items.push(a);
+                });
+
+                if (groups.length === 0) {
                     container.innerHTML = `<div class="empty-state"><div class="empty-icon">🧪</div><h3>Aucune analyse trouvée</h3></div>`;
                     return;
                 }
 
-                container.innerHTML = filtered.map(a => {
-                    const dateObj = new Date(a.dateAnalyse);
+                container.innerHTML = groups.map(g => {
+                    const dateObj = new Date(g.dateAnalyse);
                     const d5 = new Date(dateObj); d5.setDate(d5.getDate() + 5);
                     const d7 = new Date(dateObj); d7.setDate(d7.getDate() + 7);
                     
+                    const title = g.items.length === 1 ? g.items[0].produit : `SESSION : ${g.items.length} PRODUITS`;
+                    
                     return `
-                    <div class="fiche-card ${selectedFiches.has(a.id) ? 'selected' : ''}" 
-                         onclick="${isSelectionMode ? `toggleFicheSelection('${a.id}', event); render();` : `openAnalysisEdit('${a.id}')`}" 
+                    <div class="fiche-card ${g.items.some(i => selectedFiches.has(i.id)) ? 'selected' : ''}" 
                          style="border-left: 4px solid var(--primary);">
                         <div class="card-header">
                             <div>
-                                <span class="code-badge" style="background:rgba(148,163,184,0.1); color:var(--text-dim); margin-bottom:5px; display:inline-block;">${a.classe}</span>
-                                <div class="designation">${a.produit}</div>
+                                <span class="code-badge" style="background:rgba(148,163,184,0.1); color:var(--text-dim); margin-bottom:5px; display:inline-block;">${g.classe}</span>
+                                <div class="designation">${title}</div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 0.8rem; font-weight: 800; color: var(--primary);">${new Date(a.dateAnalyse).toLocaleDateString()}</div>
-                                <div style="font-size: 0.6rem; color: var(--text-dim);">LOT: ${a.lot || '-'}</div>
+                                <div style="font-size: 0.8rem; font-weight: 800; color: var(--primary);">${new Date(g.dateAnalyse).toLocaleDateString()}</div>
                             </div>
                         </div>
                         
@@ -2142,7 +2215,7 @@
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <div class="prep-label" style="font-size:0.5rem;">DATE DE SORTIE</div>
-                                    <div style="font-size: 0.9rem; font-weight: 900; color: #fbbf24;">${a.dateSortie ? new Date(a.dateSortie).toLocaleDateString() : 'Non définie'}</div>
+                                    <div style="font-size: 0.9rem; font-weight: 900; color: #fbbf24;">${g.dateSortie ? new Date(g.dateSortie).toLocaleDateString() : 'Non définie'}</div>
                                 </div>
                                 <div style="text-align: right; opacity: 0.5;">
                                     <div style="font-size: 0.5rem; color: var(--text-dim);">Suggestions (5j / 7j)</div>
@@ -2151,23 +2224,25 @@
                             </div>
                         </div>
 
-                        ${a.resultats ? `
-                            <div style="margin-top: 10px;">
-                                <div class="prep-label">Résultats</div>
-                                <div style="font-size: 0.8rem; color: var(--success); font-weight: 600;">${a.resultats}</div>
-                            </div>
-                        ` : ''}
+                        <div class="batch-items" style="display: flex; flex-direction: column; gap: 8px;">
+                            ${g.items.map(i => `
+                                <div onclick="${isSelectionMode ? `toggleFicheSelection('${i.id}', event); render();` : `openAnalysisEdit('${i.id}')`}" 
+                                     style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px; border: 1px solid ${selectedFiches.has(i.id) ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                    <div>
+                                        <div style="font-size: 0.85rem; font-weight: 700; color: white;">${i.produit}</div>
+                                        <div style="font-size: 0.65rem; color: var(--text-dim);">Lot: ${i.lot || '-'} | Code: ${i.codeControl || '-'}</div>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--success); font-weight: 600;">${i.resultats || ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
 
-                        ${a.observations ? `
+                        ${g.observations ? `
                             <div class="obs-card-footer">
                                 <span>📝</span>
-                                <span>${a.observations}</span>
+                                <span>${g.observations}</span>
                             </div>
                         ` : ''}
-                        
-                        <div style="font-size: 0.6rem; color: var(--text-dim); margin-top: 10px; text-align: right; opacity: 0.5;">
-                            N° CONTROL: ${a.codeControl || '-'}
-                        </div>
                     </div>
                 `}).join('');
             }
@@ -2342,30 +2417,81 @@
         };
 
         // Analysis CRUD
+        window.addAnalysisRow = function() {
+            const container = document.getElementById('analysisRows');
+            const rowId = 'row-' + Date.now();
+            const div = document.createElement('div');
+            div.className = 'analysis-row';
+            div.id = rowId;
+            div.style = "background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;";
+            div.innerHTML = `
+                <button type="button" onclick="document.getElementById('${rowId}').remove()" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer;">✕</button>
+                <div class="form-group">
+                    <label>Produit</label>
+                    <input type="text" class="form-input row-prod" placeholder="Nom du produit..." list="produit-suggestions" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Lot</label>
+                        <input type="text" class="form-input row-lot" placeholder="ex: L240601">
+                    </div>
+                    <div class="form-group">
+                        <label>N° de contrôle</label>
+                        <input type="text" class="form-input row-code" placeholder="ex: CTRL-001">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        };
+
         document.getElementById('analysisForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const id = document.getElementById('analysisEditId').value;
             
-            const data = {
+            const commonData = {
                 dateAnalyse: document.getElementById('dateAnalyse').value,
                 dateSortie: document.getElementById('dateSortie').value,
                 classe: document.getElementById('classeAnalyse').value,
-                produit: document.getElementById('produitAnalyse').value,
-                lot: document.getElementById('lotAnalyse').value,
-                codeControl: document.getElementById('codeControl').value,
                 resultats: document.getElementById('resultatsAnalyse').value,
                 observations: document.getElementById('obsAnalyse').value,
                 updatedAt: new Date().toISOString()
             };
 
-            const promise = id ? 
-                db.collection(ANALYSES_COL).doc(id).update(data) : 
-                db.collection(ANALYSES_COL).add(data);
+            const rows = document.querySelectorAll('.analysis-row');
+            const promises = [];
 
-            promise.then(() => {
-                alert("✅ Analyse enregistrée !");
+            if (id) {
+                // Modification (une seule ligne)
+                const row = rows[0];
+                const data = {
+                    ...commonData,
+                    produit: row.querySelector('.row-prod').value,
+                    lot: row.querySelector('.row-lot').value,
+                    codeControl: row.querySelector('.row-code').value
+                };
+                promises.push(db.collection(ANALYSES_COL).doc(id).update(data));
+            } else {
+                // Ajout multiple
+                const batchId = 'batch_' + Date.now();
+                rows.forEach(row => {
+                    const data = {
+                        ...commonData,
+                        batchId: batchId,
+                        produit: row.querySelector('.row-prod').value,
+                        lot: row.querySelector('.row-lot').value,
+                        codeControl: row.querySelector('.row-code').value
+                    };
+                    promises.push(db.collection(ANALYSES_COL).add(data));
+                });
+            }
+
+            Promise.all(promises).then(() => {
+                alert(`✅ ${promises.length} analyse(s) enregistrée(s) !`);
                 window.closeAnalysisModal();
-            }).catch(err => alert("Erreur d'enregistrement : " + err.message));
+            }).catch(err => {
+                console.error("Save Error:", err);
+                alert("Erreur d'enregistrement : " + err.message);
+            });
         });
 
         window.openAnalysisEdit = function(id) {
@@ -2376,9 +2502,28 @@
             document.getElementById('dateAnalyse').value = a.dateAnalyse || '';
             document.getElementById('dateSortie').value = a.dateSortie || '';
             document.getElementById('classeAnalyse').value = a.classe || 'PF';
-            document.getElementById('produitAnalyse').value = a.produit || '';
-            document.getElementById('lotAnalyse').value = a.lot || '';
-            document.getElementById('codeControl').value = a.codeControl || '';
+            
+            // On remet une seule ligne pour l'édition
+            const container = document.getElementById('analysisRows');
+            container.innerHTML = `
+                <div class="analysis-row" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
+                    <div class="form-group">
+                        <label>Produit</label>
+                        <input type="text" class="form-input row-prod" value="${a.produit || ''}" placeholder="Nom du produit..." list="produit-suggestions" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label>Lot</label>
+                            <input type="text" class="form-input row-lot" value="${a.lot || ''}" placeholder="ex: L240601">
+                        </div>
+                        <div class="form-group">
+                            <label>N° de contrôle</label>
+                            <input type="text" class="form-input row-code" value="${a.codeControl || ''}" placeholder="ex: CTRL-001">
+                        </div>
+                    </div>
+                </div>`;
+            
+            document.getElementById('addRowBtn').style.display = 'none';
             document.getElementById('resultatsAnalyse').value = a.resultats || '';
             document.getElementById('obsAnalyse').value = a.observations || '';
 

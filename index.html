@@ -1655,38 +1655,8 @@
                 document.getElementById('analysisModalTitle').innerText = 'Nouvelle Analyse';
                 document.getElementById('analysisEditId').value = '';
                 document.getElementById('analysisForm').reset();
-                document.getElementById('analysisRows').innerHTML = `
-                    <div class="analysis-row" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
-                        <div class="form-group">
-                            <label>Produit</label>
-                            <input type="text" class="form-input row-prod" placeholder="Nom du produit..." list="produit-suggestions" required>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div class="form-group">
-                                <label>Lot</label>
-                                <input type="text" class="form-input row-lot" placeholder="ex: L240601">
-                            </div>
-                            <div class="form-group">
-                                <label>N° de contrôle</label>
-                                <input type="text" class="form-input row-code" placeholder="ex: CTRL-001">
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-top:10px;">
-                            <label style="font-size:0.65rem; color:var(--primary);">🦠 Germes à rechercher</label>
-                            <div id="germsList-initial" class="germs-dynamic-container" style="display:flex; flex-direction:column; gap:5px; margin-bottom:5px;">
-                                <!-- Les germes s'ajouteront ici -->
-                                <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
-                                    <input type="checkbox" checked class="row-germ-check">
-                                    <span style="font-size:0.7rem; flex:1; color:white;">E.coli</span>
-                                    <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:5px;">
-                                <input type="text" class="new-germ-input" placeholder="Ajouter un germe..." style="flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; padding:5px 10px; font-size:0.7rem;">
-                                <button type="button" onclick="addGermToRow(this)" style="background:var(--primary); border:none; color:white; width:30px; height:30px; border-radius:8px; cursor:pointer; font-weight:800;">+</button>
-                            </div>
-                        </div>
-                    </div>`;
+                document.getElementById('analysisRows').innerHTML = '';
+                window.addAnalysisRow();
                 document.getElementById('addRowBtn').style.display = 'block';
                 document.getElementById('out5j').innerText = '--/--';
                 document.getElementById('out7j').innerText = '--/--';
@@ -2285,7 +2255,7 @@
                     const singleId = g.items[0].id;
                     const cardAction = isSelectionMode ? 
                         `toggleFicheSelection('${singleId}', event); render();` : 
-                        (g.items.length === 1 ? `openAnalysisEdit('${singleId}')` : '');
+                        (g.items.length === 1 ? `openAnalysisEdit('${singleId}')` : `openAnalysisEdit('${singleId}')`);
 
                     return `
                     <div class="fiche-card ${g.items.some(i => selectedFiches.has(i.id)) ? 'selected' : ''}" 
@@ -2516,33 +2486,50 @@
         };
 
         // Analysis CRUD
-        window.addAnalysisRow = function() {
+        window.addAnalysisRow = function(data = null) {
             const container = document.getElementById('analysisRows');
-            const rowId = 'row-' + Date.now();
+            const rowId = 'row-' + (data ? data.id : Date.now() + Math.random());
             const div = document.createElement('div');
             div.className = 'analysis-row';
             div.id = rowId;
+            div.dataset.id = data ? data.id : '';
             div.style = "background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;";
             div.innerHTML = `
                 <button type="button" onclick="document.getElementById('${rowId}').remove()" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer;">✕</button>
                 <div class="form-group">
                     <label>Produit</label>
-                    <input type="text" class="form-input row-prod" placeholder="Nom du produit..." list="produit-suggestions" required>
+                    <input type="text" class="form-input row-prod" value="${data ? data.produit : ''}" placeholder="Nom du produit..." list="produit-suggestions" required>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label>Lot</label>
-                        <input type="text" class="form-input row-lot" placeholder="ex: L240601">
+                        <input type="text" class="form-input row-lot" value="${data ? (data.lot || '') : ''}" placeholder="ex: L240601">
                     </div>
                     <div class="form-group">
                         <label>N° de contrôle</label>
-                        <input type="text" class="form-input row-code" placeholder="ex: CTRL-001">
+                        <input type="text" class="form-input row-code" value="${data ? (data.codeControl || '') : ''}" placeholder="ex: CTRL-001">
                     </div>
+                </div>
+                <div style="margin: 10px 0; display: flex; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.05); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.1);">
+                    <input type="checkbox" class="row-libere" ${data && data.isLibere ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                    <label style="color: var(--success); font-weight: 800; font-size: 0.75rem; cursor: pointer;">RÉSULTAT LIBÉRÉ (TERMINÉ)</label>
                 </div>
                 <div class="form-group" style="margin-top:10px;">
                     <label style="font-size:0.65rem; color:var(--primary);">🦠 Germes à rechercher</label>
                     <div class="germs-dynamic-container" style="display:flex; flex-direction:column; gap:5px; margin-bottom:5px;">
-                        <!-- Les germes s'ajouteront ici -->
+                        ${data && Array.isArray(data.germs) ? data.germs.map(g => `
+                            <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
+                                <input type="checkbox" checked class="row-germ-check">
+                                <span style="font-size:0.7rem; flex:1; color:white;">${g}</span>
+                                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                            </div>
+                        `).join('') : (data && typeof data.germs === 'string' ? `
+                            <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
+                                <input type="checkbox" checked class="row-germ-check">
+                                <span style="font-size:0.7rem; flex:1; color:white;">${data.germs}</span>
+                                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                            </div>
+                        ` : '')}
                     </div>
                     <div style="display:flex; gap:5px;">
                         <input type="text" class="new-germ-input" placeholder="Ajouter un germe..." style="flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; padding:5px 10px; font-size:0.7rem;">
@@ -2578,18 +2565,17 @@
                 dateAnalyse: document.getElementById('dateAnalyse').value,
                 dateSortie: document.getElementById('dateSortie').value,
                 classe: document.getElementById('classeAnalyse').value,
-                isLibere: document.getElementById('isLibere').checked,
                 resultats: document.getElementById('resultatsAnalyse').value,
                 observations: document.getElementById('obsAnalyse').value,
                 updatedAt: new Date().toISOString()
             };
 
             const rows = document.querySelectorAll('.analysis-row');
+            const batch = db.batch();
             const promises = [];
 
-            if (id) {
-                // Modification (une seule ligne)
-                const row = rows[0];
+            rows.forEach(row => {
+                const rowId = row.dataset.id;
                 const germItems = Array.from(row.querySelectorAll('.germs-dynamic-container div'));
                 const selectedGerms = germItems
                     .filter(item => item.querySelector('.row-germ-check').checked)
@@ -2600,36 +2586,29 @@
                     produit: row.querySelector('.row-prod').value,
                     lot: row.querySelector('.row-lot').value,
                     codeControl: row.querySelector('.row-code').value,
+                    isLibere: row.querySelector('.row-libere').checked,
                     germs: selectedGerms
                 };
-                promises.push(db.collection(ANALYSES_COL).doc(id).update(data));
-            } else {
-                // Ajout multiple
-                const batchId = 'batch_' + Date.now();
-                rows.forEach(row => {
-                    const germItems = Array.from(row.querySelectorAll('.germs-dynamic-container div'));
-                    const selectedGerms = germItems
-                        .filter(item => item.querySelector('.row-germ-check').checked)
-                        .map(item => item.querySelector('span').innerText);
 
-                    const data = {
-                        ...commonData,
-                        batchId: batchId,
-                        produit: row.querySelector('.row-prod').value,
-                        lot: row.querySelector('.row-lot').value,
-                        codeControl: row.querySelector('.row-code').value,
-                        germs: selectedGerms
-                    };
-                    promises.push(db.collection(ANALYSES_COL).add(data));
-                });
-            }
+                if (rowId) {
+                    batch.update(db.collection(ANALYSES_COL).doc(rowId), data);
+                } else {
+                    const newRef = db.collection(ANALYSES_COL).doc();
+                    if (rows.length > 1) data.batchId = id ? (analyses.find(x => x.id === id).batchId || 'batch_' + Date.now()) : 'batch_' + Date.now();
+                    batch.set(newRef, data);
+                }
+            });
 
-            Promise.all(promises).then(() => {
+            batch.commit().then(() => {
+                // Succès
                 window.closeAnalysisModal();
             }).catch(err => {
                 console.error("Save Error:", err);
                 alert("Erreur d'enregistrement : " + err.message);
             });
+            
+            // On peut fermer immédiatement pour plus de fluidité
+            window.closeAnalysisModal();
         });
 
         window.openAnalysisEdit = function(id) {
@@ -2641,50 +2620,23 @@
             document.getElementById('dateSortie').value = a.dateSortie || '';
             document.getElementById('classeAnalyse').value = a.classe || 'PF';
             
-            // On remet une seule ligne pour l'édition
             const container = document.getElementById('analysisRows');
-            container.innerHTML = `
-                <div class="analysis-row" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
-                    <div class="form-group">
-                        <label>Produit</label>
-                        <input type="text" class="form-input row-prod" value="${a.produit || ''}" placeholder="Nom du produit..." list="produit-suggestions" required>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="form-group">
-                            <label>Lot</label>
-                            <input type="text" class="form-input row-lot" value="${a.lot || ''}" placeholder="ex: L240601">
-                        </div>
-                        <div class="form-group">
-                            <label>N° de contrôle</label>
-                            <input type="text" class="form-input row-code" value="${a.codeControl || ''}" placeholder="ex: CTRL-001">
-                        </div>
-                    </div>
-                    <div class="form-group" style="margin-top:10px;">
-                        <label style="font-size:0.65rem; color:var(--primary);">🦠 Germes à rechercher</label>
-                        <div class="germs-dynamic-container" style="display:flex; flex-direction:column; gap:5px; margin-bottom:5px;">
-                            ${ (a.germs || []).map(g => `
-                                <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
-                                    <input type="checkbox" checked class="row-germ-check">
-                                    <span style="font-size:0.7rem; flex:1; color:white;">${g}</span>
-                                    <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
-                                </div>
-                            `).join('') }
-                        </div>
-                        <div style="display:flex; gap:5px;">
-                            <input type="text" class="new-germ-input" placeholder="Ajouter un germe..." style="flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; padding:5px 10px; font-size:0.7rem;">
-                            <button type="button" onclick="addGermToRow(this)" style="background:var(--primary); border:none; color:white; width:30px; height:30px; border-radius:8px; cursor:pointer; font-weight:800;">+</button>
-                        </div>
-                    </div>
-                </div>`;
+            container.innerHTML = '';
+
+            // Trouver TOUS les produits de la même session (si batchId existe)
+            const sessionItems = a.batchId ? analyses.filter(x => x.batchId === a.batchId) : [a];
             
-            document.getElementById('addRowBtn').style.display = 'none';
-            document.getElementById('isLibere').checked = a.isLibere || false;
+            sessionItems.forEach(item => window.addAnalysisRow(item));
+            
+            document.getElementById('addRowBtn').style.display = 'block';
+            // Cacher le libéré global car on utilise les individuels par ligne
+            document.getElementById('isLibere').parentElement.style.display = 'none'; 
             document.getElementById('resultatsAnalyse').value = a.resultats || '';
             document.getElementById('obsAnalyse').value = a.observations || '';
 
             window.calcIncubation();
             
-            document.getElementById('analysisModalTitle').innerText = 'Modifier l\'Analyse';
+            document.getElementById('analysisModalTitle').innerText = a.batchId ? 'Modifier la Session' : 'Modifier l\'Analyse';
             document.getElementById('deleteAnalysisBtn').style.display = 'block';
             document.getElementById('analysisModalOverlay').classList.add('active');
         };

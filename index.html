@@ -204,6 +204,12 @@
             color: white;
         }
 
+        .main-tab.active {
+            background: var(--primary) !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+        }
+
         /* Content List */
         #fiches-list {
             padding: 20px;
@@ -423,7 +429,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.9);
+            background: rgba(15, 23, 42, 0.95);
             backdrop-filter: blur(10px);
             z-index: 1000;
             display: none;
@@ -431,6 +437,11 @@
             transition: opacity 0.3s;
             padding: 20px;
             overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: block !important;
+            opacity: 1;
         }
 
         .modal-content {
@@ -1017,19 +1028,24 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
-                <button
-                    onclick="document.getElementById('modalOverlay').removeAttribute('style'); document.getElementById('modalOverlay').setAttribute('style', 'display:block; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:9999; overflow-y:auto; padding:20px;'); document.getElementById('modalTitle').innerText='Nouvelle Fiche'; document.getElementById('editId').value='';"
+                <button id="addBtn"
                     style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">+
-                    NOUVELLE FICHE</button>
+                    NOUVEAU</button>
                 <button id="openCalcBtn"
                     style="background: rgba(14, 165, 233, 0.2); color: var(--primary); border: 1px solid var(--primary); padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">CALCULATRICE</button>
                 <button id="toggleSelectBtn"
                     style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer;">SÉLECTIONNER</button>
             </div>
         </div>
-        <div class="search-container">
+
+        <div class="main-tabs" style="display: flex; gap: 10px; margin-top: 5px;">
+            <button onclick="switchTab('fiches')" id="tab-fiches" class="main-tab active" style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📋 FICHES TECHNIQUES</button>
+            <button onclick="switchTab('analyses')" id="tab-analyses" class="main-tab" style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">🧪 ANALYSES & INCUBATION</button>
+        </div>
+
+        <div class="search-container" style="margin-top: 15px;">
             <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" class="search-input" placeholder="Chercher un produit ou un code...">
+            <input type="text" id="searchInput" class="search-input" placeholder="Chercher un produit, lot ou code...">
         </div>
         <div id="selectionActions"
             style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center;">
@@ -1289,7 +1305,77 @@
         </div>
     </div>
 
-    <!-- Fiche Editor Modal -->
+    <!-- Analysis Modal -->
+    <div id="analysisModalOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="closeAnalysisModal()">✕</button>
+            <h2 id="analysisModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">Nouvelle Analyse</h2>
+
+            <form id="analysisForm">
+                <input type="hidden" id="analysisEditId">
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Date d'analyse</label>
+                        <input type="date" id="dateAnalyse" class="form-input" required onchange="calcIncubation()">
+                    </div>
+                    <div class="form-group">
+                        <label>Classe / Catégorie</label>
+                        <select id="classeAnalyse" class="form-input" style="background: #0f172a;">
+                            <option value="EAUX">EAUX</option>
+                            <option value="MP">MP (Matière Première)</option>
+                            <option value="PF">PF (Produit Fini)</option>
+                            <option value="PSF">PSF (Produit Semi-Fini)</option>
+                            <option value="ADC">ADC (Article Cond.)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Produit</label>
+                    <input type="text" id="produitAnalyse" class="form-input" placeholder="Nom du produit..." list="produit-suggestions" required>
+                    <datalist id="produit-suggestions"></datalist>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Lot</label>
+                        <input type="text" id="lotAnalyse" class="form-input" placeholder="ex: L240601">
+                    </div>
+                    <div class="form-group">
+                        <label>N° de contrôle</label>
+                        <input type="text" id="codeControl" class="form-input" placeholder="ex: CTRL-001">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:20px;">
+                    <label>📅 Date de Sortie (Incubation)</label>
+                    <input type="date" id="dateSortie" class="form-input">
+                </div>
+
+                <div id="incubationAssistant" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14,165,233,0.2); padding: 12px; border-radius: 12px; margin-bottom: 20px; font-size: 0.75rem;">
+                    <div style="font-weight: 800; color: var(--primary); margin-bottom: 5px; text-transform: uppercase;">🕒 Suggestions de sortie</div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <button type="button" onclick="document.getElementById('dateSortie').value=document.getElementById('out5j_val').value" style="background:none; border:none; color:white; font-size:0.7rem; cursor:pointer;">Mettre +5j : <b id="out5j">--/--</b> <input type="hidden" id="out5j_val"></button>
+                        <button type="button" onclick="document.getElementById('dateSortie').value=document.getElementById('out7j_val').value" style="background:none; border:none; color:white; font-size:0.7rem; cursor:pointer;">Mettre +7j : <b id="out7j">--/--</b> <input type="hidden" id="out7j_val"></button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Résultats</label>
+                    <textarea id="resultatsAnalyse" class="form-input" style="height: 60px; resize: none;" placeholder="Saisir les résultats..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Observations / Remarques</label>
+                    <textarea id="obsAnalyse" class="form-input" style="height: 60px; resize: none;" placeholder="Une remarque particulière ?"></textarea>
+                </div>
+
+                <button type="submit" class="save-btn">Enregistrer l'analyse</button>
+                <button type="button" class="delete-btn" id="deleteAnalysisBtn" style="display: none;" onclick="deleteAnalysis()">Supprimer cette analyse</button>
+            </form>
+        </div>
+    </div>
     <div id="modalOverlay" style="display:none;">
         <div
             style="background:#1e293b; width:100%; max-width:500px; margin:40px auto; border-radius:32px; padding:30px; position:relative; border:1px solid rgba(255,255,255,0.1);">
@@ -1302,8 +1388,8 @@
 
                 <div class="form-group">
                     <label>Désignation</label>
-                    <input type="text" id="designation" class="form-input" placeholder="ex: BIOTANIDE 1 mg comprimé"
-                        required>
+                    <input type="text" id="designation" class="form-input" placeholder="ex: BIOTANIDE 1 mg comprimé" list="designation-suggestions" required>
+                    <datalist id="designation-suggestions"></datalist>
                 </div>
 
                 <div class="form-group">
@@ -1431,6 +1517,81 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Global State
+        let currentTab = 'fiches';
+        let fiches = [];
+        let analyses = [];
+        let catalogs = {
+            germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
+            consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
+            diluants: ['SNT 90ML', 'PH7', 'Eau Peptonée'],
+            reactifs: ['TWEEN 80', 'IPA 70%']
+        };
+
+        const ANALYSES_COL = "analyses";
+
+        // Tab Switching Logic
+        window.switchTab = function(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            
+            // Mise à jour de l'UI
+            const addBtn = document.getElementById('addBtn');
+            if (tab === 'fiches') {
+                addBtn.innerText = "+ NOUVELLE FICHE";
+                searchInput.placeholder = "Chercher un produit ou un code...";
+            } else {
+                addBtn.innerText = "+ NOUVELLE ANALYSE";
+                searchInput.placeholder = "Chercher produit, lot, n° de contrôle...";
+            }
+            
+            render();
+        };
+
+        window.calcIncubation = function() {
+            const dateVal = document.getElementById('dateAnalyse').value;
+            if (!dateVal) return;
+            
+            const date = new Date(dateVal);
+            
+            const d5 = new Date(date);
+            d5.setDate(d5.getDate() + 5);
+            document.getElementById('out5j').innerText = d5.toLocaleDateString('fr-FR');
+            document.getElementById('out5j_val').value = d5.toISOString().split('T')[0];
+            
+            const d7 = new Date(date);
+            d7.setDate(d7.getDate() + 7);
+            document.getElementById('out7j').innerText = d7.toLocaleDateString('fr-FR');
+            document.getElementById('out7j_val').value = d7.toISOString().split('T')[0];
+        };
+
+        window.closeAnalysisModal = function() {
+            document.getElementById('analysisModalOverlay').classList.remove('active');
+        };
+
+        window.openAddModal = function() {
+            if (currentTab === 'fiches') {
+                modalOverlay.classList.add('active');
+                document.getElementById('modalTitle').innerText = 'Nouvelle Fiche';
+                document.getElementById('editId').value = '';
+                if (ficheForm) ficheForm.reset();
+                renderCatalogs();
+                deleteBtn.style.display = 'none';
+            } else {
+                document.getElementById('analysisModalOverlay').classList.add('active');
+                document.getElementById('analysisModalTitle').innerText = 'Nouvelle Analyse';
+                document.getElementById('analysisEditId').value = '';
+                document.getElementById('analysisForm').reset();
+                document.getElementById('out5j').innerText = '--/--';
+                document.getElementById('out7j').innerText = '--/--';
+                document.getElementById('dateSortie').value = '';
+                document.getElementById('deleteAnalysisBtn').style.display = 'none';
+            }
+        };
+
+        document.getElementById('addBtn').onclick = window.openAddModal;
+
         // Use persistence for offline access
         db.enablePersistence().catch((err) => {
             console.warn("Persistence failed", err.code);
@@ -1438,14 +1599,6 @@
 
         const FICHES_COL = "fiches";
         const CATALOGS_DOC = "catalogs";
-
-        let fiches = [];
-        let catalogs = {
-            germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
-            consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
-            diluants: ['SNT 90ML', 'PH7', 'Eau Peptonée'],
-            reactifs: ['TWEEN 80', 'IPA 70%']
-        };
 
         const fichesList = document.getElementById('fiches-list');
         const searchInput = document.getElementById('searchInput');
@@ -1724,16 +1877,33 @@
         let isSelectionMode = false;
         let selectedFiches = new Set();
 
+        function updateSuggestions() {
+            const desigList = document.getElementById('designation-suggestions');
+            if (desigList) {
+                const uniqueDesig = [...new Set(fiches.map(f => f.designation).filter(Boolean))].sort();
+                desigList.innerHTML = uniqueDesig.map(d => `<option value="${d}">`).join('');
+            }
+
+            const prodList = document.getElementById('produit-suggestions');
+            if (prodList) {
+                const uniqueProd = [...new Set(analyses.map(a => a.produit).filter(Boolean))].sort();
+                prodList.innerHTML = uniqueProd.map(p => `<option value="${p}">`).join('');
+            }
+        }
+
         // --- Real-time Sync ---
         db.collection(FICHES_COL).onSnapshot(snapshot => {
-            fiches = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return { ...data, id: doc.id };
-            });
-            render();
+            fiches = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            updateSuggestions();
+            if (currentTab === 'fiches') render();
+        });
+
+        db.collection(ANALYSES_COL).orderBy('dateAnalyse', 'desc').onSnapshot(snapshot => {
+            analyses = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            updateSuggestions();
+            if (currentTab === 'analyses') render();
         }, err => {
-            console.error("Firestore Error:", err);
-            alert("Erreur de connexion Firestore. Vérifiez votre connexion.");
+            console.error("Analyses Sync Error:", err);
         });
 
         db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
@@ -1873,93 +2043,134 @@
         // Render List
         function render() {
             const query = searchInput.value.toLowerCase().trim();
-            let filtered = fiches.filter(f =>
-                (f.designation && f.designation.toLowerCase().includes(query)) ||
-                (f.code && f.code.toLowerCase().includes(query)) ||
-                (f.methode && f.methode.toLowerCase().includes(query))
-            );
+            const container = fichesList;
+            
+            if (currentTab === 'fiches') {
+                let filtered = fiches.filter(f =>
+                    (f.designation && f.designation.toLowerCase().includes(query)) ||
+                    (f.code && f.code.toLowerCase().includes(query)) ||
+                    (f.methode && f.methode.toLowerCase().includes(query))
+                );
+                filtered.sort((a, b) => (a.designation || "").localeCompare(b.designation || ""));
 
-            // TRI ALPHABÉTIQUE (A-Z)
-            filtered.sort((a, b) => (a.designation || "").localeCompare(b.designation || ""));
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📂</div><h3>Aucune fiche trouvée</h3></div>`;
+                    return;
+                }
 
-            if (filtered.length === 0) {
-                fichesList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📂</div>
-                        <h3>Aucune fiche</h3>
-                    </div>
-                `;
-                return;
-            }
-
-            fichesList.innerHTML = filtered.map(f => `
-                <div class="fiche-card ${selectedFiches.has(f.id) ? 'selected' : ''}" onclick="${isSelectionMode ? `toggleFicheSelection('${f.id}', event); render();` : `openEdit('${f.id}')`}">
-                    ${isSelectionMode ? `
-                        <div style="position: absolute; top: 15px; right: 15px; z-index: 10;">
-                            <input type="checkbox" ${selectedFiches.has(f.id) ? 'checked' : ''} style="width: 24px; height: 24px; accent-color: var(--primary);">
+                container.innerHTML = filtered.map(f => `
+                    <div class="fiche-card ${selectedFiches.has(f.id) ? 'selected' : ''}" onclick="${isSelectionMode ? `toggleFicheSelection('${f.id}', event); render();` : `openEdit('${f.id}')`}">
+                        <div class="card-header">
+                            <div class="card-title-group" style="flex: 1;">
+                                <div class="designation">${f.designation}</div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                                <div class="code-badge">${f.code || 'SANS CODE'}</div>
+                                <button class="pdf-btn" onclick="event.stopPropagation(); window.generatePDF('${f.id}')">
+                                    <svg viewBox="0 0 24 24"><path d="M12 16L16 12H13V4H11V12H8L12 16ZM20 18H4V20H20V18Z"/></svg>
+                                    PDF
+                                </button>
+                            </div>
                         </div>
-                    ` : ''}
+                        <div class="card-stats-row">
+                            ${f.dgat ? `<div class="stat-chip"><span class="stat-label">DGAT</span><span class="stat-value">${f.dgat}</span></div>` : ''}
+                            ${f.dmlt ? `<div class="stat-chip"><span class="stat-label">DMLT</span><span class="stat-value">${f.dmlt}</span></div>` : ''}
+                            ${f.dilution ? `<div class="stat-chip" style="border-color:rgba(99,102,241,0.3);"><span class="stat-label" style="color:var(--secondary);">Dilution</span><span class="stat-value">${f.dilution}</span></div>` : ''}
+                        </div>
+                        <div class="prep-section">
+                            <div class="prep-box">
+                                <span class="prep-label">🧪 Diluants</span>
+                                <div class="prep-tags">
+                                    ${(f.diluants || []).map(d => `<span class="mini-tag">${d}</span>`).join('')}
+                                </div>
+                            </div>
+                            <div class="prep-box">
+                                <span class="prep-label">⚗️ Réactifs</span>
+                                <div class="prep-tags">
+                                    ${(f.reactifs || []).map(r => `<span class="mini-tag">${r}</span>`).join('')}
+                                    ${f.reactifsCustom ? `<span class="mini-tag">${f.reactifsCustom}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="germes-grid">
+                            <span class="prep-label" style="color:var(--success);">🧫 Germes Spécifiés</span>
+                            ${(f.germesDetails || []).map(g => `
+                                <div class="germe-item" style="display:flex; justify-content:space-between; font-size:0.75rem;">
+                                    <span style="color:var(--text-dim);">${g.name}</span>
+                                    <span style="color:var(--success); font-weight:700;">${g.norm}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${f.observation ? `<div class="obs-card-footer"><span>📝</span><span>${f.observation}</span></div>` : ''}
+                    </div>
+                `).join('');
+            } else {
+                // ANALYSES TAB
+                let filtered = analyses.filter(a =>
+                    (a.produit && a.produit.toLowerCase().includes(query)) ||
+                    (a.lot && a.lot.toLowerCase().includes(query)) ||
+                    (a.codeControl && a.codeControl.toLowerCase().includes(query)) ||
+                    (a.classe && a.classe.toLowerCase().includes(query))
+                );
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🧪</div><h3>Aucune analyse trouvée</h3></div>`;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(a => {
+                    const dateObj = new Date(a.dateAnalyse);
+                    const d5 = new Date(dateObj); d5.setDate(d5.getDate() + 5);
+                    const d7 = new Date(dateObj); d7.setDate(d7.getDate() + 7);
                     
-                    <!-- HEADER : Titre & Code -->
-                    <div class="card-header">
-                        <div class="card-title-group" style="flex: 1;">
-                            <div class="designation">${f.designation}</div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                            <div class="code-badge">${f.code || 'SANS CODE'}</div>
-                            <button class="pdf-btn" onclick="event.stopPropagation(); window.generatePDF('${f.id}')">
-                                <svg viewBox="0 0 24 24"><path d="M12 16L16 12H13V4H11V12H8L12 16ZM20 18H4V20H20V18Z"/></svg>
-                                PDF
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- STATS : DGAT / DMLT / Dilution -->
-                    <div class="card-stats-row">
-                        ${f.dgat ? `<div class="stat-chip"><span class="stat-label">DGAT</span><span class="stat-value">${f.dgat}</span></div>` : ''}
-                        ${f.dmlt ? `<div class="stat-chip"><span class="stat-label">DMLT</span><span class="stat-value">${f.dmlt}</span></div>` : ''}
-                        ${f.dilution ? `<div class="stat-chip" style="border-color:rgba(99,102,241,0.3);"><span class="stat-label" style="color:var(--secondary);">Dilution</span><span class="stat-value">${f.dilution}</span></div>` : ''}
-                    </div>
-
-                    <!-- PREP : Diluants & Réactifs -->
-                    <div class="prep-section">
-                        <div class="prep-box">
-                            <span class="prep-label">🧪 Diluants</span>
-                            <div class="prep-tags">
-                                ${(f.diluants || []).map(d => `<span class="mini-tag">${d}</span>`).join('')}
-                                ${(!f.diluants || f.diluants.length === 0) ? '<span style="font-size:0.5rem; opacity:0.5;">-</span>' : ''}
+                    return `
+                    <div class="fiche-card ${selectedFiches.has(a.id) ? 'selected' : ''}" 
+                         onclick="${isSelectionMode ? `toggleFicheSelection('${a.id}', event); render();` : `openAnalysisEdit('${a.id}')`}" 
+                         style="border-left: 4px solid var(--primary);">
+                        <div class="card-header">
+                            <div>
+                                <span class="code-badge" style="background:rgba(148,163,184,0.1); color:var(--text-dim); margin-bottom:5px; display:inline-block;">${a.classe}</span>
+                                <div class="designation">${a.produit}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 0.8rem; font-weight: 800; color: var(--primary);">${new Date(a.dateAnalyse).toLocaleDateString()}</div>
+                                <div style="font-size: 0.6rem; color: var(--text-dim);">LOT: ${a.lot || '-'}</div>
                             </div>
                         </div>
-                        <div class="prep-box">
-                            <span class="prep-label">⚗️ Réactifs</span>
-                            <div class="prep-tags" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                                ${(f.reactifs || []).sort().map(r => `<span class="mini-tag" style="width: 100%;">${r}</span>`).join('')}
-                                ${f.reactifsCustom ? `<span class="mini-tag" style="width: 100%; border-color: var(--primary);">${f.reactifsCustom}</span>` : ''}
-                                ${(!f.reactifs || f.reactifs.length === 0) && !f.reactifsCustom ? '<span style="font-size:0.5rem; opacity:0.5;">-</span>' : ''}
+                        
+                        <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; margin: 10px 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div class="prep-label" style="font-size:0.5rem;">DATE DE SORTIE</div>
+                                    <div style="font-size: 0.9rem; font-weight: 900; color: #fbbf24;">${a.dateSortie ? new Date(a.dateSortie).toLocaleDateString() : 'Non définie'}</div>
+                                </div>
+                                <div style="text-align: right; opacity: 0.5;">
+                                    <div style="font-size: 0.5rem; color: var(--text-dim);">Suggestions (5j / 7j)</div>
+                                    <div style="font-size: 0.6rem; color: white;">${d5.toLocaleDateString()} / ${d7.toLocaleDateString()}</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- ANALYSE : Germes Spécifiés -->
-                    <div class="germes-grid">
-                        <span class="prep-label" style="margin-bottom:8px; color:var(--success);">🧫 Germes Spécifiés</span>
-                        ${(f.germesDetails || []).map(g => `
-                            <div class="germe-item" style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                                <span style="color:var(--text-dim);">${g.name}</span>
-                                <span style="color:var(--success); font-weight:700;">${g.norm}</span>
+                        ${a.resultats ? `
+                            <div style="margin-top: 10px;">
+                                <div class="prep-label">Résultats</div>
+                                <div style="font-size: 0.8rem; color: var(--success); font-weight: 600;">${a.resultats}</div>
                             </div>
-                        `).join('')}
-                    </div>
+                        ` : ''}
 
-                    <!-- FOOTER : Observations -->
-                    ${f.observation ? `
-                        <div class="obs-card-footer">
-                            <span>📝</span>
-                            <span>${f.observation}</span>
+                        ${a.observations ? `
+                            <div class="obs-card-footer">
+                                <span>📝</span>
+                                <span>${a.observations}</span>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="font-size: 0.6rem; color: var(--text-dim); margin-top: 10px; text-align: right; opacity: 0.5;">
+                            N° CONTROL: ${a.codeControl || '-'}
                         </div>
-                    ` : ''}
-                </div>
-            `).join('');
+                    </div>
+                `}).join('');
+            }
         }
 
         // CSS additionnel pour la sélection
@@ -1978,7 +2189,7 @@
 
         // Ouvre le formulaire ajout
         window.openAddModal = function () {
-            modalOverlay.setAttribute('style', 'display:block !important; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:9999; overflow-y:auto; padding:20px;');
+            modalOverlay.classList.add('active');
             document.getElementById('modalTitle').innerText = 'Nouvelle Fiche';
             document.getElementById('editId').value = '';
             if (ficheForm) ficheForm.reset();
@@ -1988,8 +2199,7 @@
 
         // Ferme le formulaire
         window.closeAddModal = function () {
-            console.log(" Closing modal...");
-            modalOverlay.setAttribute('style', 'display:none;');
+            modalOverlay.classList.remove('active');
         };
 
         window.openEdit = function (id) {
@@ -2038,7 +2248,7 @@
 
             document.getElementById('modalTitle').innerText = 'Modifier la Fiche';
             deleteBtn.style.display = 'block';
-            modalOverlay.setAttribute('style', 'display:block !important; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:9999; overflow-y:auto; padding:20px;');
+            modalOverlay.classList.add('active');
         };
 
         // CRUD Operations
@@ -2110,14 +2320,17 @@
         // Supprimer la sélection
         window.runBatchDelete = function () {
             if (selectedFiches.size === 0) {
-                alert("Sélectionnez au moins une fiche.");
+                alert("Sélectionnez au moins un élément.");
                 return;
             }
 
-            if (confirm(`⚠️ Supprimer définitivement ${selectedFiches.size} fiche(s) ?`)) {
+            const targetCol = currentTab === 'fiches' ? FICHES_COL : ANALYSES_COL;
+            const label = currentTab === 'fiches' ? "fiche(s)" : "analyse(s)";
+
+            if (confirm(`⚠️ Supprimer définitivement ${selectedFiches.size} ${label} ?`)) {
                 const batch = db.batch();
                 selectedFiches.forEach(id => {
-                    batch.delete(db.collection(FICHES_COL).doc(id));
+                    batch.delete(db.collection(targetCol).doc(id));
                 });
 
                 batch.commit().then(() => {
@@ -2125,6 +2338,65 @@
                     selectedFiches.clear();
                     window.toggleSelectionMode(false);
                 }).catch(err => alert("Erreur lors de la suppression groupée: " + err.message));
+            }
+        };
+
+        // Analysis CRUD
+        document.getElementById('analysisForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('analysisEditId').value;
+            
+            const data = {
+                dateAnalyse: document.getElementById('dateAnalyse').value,
+                dateSortie: document.getElementById('dateSortie').value,
+                classe: document.getElementById('classeAnalyse').value,
+                produit: document.getElementById('produitAnalyse').value,
+                lot: document.getElementById('lotAnalyse').value,
+                codeControl: document.getElementById('codeControl').value,
+                resultats: document.getElementById('resultatsAnalyse').value,
+                observations: document.getElementById('obsAnalyse').value,
+                updatedAt: new Date().toISOString()
+            };
+
+            const promise = id ? 
+                db.collection(ANALYSES_COL).doc(id).update(data) : 
+                db.collection(ANALYSES_COL).add(data);
+
+            promise.then(() => {
+                alert("✅ Analyse enregistrée !");
+                window.closeAnalysisModal();
+            }).catch(err => alert("Erreur d'enregistrement : " + err.message));
+        });
+
+        window.openAnalysisEdit = function(id) {
+            const a = analyses.find(x => x.id === id);
+            if (!a) return;
+
+            document.getElementById('analysisEditId').value = a.id;
+            document.getElementById('dateAnalyse').value = a.dateAnalyse || '';
+            document.getElementById('dateSortie').value = a.dateSortie || '';
+            document.getElementById('classeAnalyse').value = a.classe || 'PF';
+            document.getElementById('produitAnalyse').value = a.produit || '';
+            document.getElementById('lotAnalyse').value = a.lot || '';
+            document.getElementById('codeControl').value = a.codeControl || '';
+            document.getElementById('resultatsAnalyse').value = a.resultats || '';
+            document.getElementById('obsAnalyse').value = a.observations || '';
+
+            window.calcIncubation();
+            
+            document.getElementById('analysisModalTitle').innerText = 'Modifier l\'Analyse';
+            document.getElementById('deleteAnalysisBtn').style.display = 'block';
+            document.getElementById('analysisModalOverlay').classList.add('active');
+        };
+
+        window.deleteAnalysis = function() {
+            const id = document.getElementById('analysisEditId').value;
+            if (!id) return;
+            if (confirm("⚠️ Supprimer cette analyse ?")) {
+                db.collection(ANALYSES_COL).doc(id).delete().then(() => {
+                    alert("✅ Analyse supprimée !");
+                    window.closeAnalysisModal();
+                }).catch(err => alert("Erreur : " + err.message));
             }
         };
 

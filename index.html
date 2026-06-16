@@ -15,8 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <!-- SEO & Icons -->
-    <meta name="description"
-        content="Application de consultation des résumés de laboratoire microbiologique.">
+    <meta name="description" content="Application de consultation des résumés de laboratoire microbiologique.">
     <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="manifest.json">
 
@@ -1039,8 +1038,12 @@
         </div>
 
         <div class="main-tabs" style="display: flex; gap: 10px; margin-top: 5px;">
-            <button onclick="switchTab('fiches')" id="tab-fiches" class="main-tab active" style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📋 FICHES TECHNIQUES</button>
-            <button onclick="switchTab('analyses')" id="tab-analyses" class="main-tab" style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">🧪 ANALYSES & INCUBATION</button>
+            <button onclick="switchTab('fiches')" id="tab-fiches" class="main-tab active"
+                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📋
+                FICHES TECHNIQUES</button>
+            <button onclick="switchTab('analyses')" id="tab-analyses" class="main-tab"
+                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">🧪
+                ANALYSES & INCUBATION</button>
         </div>
 
         <div style="display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 15px; flex-wrap: wrap;">
@@ -1051,7 +1054,8 @@
             <div class="search-container" style="width: 150px;">
                 <input type="date" id="dateFilter" class="search-input" style="padding-left: 15px;" onchange="render()">
             </div>
-            <button id="sortBtn" onclick="toggleSort()" title="Inverser l'ordre" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px; border-radius: 16px; color: var(--text-dim); cursor: pointer; transition: all 0.3s; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+            <button id="sortBtn" onclick="toggleSort()" title="Inverser l'ordre"
+                style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px; border-radius: 16px; color: var(--text-dim); cursor: pointer; transition: all 0.3s; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                 ⇅
             </button>
         </div>
@@ -1317,7 +1321,9 @@
     <div id="analysisModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px;">
             <button class="close-modal" onclick="closeAnalysisModal()">✕</button>
-            <h2 id="analysisModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">Nouvelle Analyse</h2>
+            <h2 id="analysisModalTitle"
+                style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">Nouvelle
+                Analyse</h2>
 
             <form id="analysisForm">
                 <input type="hidden" id="analysisEditId">
@@ -1340,10 +1346,12 @@
                 </div>
 
                 <div id="analysisRows">
-                    <div class="analysis-row" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
+                    <div class="analysis-row"
+                        style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
                         <div class="form-group">
                             <label>Produit</label>
-                            <input type="text" class="form-input row-prod" placeholder="Nom du produit..." list="produit-suggestions" required>
+                            <input type="text" class="form-input row-prod" placeholder="Nom du produit..."
+                                list="produit-suggestions" required>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -1359,19 +1367,33 @@
 
                         <div class="form-group" style="margin-top:10px;">
                             <label style="font-size:0.65rem; color:var(--primary);">🦠 Germes à rechercher</label>
-                            <div class="germs-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px;">
-                                <label style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input type="checkbox" class="row-germ" value="E.coli"> E.coli</label>
-                                <label style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input type="checkbox" class="row-germ" value="Salmonella"> Salmonella</label>
-                                <label style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input type="checkbox" class="row-germ" value="Staph"> Staph</label>
-                                <label style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input type="checkbox" class="row-germ" value="Coliformes"> Coliformes</label>
-                                <label style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input type="checkbox" class="row-germ" value="Listeria"> Listeria</label>
-                                <label style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input type="checkbox" class="row-germ" value="CT"> CT/FF</label>
+                            <div class="germs-grid"
+                                style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:5px;">
+                                <label
+                                    style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input
+                                        type="checkbox" class="row-germ" value="E.coli"> E.coli</label>
+                                <label
+                                    style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input
+                                        type="checkbox" class="row-germ" value="Salmonella"> Salmonella</label>
+                                <label
+                                    style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input
+                                        type="checkbox" class="row-germ" value="Staph"> Staph</label>
+                                <label
+                                    style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input
+                                        type="checkbox" class="row-germ" value="Coliformes"> Coliformes</label>
+                                <label
+                                    style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input
+                                        type="checkbox" class="row-germ" value="Listeria"> Listeria</label>
+                                <label
+                                    style="font-size:0.6rem; display:flex; align-items:center; gap:5px; color:var(--text-dim);"><input
+                                        type="checkbox" class="row-germ" value="CT"> CT/FF</label>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <button type="button" id="addRowBtn" onclick="addAnalysisRow()" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px dashed var(--primary); color: var(--primary); padding: 10px; border-radius: 12px; cursor: pointer; margin-bottom: 20px; font-weight: 800; font-size: 0.7rem;">
+                <button type="button" id="addRowBtn" onclick="addAnalysisRow()"
+                    style="width: 100%; background: rgba(255,255,255,0.05); border: 1px dashed var(--primary); color: var(--primary); padding: 10px; border-radius: 12px; cursor: pointer; margin-bottom: 20px; font-weight: 800; font-size: 0.7rem;">
                     + AJOUTER UN AUTRE PRODUIT
                 </button>
 
@@ -1380,39 +1402,58 @@
                     <input type="date" id="dateSortie" class="form-input">
                 </div>
 
-                <div id="incubationAssistant" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14,165,233,0.2); padding: 12px; border-radius: 12px; margin-bottom: 20px; font-size: 0.75rem;">
-                    <div style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase;">🕒 Assistant de sortie</div>
+                <div id="incubationAssistant"
+                    style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14,165,233,0.2); padding: 12px; border-radius: 12px; margin-bottom: 20px; font-size: 0.75rem;">
+                    <div
+                        style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase;">
+                        🕒 Assistant de sortie</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <button type="button" onclick="setIncubation(5)" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+5 Jours</button>
-                        <button type="button" onclick="setIncubation(7)" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+7 Jours</button>
-                        <button type="button" onclick="setIncubation(10)" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+10 Jours</button>
-                        <button type="button" onclick="setIncubation(15)" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+15 Jours</button>
+                        <button type="button" onclick="setIncubation(5)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+5
+                            Jours</button>
+                        <button type="button" onclick="setIncubation(7)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+7
+                            Jours</button>
+                        <button type="button" onclick="setIncubation(10)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+10
+                            Jours</button>
+                        <button type="button" onclick="setIncubation(15)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+15
+                            Jours</button>
                     </div>
-                    <div style="margin-top:10px; font-size:0.6rem; color:var(--text-dim); text-align:center;">Suggestions : <span id="out5j">--</span> / <span id="out7j">--</span></div>
+                    <div style="margin-top:10px; font-size:0.6rem; color:var(--text-dim); text-align:center;">
+                        Suggestions : <span id="out5j">--</span> / <span id="out7j">--</span></div>
                     <input type="hidden" id="out5j_val">
                     <input type="hidden" id="out7j_val">
                 </div>
 
-                <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; background: rgba(34, 197, 94, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(34, 197, 94, 0.2); margin-bottom: 20px;">
+                <div class="form-group"
+                    style="flex-direction: row; align-items: center; gap: 10px; background: rgba(34, 197, 94, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(34, 197, 94, 0.2); margin-bottom: 20px;">
                     <input type="checkbox" id="isLibere" style="width: 20px; height: 20px; cursor: pointer;">
-                    <label for="isLibere" style="margin-bottom: 0; cursor: pointer; color: var(--success); font-weight: 800;">RÉSULTAT LIBÉRÉ (TERMINÉ)</label>
+                    <label for="isLibere"
+                        style="margin-bottom: 0; cursor: pointer; color: var(--success); font-weight: 800;">RÉSULTAT
+                        LIBÉRÉ (TERMINÉ)</label>
                 </div>
 
                 <div class="form-group">
                     <label>Résultats</label>
-                    <textarea id="resultatsAnalyse" class="form-input" style="height: 60px; resize: none;" placeholder="Saisir les résultats..."></textarea>
+                    <textarea id="resultatsAnalyse" class="form-input" style="height: 60px; resize: none;"
+                        placeholder="Saisir les résultats..."></textarea>
                 </div>
 
                 <div class="form-group">
                     <label>Observations / Remarques</label>
-                    <textarea id="obsAnalyse" class="form-input" style="height: 60px; resize: none;" placeholder="Une remarque particulière ?"></textarea>
+                    <textarea id="obsAnalyse" class="form-input" style="height: 60px; resize: none;"
+                        placeholder="Une remarque particulière ?"></textarea>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button type="submit" class="save-btn">Enregistrer</button>
-                    <button type="button" onclick="window.closeAnalysisModal()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
+                    <button type="button" onclick="window.closeAnalysisModal()"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
-                <button type="button" class="delete-btn" id="deleteAnalysisBtn" style="display: none; margin-top: 10px;" onclick="deleteAnalysis()">Supprimer cette analyse</button>
+                <button type="button" class="delete-btn" id="deleteAnalysisBtn" style="display: none; margin-top: 10px;"
+                    onclick="deleteAnalysis()">Supprimer cette analyse</button>
                 <datalist id="produit-suggestions"></datalist>
             </form>
         </div>
@@ -1429,7 +1470,8 @@
 
                 <div class="form-group">
                     <label>Désignation</label>
-                    <input type="text" id="designation" class="form-input" placeholder="ex: BIOTANIDE 1 mg comprimé" list="designation-suggestions" required>
+                    <input type="text" id="designation" class="form-input" placeholder="ex: BIOTANIDE 1 mg comprimé"
+                        list="designation-suggestions" required>
                     <datalist id="designation-suggestions"></datalist>
                 </div>
 
@@ -1534,9 +1576,11 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button type="submit" class="save-btn">Enregistrer</button>
-                    <button type="button" onclick="window.closeAddModal()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
+                    <button type="button" onclick="window.closeAddModal()"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
-                <button type="button" class="delete-btn" id="deleteBtn" style="display: none; margin-top: 10px;">Supprimer cette fiche</button>
+                <button type="button" class="delete-btn" id="deleteBtn"
+                    style="display: none; margin-top: 10px;">Supprimer cette fiche</button>
             </form>
         </div>
     </div>
@@ -1562,7 +1606,7 @@
 
         // Global State
         let currentTab = 'fiches';
-        let sortOrder = localStorage.getItem('microbio_sort') || 'desc'; 
+        let sortOrder = localStorage.getItem('microbio_sort') || 'desc';
         let fiches = [];
         let analyses = [];
         let catalogs = {
@@ -1574,7 +1618,7 @@
 
         const ANALYSES_COL = "analyses";
 
-        window.toggleSort = function() {
+        window.toggleSort = function () {
             sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
             localStorage.setItem('microbio_sort', sortOrder);
             const btn = document.getElementById('sortBtn');
@@ -1584,11 +1628,11 @@
         };
 
         // Tab Switching Logic
-        window.switchTab = function(tab) {
+        window.switchTab = function (tab) {
             currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.add('active');
-            
+
             // Mise à jour de l'UI
             const addBtn = document.getElementById('addBtn');
             if (tab === 'fiches') {
@@ -1598,28 +1642,28 @@
                 addBtn.innerText = "+ NOUVELLE ANALYSE";
                 searchInput.placeholder = "Chercher produit, lot, n° de contrôle...";
             }
-            
+
             render();
         };
 
-        window.calcIncubation = function() {
+        window.calcIncubation = function () {
             const dateVal = document.getElementById('dateAnalyse').value;
             if (!dateVal) return;
-            
+
             const date = new Date(dateVal);
-            
+
             const d5 = new Date(date);
             d5.setDate(d5.getDate() + 5);
             document.getElementById('out5j').innerText = d5.toLocaleDateString('fr-FR');
             document.getElementById('out5j_val').value = d5.toISOString().split('T')[0];
-            
+
             const d7 = new Date(date);
             d7.setDate(d7.getDate() + 7);
             document.getElementById('out7j').innerText = d7.toLocaleDateString('fr-FR');
             document.getElementById('out7j_val').value = d7.toISOString().split('T')[0];
         };
 
-        window.setIncubation = function(days) {
+        window.setIncubation = function (days) {
             const dateVal = document.getElementById('dateAnalyse').value;
             if (!dateVal) {
                 alert("Veuillez d'abord sélectionner une date d'analyse.");
@@ -1630,19 +1674,19 @@
             document.getElementById('dateSortie').value = date.toISOString().split('T')[0];
         };
 
-        window.closeAnalysisModal = function() {
+        window.closeAnalysisModal = function () {
             const modal = document.getElementById('analysisModalOverlay');
             if (modal) modal.classList.remove('active');
             document.getElementById('analysisForm').reset();
         };
 
-        window.closeAddModal = function() {
+        window.closeAddModal = function () {
             const modal = document.getElementById('modalOverlay');
             if (modal) modal.classList.remove('active');
             if (ficheForm) ficheForm.reset();
         };
 
-        window.openAddModal = function() {
+        window.openAddModal = function () {
             if (currentTab === 'fiches') {
                 modalOverlay.classList.add('active');
                 document.getElementById('modalTitle').innerText = 'Nouvelle Fiche';
@@ -2120,7 +2164,7 @@
         function render() {
             const query = searchInput.value.toLowerCase().trim();
             const container = fichesList;
-            
+
             if (currentTab === 'fiches') {
                 let filtered = fiches.filter(f =>
                     (f.designation && f.designation.toLowerCase().includes(query)) ||
@@ -2189,7 +2233,7 @@
                     // 1. Les libérés vont en bas
                     if (a.isLibere && !b.isLibere) return 1;
                     if (!a.isLibere && b.isLibere) return -1;
-                    
+
                     // 2. Ensuite par date
                     const da = new Date(a.dateAnalyse).getTime();
                     const db = new Date(b.dateAnalyse).getTime();
@@ -2200,12 +2244,12 @@
                 const dateFilter = document.getElementById('dateFilter').value;
                 filtered = filtered.filter(a => {
                     const matchesText = (a.produit && a.produit.toLowerCase().includes(query)) ||
-                                       (a.lot && a.lot.toLowerCase().includes(query)) ||
-                                       (a.codeControl && a.codeControl.toLowerCase().includes(query)) ||
-                                       (a.classe && a.classe.toLowerCase().includes(query));
-                    
+                        (a.lot && a.lot.toLowerCase().includes(query)) ||
+                        (a.codeControl && a.codeControl.toLowerCase().includes(query)) ||
+                        (a.classe && a.classe.toLowerCase().includes(query));
+
                     const matchesDate = !dateFilter || a.dateAnalyse === dateFilter;
-                    
+
                     return matchesText && matchesDate;
                 });
 
@@ -2239,22 +2283,22 @@
 
                 container.innerHTML = groups.map(g => {
                     const today = new Date();
-                    today.setHours(0,0,0,0);
+                    today.setHours(0, 0, 0, 0);
                     const exitDate = g.dateSortie ? new Date(g.dateSortie) : null;
-                    if(exitDate) exitDate.setHours(0,0,0,0);
-                    
+                    if (exitDate) exitDate.setHours(0, 0, 0, 0);
+
                     const isOverdue = exitDate && exitDate <= today;
                     const isToday = exitDate && exitDate.getTime() === today.getTime();
 
                     const dateObj = new Date(g.dateAnalyse);
                     const d5 = new Date(dateObj); d5.setDate(d5.getDate() + 5);
                     const d7 = new Date(dateObj); d7.setDate(d7.getDate() + 7);
-                    
+
                     const title = g.items.length === 1 ? g.items[0].produit : `SESSION : ${g.items.length} PRODUITS`;
-                    
+
                     const singleId = g.items[0].id;
-                    const cardAction = isSelectionMode ? 
-                        `toggleFicheSelection('${singleId}', event); render();` : 
+                    const cardAction = isSelectionMode ?
+                        `toggleFicheSelection('${singleId}', event); render();` :
                         (g.items.length === 1 ? `openAnalysisEdit('${singleId}')` : `openAnalysisEdit('${singleId}')`);
 
                     return `
@@ -2291,19 +2335,32 @@
 
                         <div class="batch-items" style="display: flex; flex-direction: column; gap: 8px;">
                             ${g.items.map(i => {
-                                const itemAction = isSelectionMode ? 
-                                    `event.stopPropagation(); toggleFicheSelection('${i.id}', event); render();` : 
-                                    `event.stopPropagation(); openAnalysisEdit('${i.id}')`;
-                                
-                                return `
+                        const itemAction = isSelectionMode ?
+                            `event.stopPropagation(); toggleFicheSelection('${i.id}', event); render();` :
+                            `event.stopPropagation(); openAnalysisEdit('${i.id}')`;
+
+                        return `
                                 <div onclick="${itemAction}" 
                                      style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px; border: 1px solid ${selectedFiches.has(i.id) ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; display: flex; justify-content: space-between; align-items: center; cursor: pointer; opacity: ${i.isLibere ? '0.5' : '1'};">
                                      <div style="${i.isLibere ? 'text-decoration: line-through; color: var(--text-dim);' : ''}">
                                          <div style="font-size: 0.85rem; font-weight: 700; color: ${i.isLibere ? 'var(--text-dim)' : 'white'};">${i.produit}</div>
                                          <div style="font-size: 0.65rem; color: var(--text-dim);">Lot: ${i.lot || '-'} | Code: ${i.codeControl || '-'}</div>
-                                         <div style="font-size: 0.55rem; color: var(--primary); margin-top: 3px; font-weight: 800;">${Array.isArray(i.germs) ? i.germs.join(' • ') : (i.germs || '') }</div>
+                                         <div style="font-size: 0.55rem; color: var(--primary); margin-top: 3px; font-weight: 800;">
+                                             ${i.germsDetails ? i.germsDetails.map(g => `${g.name}: ${g.result || '...'}`).join(' • ') : (Array.isArray(i.germs) ? i.germs.join(' • ') : (i.germs || ''))}
+                                         </div>
                                      </div>
-                                     <div style="font-size: 0.75rem; color: var(--success); font-weight: 800;">${i.resultats || (i.isLibere ? 'LIBÉRÉ' : '')}</div>
+                                     <div style="text-align: right;">
+                                         <div style="font-size: 0.75rem; color: var(--success); font-weight: 800;">
+                                             ${(() => {
+                                if (i.isLibere) return 'LIBÉRÉ';
+                                if (i.dailyReadings && i.dailyReadings.length > 0) {
+                                    const lastVal = [...i.dailyReadings].reverse().find(v => v !== '');
+                                    return lastVal ? `Dernier: ${lastVal}` : 'En cours...';
+                                }
+                                return i.resultats || '';
+                            })()}
+                                         </div>
+                                     </div>
                                  </div>
                             `}).join('')}
                         </div>
@@ -2486,7 +2543,7 @@
         };
 
         // Analysis CRUD
-        window.addAnalysisRow = function(data = null) {
+        window.addAnalysisRow = function (data = null) {
             const container = document.getElementById('analysisRows');
             const rowId = 'row-' + (data ? data.id : Date.now() + Math.random());
             const div = document.createElement('div');
@@ -2510,26 +2567,38 @@
                         <input type="text" class="form-input row-code" value="${data ? (data.codeControl || '') : ''}" placeholder="ex: CTRL-001">
                     </div>
                 </div>
+                
+                <!-- Lectures Journalières -->
+                <div class="form-group" style="margin-top:10px;">
+                    <label style="font-size:0.65rem; color:var(--secondary); font-weight:800;">📓 LECTURES JOURNALIÈRES (DÉNOMBREMENT)</label>
+                    <div class="daily-readings-grid" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:5px;">
+                        <!-- Les cases J1, J2... seront générées ici -->
+                    </div>
+                </div>
+
                 <div style="margin: 10px 0; display: flex; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.05); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.1);">
                     <input type="checkbox" class="row-libere" ${data && data.isLibere ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
                     <label style="color: var(--success); font-weight: 800; font-size: 0.75rem; cursor: pointer;">RÉSULTAT LIBÉRÉ (TERMINÉ)</label>
                 </div>
+
                 <div class="form-group" style="margin-top:10px;">
                     <label style="font-size:0.65rem; color:var(--primary);">🦠 Germes à rechercher</label>
                     <div class="germs-dynamic-container" style="display:flex; flex-direction:column; gap:5px; margin-bottom:5px;">
-                        ${data && Array.isArray(data.germs) ? data.germs.map(g => `
+                        ${data && data.germsDetails ? data.germsDetails.map(g => `
                             <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
-                                <span style="font-size:0.7rem; flex:1; color:white;">${g}</span>
+                                <span style="font-size:0.7rem; flex:1; color:white;">${g.name}</span>
+                                <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Résultat..." style="width:70px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
-                        `).join('') : (data && typeof data.germs === 'string' ? `
+                        `).join('') : (data && Array.isArray(data.germs) ? data.germs.map(gname => `
                             <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
-                                <span style="font-size:0.7rem; flex:1; color:white;">${data.germs}</span>
+                                <span style="font-size:0.7rem; flex:1; color:white;">${gname}</span>
+                                <input type="text" class="row-germ-result" placeholder="Résultat..." style="width:70px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
-                        ` : '')}
+                        `).join('') : '')}
                     </div>
                     <div style="display:flex; gap:5px;">
                         <input type="text" class="new-germ-input" placeholder="Ajouter un germe..." style="flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; padding:5px 10px; font-size:0.7rem;">
@@ -2538,19 +2607,55 @@
                 </div>
             `;
             container.appendChild(div);
+            updateDailyReadings(div, data ? data.dailyReadings : null);
         };
 
-        window.addGermToRow = function(btn) {
+        function updateDailyReadings(row, existing = null) {
+            const dateAnalyse = document.getElementById('dateAnalyse').value;
+            const dateSortie = document.getElementById('dateSortie').value;
+            const container = row.querySelector('.daily-readings-grid');
+            if (!dateAnalyse || !dateSortie) {
+                container.innerHTML = '<span style="font-size:0.6rem; opacity:0.5;">Définissez les dates pour générer les jours...</span>';
+                return;
+            }
+
+            const d1 = new Date(dateAnalyse);
+            const d2 = new Date(dateSortie);
+            const timeDiff = d2.getTime() - d1.getTime();
+            const daysCount = Math.max(1, Math.ceil(timeDiff / (1000 * 3600 * 24)));
+
+            let html = '';
+            for (let i = 1; i <= daysCount; i++) {
+                const val = (existing && existing[i - 1]) ? existing[i - 1] : '';
+                html += `
+                    <div style="display:flex; flex-direction:column; gap:2px; width:45px;">
+                        <span style="font-size:0.5rem; text-align:center; color:var(--text-dim);">J${i}</span>
+                        <input type="text" class="daily-input" value="${val}" style="width:100%; height:25px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:5px; color:white; text-align:center; font-size:0.65rem;">
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // Global watcher for date changes to update all rows
+        ['dateAnalyse', 'dateSortie'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                document.querySelectorAll('.analysis-row').forEach(row => updateDailyReadings(row));
+            });
+        });
+
+        window.addGermToRow = function (btn) {
             const input = btn.previousElementSibling;
             const value = input.value.trim();
             if (!value) return;
-            
+
             const container = btn.parentElement.previousElementSibling;
             const div = document.createElement('div');
             div.style = "display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;";
             div.innerHTML = `
                 <input type="checkbox" checked class="row-germ-check">
                 <span style="font-size:0.7rem; flex:1; color:white;">${value}</span>
+                <input type="text" class="row-germ-result" placeholder="Résultat..." style="width:70px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
             `;
             container.appendChild(div);
@@ -2560,7 +2665,7 @@
         document.getElementById('analysisForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const id = document.getElementById('analysisEditId').value;
-            
+
             const commonData = {
                 dateAnalyse: document.getElementById('dateAnalyse').value,
                 dateSortie: document.getElementById('dateSortie').value,
@@ -2577,9 +2682,14 @@
             rows.forEach(row => {
                 const rowId = row.dataset.id;
                 const germItems = Array.from(row.querySelectorAll('.germs-dynamic-container div'));
-                const selectedGerms = germItems
+                const germsDetails = germItems
                     .filter(item => item.querySelector('.row-germ-check').checked)
-                    .map(item => item.querySelector('span').innerText);
+                    .map(item => ({
+                        name: item.querySelector('span').innerText,
+                        result: item.querySelector('.row-germ-result').value
+                    }));
+
+                const dailyReadings = Array.from(row.querySelectorAll('.daily-input')).map(inp => inp.value);
 
                 const data = {
                     ...commonData,
@@ -2587,7 +2697,10 @@
                     lot: row.querySelector('.row-lot').value,
                     codeControl: row.querySelector('.row-code').value,
                     isLibere: row.querySelector('.row-libere').checked,
-                    germs: selectedGerms
+                    germsDetails: germsDetails,
+                    dailyReadings: dailyReadings
+                    // Compatibilité ancienne : on garde germs comme liste simple de noms
+                    , germs: germsDetails.map(g => g.name)
                 };
 
                 if (rowId) {
@@ -2606,12 +2719,12 @@
                 console.error("Save Error:", err);
                 alert("Erreur d'enregistrement : " + err.message);
             });
-            
+
             // On peut fermer immédiatement pour plus de fluidité
             window.closeAnalysisModal();
         });
 
-        window.openAnalysisEdit = function(id) {
+        window.openAnalysisEdit = function (id) {
             const a = analyses.find(x => x.id === id);
             if (!a) return;
 
@@ -2619,29 +2732,29 @@
             document.getElementById('dateAnalyse').value = a.dateAnalyse || '';
             document.getElementById('dateSortie').value = a.dateSortie || '';
             document.getElementById('classeAnalyse').value = a.classe || 'PF';
-            
+
             const container = document.getElementById('analysisRows');
             container.innerHTML = '';
 
             // Trouver TOUS les produits de la même session (si batchId existe)
             const sessionItems = a.batchId ? analyses.filter(x => x.batchId === a.batchId) : [a];
-            
+
             sessionItems.forEach(item => window.addAnalysisRow(item));
-            
+
             document.getElementById('addRowBtn').style.display = 'block';
             // Cacher le libéré global car on utilise les individuels par ligne
-            document.getElementById('isLibere').parentElement.style.display = 'none'; 
+            document.getElementById('isLibere').parentElement.style.display = 'none';
             document.getElementById('resultatsAnalyse').value = a.resultats || '';
             document.getElementById('obsAnalyse').value = a.observations || '';
 
             window.calcIncubation();
-            
+
             document.getElementById('analysisModalTitle').innerText = a.batchId ? 'Modifier la Session' : 'Modifier l\'Analyse';
             document.getElementById('deleteAnalysisBtn').style.display = 'block';
             document.getElementById('analysisModalOverlay').classList.add('active');
         };
 
-        window.deleteAnalysis = function() {
+        window.deleteAnalysis = function () {
             const id = document.getElementById('analysisEditId').value;
             if (!id) return;
             if (confirm("⚠️ Supprimer cette analyse ?")) {
@@ -2691,11 +2804,11 @@
             doc.setFont("helvetica", "bold");
             doc.setFontSize(16);
             doc.text("RÉSUMÉ", 15, y);
-            
+
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
             doc.text(`Doc ID: ${f.code || 'N/A'}`, pageWidth - 15, y, { align: 'right' });
-            
+
             y += 10;
 
             // Main Info Table

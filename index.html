@@ -1045,7 +1045,10 @@
                 FICHES TECHNIQUES</button>
             <button onclick="switchTab('analyses')" id="tab-analyses" class="main-tab"
                 style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">🧪
-                ANALYSES & INCUBATION</button>
+                ANALYSES</button>
+            <button onclick="switchTab('preps')" id="tab-preps" class="main-tab"
+                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">⚗️
+                PRÉPARATIONS</button>
         </div>
 
         <div style="display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 15px; flex-wrap: wrap;">
@@ -1318,7 +1321,136 @@
             </div>
         </div>
     </div>
+    <!-- Preparation Modal -->
+    <div id="prepModalOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="closePrepModal()">✕</button>
+            <h2 id="prepModalTitle"
+                style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--secondary);">Nouvelle
+                Préparation</h2>
 
+            <form id="prepForm">
+                <input type="hidden" id="prepEditId">
+
+                <div class="form-group">
+                    <label>Désignation / Milieu</label>
+                    <input type="text" id="prepDesignation" class="form-input" placeholder="ex: Gélose PCA"
+                        list="prep-suggestions" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Fournisseur (Milieu)</label>
+                        <input type="text" id="prepSupplier" class="form-input" placeholder="ex: Merk, Biokar...">
+                    </div>
+                    <div class="form-group">
+                        <label>Quantité Pesée (g/ml)</label>
+                        <input type="text" id="prepWeight" class="form-input" placeholder="ex: 23.5">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Lot (Interne)</label>
+                        <input type="text" id="prepLot" class="form-input" placeholder="ex: 17/24" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Lot (Fournisseur)</label>
+                        <input type="text" id="prepLotFourn" class="form-input" placeholder="ex: BD-9982">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Code</label>
+                        <input type="text" id="prepCode" class="form-input" placeholder="ex: M-01">
+                    </div>
+                    <div class="form-group">
+                        <label>N° de Boîte</label>
+                        <input type="text" id="prepBoite" class="form-input" placeholder="ex: B-05">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Date Préparation</label>
+                        <input type="date" id="datePrep" class="form-input" required onchange="setPrepExpiry(12)">
+                    </div>
+                    <div class="form-group">
+                        <label>Date Péremption</label>
+                        <input type="date" id="datePeremption" class="form-input" required>
+                    </div>
+                </div>
+
+                <div id="prepExpiryAssistant"
+                    style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99,102,241,0.2); padding: 12px; border-radius: 12px; margin-bottom: 20px; font-size: 0.75rem;">
+                    <div
+                        style="font-weight: 800; color: var(--secondary); margin-bottom: 8px; text-transform: uppercase;">
+                        🕒 Assistant Péremption</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <button type="button" onclick="setPrepExpiry(6)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+6
+                            MOIS</button>
+                        <button type="button" onclick="setPrepExpiry(12)"
+                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+1
+                            AN</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label style="color:var(--secondary);">🧪 Additifs / Suppléments (Détails de pesée)</label>
+
+                    <div style="margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 12px;">
+                        <label style="font-size:0.6rem; color:var(--text-dim); margin-bottom:5px; display:block;">Mes
+                            Additifs (Catalogue)</label>
+                        <div id="additifs-catalog-prep"
+                            style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;"></div>
+                        <div style="display:flex; gap:5px;">
+                            <input type="text" id="new-catalog-additif" class="add-catalog-input"
+                                style="flex:1; font-size:0.65rem;" placeholder="Nouvel additif au catalogue...">
+                            <button type="button" class="add-catalog-btn"
+                                onclick="addToCatalog('additifs', 'new-catalog-additif')">＋</button>
+                        </div>
+                    </div>
+
+                    <div id="additifFormUI"
+                        style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
+                        <div class="form-group" style="margin-bottom:10px;">
+                            <input type="text" id="newAdditifName" class="form-input" style="font-size:0.8rem;"
+                                placeholder="Nom de l'additif...">
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                            <input type="text" id="newAdditifLot" class="form-input"
+                                style="font-size:0.75rem; padding:8px;" placeholder="Lot">
+                            <input type="text" id="newAdditifFourn" class="form-input"
+                                style="font-size:0.75rem; padding:8px;" placeholder="Fourn.">
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <input type="text" id="newAdditifBoite" class="form-input"
+                                style="font-size:0.75rem; padding:8px;" placeholder="Boîte">
+                            <input type="text" id="newAdditifQty" class="form-input"
+                                style="font-size:0.75rem; padding:8px;" placeholder="Qté pesée">
+                        </div>
+                        <button type="button" onclick="addAdditifToPrep()"
+                            style="width:100%; margin-top:12px; background:var(--secondary); color:white; border:none; padding:10px; border-radius:12px; cursor:pointer; font-weight:800; font-size:0.7rem;">+
+                            AJOUTER CET ADDITIF À LA LISTE</button>
+                    </div>
+
+                    <div id="prepAdditifsContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button type="submit" class="save-btn" style="background:var(--secondary);">Enregistrer</button>
+                    <button type="button" onclick="closePrepModal()"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
+                </div>
+                <button type="button" class="delete-btn" id="deletePrepBtn" style="display: none; margin-top: 10px;"
+                    onclick="deletePrep()">Supprimer</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Analysis Modal -->
     <!-- Analysis Modal -->
     <div id="analysisModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px;">
@@ -1640,9 +1772,12 @@
             if (tab === 'fiches') {
                 addBtn.innerText = "+ NOUVELLE FICHE";
                 searchInput.placeholder = "Chercher un produit ou un code...";
-            } else {
+            } else if (tab === 'analyses') {
                 addBtn.innerText = "+ NOUVELLE ANALYSE";
                 searchInput.placeholder = "Chercher produit, lot, n° de contrôle...";
+            } else if (tab === 'preps') {
+                addBtn.innerText = "+ NOUVELLE PRÉPARATION";
+                searchInput.placeholder = "Chercher milieu, lot, code...";
             }
 
             render();
@@ -1696,7 +1831,7 @@
                 if (ficheForm) ficheForm.reset();
                 renderCatalogs();
                 deleteBtn.style.display = 'none';
-            } else {
+            } else if (currentTab === 'analyses') {
                 document.getElementById('analysisModalOverlay').classList.add('active');
                 document.getElementById('analysisModalTitle').innerText = 'Nouvelle Analyse';
                 document.getElementById('analysisEditId').value = '';
@@ -1709,8 +1844,137 @@
                 document.getElementById('dateSortie').value = '';
                 document.getElementById('isLibere').checked = false;
                 document.getElementById('deleteAnalysisBtn').style.display = 'none';
+            } else if (currentTab === 'preps') {
+                window.openPrepModal();
             }
         };
+
+        const PREPS_COL = "preparations";
+        let preps = [];
+
+        window.openPrepModal = function (id = null) {
+            const form = document.getElementById('prepForm');
+            if (form) form.reset();
+            document.getElementById('prepEditId').value = id || '';
+            document.getElementById('prepAdditifsContainer').innerHTML = '';
+            document.getElementById('deletePrepBtn').style.display = id ? 'block' : 'none';
+            document.getElementById('prepModalTitle').innerText = id ? 'Modifier Préparation' : 'Nouvelle Préparation';
+            renderCatalogs();
+
+            if (id) {
+                const p = preps.find(x => x.id === id);
+                if (p) {
+                    document.getElementById('prepDesignation').value = p.designation || '';
+                    document.getElementById('prepSupplier').value = p.supplier || '';
+                    document.getElementById('prepWeight').value = p.weight || '';
+                    document.getElementById('prepLot').value = p.lot || '';
+                    document.getElementById('prepLotFourn').value = p.lotFourn || '';
+                    document.getElementById('prepCode').value = p.code || '';
+                    document.getElementById('prepBoite').value = p.boite || '';
+                    document.getElementById('datePrep').value = p.datePrep || '';
+                    document.getElementById('datePeremption').value = p.datePeremption || '';
+                    if (p.additifs) {
+                        p.additifs.forEach(a => addAdditifToPrep(a));
+                    }
+                }
+            }
+            document.getElementById('prepModalOverlay').classList.add('active');
+        };
+
+        window.closePrepModal = function () {
+            document.getElementById('prepModalOverlay').classList.remove('active');
+        };
+
+        window.setPrepExpiry = function (months) {
+            const prepDateVal = document.getElementById('datePrep').value;
+            if (!prepDateVal) return alert("Sélectionnez d'abord la date de préparation.");
+            const d = new Date(prepDateVal);
+            d.setMonth(d.getMonth() + months);
+            document.getElementById('datePeremption').value = d.toISOString().split('T')[0];
+        };
+
+        window.addAdditifToPrep = function (obj = null) {
+            const container = document.getElementById('prepAdditifsContainer');
+
+            let data = obj;
+            if (!obj) {
+                const name = document.getElementById('newAdditifName').value.trim();
+                if (!name) return;
+                data = {
+                    name: name,
+                    lot: document.getElementById('newAdditifLot').value.trim(),
+                    fourn: document.getElementById('newAdditifFourn').value.trim(),
+                    boite: document.getElementById('newAdditifBoite').value.trim(),
+                    qty: document.getElementById('newAdditifQty').value.trim()
+                };
+
+                // Reset inputs
+                document.getElementById('newAdditifName').value = '';
+                document.getElementById('newAdditifLot').value = '';
+                document.getElementById('newAdditifFourn').value = '';
+                document.getElementById('newAdditifBoite').value = '';
+                document.getElementById('newAdditifQty').value = '';
+            }
+
+            const div = document.createElement('div');
+            div.className = "additif-entry";
+            div.dataset.info = JSON.stringify(data);
+            div.style = "background:rgba(255,255,255,0.05); padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,0.1); position:relative;";
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                    <span style="font-weight:800; color:var(--secondary); font-size:0.85rem;">${data.name}</span>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer;">✕</button>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.65rem; color:var(--text-dim);">
+                    <div>Lot: <span style="color:white;">${data.lot || '-'}</span></div>
+                    <div>Fourn: <span style="color:white;">${data.fourn || '-'}</span></div>
+                    <div>Boîte: <span style="color:white;">${data.boite || '-'}</span></div>
+                    <div>Qté: <span style="color:white; font-weight:800;">${data.qty || '-'}</span></div>
+                </div>
+            `;
+            container.appendChild(div);
+        };
+
+        window.deletePrep = function () {
+            const id = document.getElementById('prepEditId').value;
+            if (!id) return;
+            if (confirm("Supprimer cette préparation ?")) {
+                db.collection(PREPS_COL).doc(id).delete().then(() => {
+                    closePrepModal();
+                });
+            }
+        };
+
+        // On gère le submit de prepForm
+        const prepForm = document.getElementById('prepForm');
+        if (prepForm) {
+            prepForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('prepEditId').value;
+                const additifs = Array.from(document.getElementById('prepAdditifsContainer').querySelectorAll('.additif-entry')).map(div => JSON.parse(div.dataset.info));
+
+                const data = {
+                    designation: document.getElementById('prepDesignation').value,
+                    supplier: document.getElementById('prepSupplier').value,
+                    weight: document.getElementById('prepWeight').value,
+                    lot: document.getElementById('prepLot').value,
+                    lotFourn: document.getElementById('prepLotFourn').value,
+                    code: document.getElementById('prepCode').value,
+                    boite: document.getElementById('prepBoite').value,
+                    datePrep: document.getElementById('datePrep').value,
+                    datePeremption: document.getElementById('datePeremption').value,
+                    additifs: additifs,
+                    updatedAt: Date.now()
+                };
+
+                if (id) {
+                    db.collection(PREPS_COL).doc(id).update(data).then(() => closePrepModal());
+                } else {
+                    db.collection(PREPS_COL).add(data).then(() => closePrepModal());
+                }
+                closePrepModal();
+            });
+        }
 
         document.getElementById('addBtn').onclick = window.openAddModal;
 
@@ -2028,12 +2292,23 @@
             console.error("Analyses Sync Error:", err);
         });
 
+        db.collection(PREPS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
+            preps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (currentTab === 'preps') render();
+        });
+
         db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
-                catalogs = doc.data();
+                catalogs = doc.data() || {};
+                // Initialisation des listes si absentes
+                ['germes', 'consommables', 'diluants', 'reactifs', 'additifs'].forEach(t => {
+                    if (!catalogs[t]) catalogs[t] = [];
+                });
                 renderCatalogs();
             } else {
-                db.collection("settings").doc(CATALOGS_DOC).set(catalogs);
+                db.collection("settings").doc(CATALOGS_DOC).set({
+                    germes: [], consommables: [], diluants: [], reactifs: [], additifs: []
+                });
             }
         }, err => {
             console.error("Catalog Sync Error:", err);
@@ -2097,6 +2372,18 @@
                     `).join('');
                 }
             });
+
+            // Gestion spécifique du catalogue d'additifs (Préparations)
+            const catPrep = document.getElementById('additifs-catalog-prep');
+            if (catPrep) {
+                const list = catalogs['additifs'] || [];
+                catPrep.innerHTML = list.map(val => `
+                    <span class="mini-tag" style="cursor:pointer; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); display:flex; align-items:center; gap:8px;">
+                        <span onclick="document.getElementById('newAdditifName').value = '${val.replace(/'/g, "\\'")}';">${val}</span>
+                        <span onclick="deleteFromCatalog('additifs', '${val.replace(/'/g, "\\'")}')" style="color:#ef4444; font-weight:800; cursor:pointer; padding:2px;">✕</span>
+                    </span>
+                `).join('') || '<span style="font-size:0.6rem; color:var(--text-dim);">Catalogue vide. Ajoutez vos additifs ci-dessous.</span>';
+            }
         }
         renderCatalogs();
 
@@ -2214,11 +2501,11 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="germes-grid">
+                         <div class="germes-grid">
                             <span class="prep-label" style="color:var(--success);">🧫 Germes Spécifiés</span>
                             ${(f.germesDetails || []).map(g => `
                                 <div class="germe-item" style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                                    <span style="color:var(--text-dim);">${g.name}</span>
+                                    <span style="color:var(--text-dim); font-size:0.65rem;">${g.name}</span>
                                     <span style="color:var(--success); font-weight:700;">${g.norm}</span>
                                 </div>
                             `).join('')}
@@ -2226,7 +2513,69 @@
                         ${f.observation ? `<div class="obs-card-footer"><span>📝</span><span>${f.observation}</span></div>` : ''}
                     </div>
                 `).join('');
-            } else {
+            } else if (currentTab === 'preps') {
+                let filtered = preps.filter(p =>
+                    (p.designation && p.designation.toLowerCase().includes(query)) ||
+                    (p.lot && p.lot.toLowerCase().includes(query)) ||
+                    (p.code && p.code.toLowerCase().includes(query))
+                );
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚗️</div><h3>Aucune préparation trouvée</h3></div>`;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(p => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const expDate = p.datePeremption ? new Date(p.datePeremption) : null;
+                    if (expDate) expDate.setHours(0, 0, 0, 0);
+                    const isExpired = expDate && expDate < today;
+                    const isExpiringSoon = expDate && (expDate - today) / (1000 * 3600 * 24) <= 7;
+
+                    return `
+                        <div class="fiche-card" onclick="openPrepModal('${p.id}')" style="border-left: 5px solid var(--secondary);">
+                            <div class="card-header">
+                                <div class="designation">${p.designation}</div>
+                                <div class="code-badge" style="background:rgba(99,102,241,0.15); color:var(--secondary); border-color:rgba(99,102,241,0.2);">${p.code || 'N/A'}</div>
+                            </div>
+                            
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                <div style="background:rgba(255,255,255,0.03); padding:8px; border-radius:10px; text-align:center;">
+                                    <div style="font-size:0.55rem; color:var(--text-dim); text-transform:uppercase;">Préparé le</div>
+                                    <div style="font-size:0.8rem; font-weight:800;">${p.datePrep ? new Date(p.datePrep).toLocaleDateString('fr-FR') : '-'}</div>
+                                </div>
+                                <div style="background:${isExpired ? 'rgba(239,68,68,0.1)' : (isExpiringSoon ? 'rgba(251,191,36,0.1)' : 'rgba(34,197,94,0.1)')}; padding:8px; border-radius:10px; text-align:center; border:1px solid ${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'transparent')}">
+                                    <div style="font-size:0.55rem; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'var(--success)')}; text-transform:uppercase;">Péremption</div>
+                                    <div style="font-size:0.8rem; font-weight:800; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'white')}">${p.datePeremption ? new Date(p.datePeremption).toLocaleDateString('fr-FR') : '-'}</div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; flex-direction:column; gap:2px;">
+                                    <div style="font-size:0.65rem; color:var(--text-dim);">Lot Int: <span style="color:white; font-weight:800;">${p.lot}</span></div>
+                                    <div style="font-size:0.55rem; color:var(--text-dim);">${p.supplier || 'N/A'} : <span style="color:rgba(255,255,255,0.7);">${p.lotFourn || '-'}</span></div>
+                                </div>
+                                <div style="text-align:right; display:flex; flex-direction:column; gap:2px;">
+                                    <div style="font-size:0.65rem; color:var(--secondary); font-weight:800;">📦 B-${p.boite || '?'} | ⚖️ ${p.weight || '0'}g</div>
+                                    ${isExpired ? '<span style="color:#ef4444; font-size:0.6rem; font-weight:800;">⚠️ EXPIRÉ</span>' : ''}
+                                </div>
+                            </div>
+
+                            ${p.additifs && p.additifs.length > 0 ? `
+                                <div style="display:flex; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
+                                    ${p.additifs.map(a => `
+                                        <div style="display:flex; justify-content:space-between; font-size:0.55rem; background:rgba(99,102,241,0.05); padding:4px 8px; border-radius:6px; border:1px solid rgba(99,102,241,0.1);">
+                                            <span style="color:var(--secondary); font-weight:800;">${a.name}</span>
+                                            <span style="color:var(--text-dim);">L: ${a.lot || '-'} | ⚖️ ${a.qty || '0'}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } else if (currentTab === 'analyses') {
                 // ANALYSES TAB
                 let filtered = analyses.slice(); // Copy
 
@@ -2628,7 +2977,7 @@
             updateDailyReadings(div, data ? data.dailyReadings : null);
         };
 
-        window.quickAddGerm = function(btn, name) {
+        window.quickAddGerm = function (btn, name) {
             const row = btn.closest('.analysis-row');
             const container = row.querySelector('.germs-dynamic-container');
             const div = document.createElement('div');

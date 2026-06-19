@@ -4,11 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MICROBIO v3.8.0 - Labo</title>
+    <title>MICROBIO v4.4.0 - Labo</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
     <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1029,9 +1030,8 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
-                <button id="addBtn"
-                    style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">+
-                    NOUVEAU</button>
+                <button id="addBtn" onclick="window.openAddModal()" 
+                    style="background: #10b981; color: white; border: none; padding: 5px 15px; border-radius: 8px; font-size: 0.8rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(16,185,129,0.3);">+ NOUVEAU</button>
                 <button id="openCalcBtn"
                     style="background: rgba(14, 165, 233, 0.2); color: var(--primary); border: 1px solid var(--primary); padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">CALCULATRICE</button>
                 <button id="toggleSelectBtn"
@@ -1042,13 +1042,16 @@
         <div class="main-tabs" style="display: flex; gap: 10px; margin-top: 5px;">
             <button onclick="switchTab('fiches')" id="tab-fiches" class="main-tab active"
                 style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📋
-                FICHES TECHNIQUES</button>
+                FICHES</button>
             <button onclick="switchTab('analyses')" id="tab-analyses" class="main-tab"
                 style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">🧪
                 ANALYSES</button>
             <button onclick="switchTab('preps')" id="tab-preps" class="main-tab"
                 style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">⚗️
-                PRÉPARATIONS</button>
+                PREPS</button>
+            <button onclick="switchTab('photos')" id="tab-photos" class="main-tab"
+                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📸
+                PHOTOS</button>
         </div>
 
         <div style="display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 15px; flex-wrap: wrap;">
@@ -1079,8 +1082,7 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.3.0 • Synchronisation
-            Cloud Firebase</div>
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.0 • Stockage Local Direct</div>
         <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
@@ -1477,6 +1479,12 @@
 
     <!-- Analysis Modal -->
     <!-- Analysis Modal -->
+    <!-- Photo Zoom Overlay (Mobile Friendly) -->
+    <div id="photoZoomOverlay" class="modal-overlay" style="z-index: 2000000; background: rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; overflow: auto; -webkit-overflow-scrolling: touch;" onclick="if(event.target === this) this.style.display='none'">
+        <img id="photoZoomImg" src="" style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.5); object-fit: contain; transform-origin: center center; cursor: zoom-out;">
+        <div style="position:fixed; top:20px; right:20px; color:white; font-size:2rem; cursor:pointer; background:rgba(0,0,0,0.5); width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; z-index:2000001;" onclick="document.getElementById('photoZoomOverlay').style.display='none'">✕</div>
+    </div>
+    
     <div id="analysisModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px;">
             <button class="close-modal" onclick="closeAnalysisModal()">✕</button>
@@ -1744,6 +1752,55 @@
         </div>
     </div>
 
+    <!-- Photo Modal -->
+    <div id="photoModalOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px;">
+            <button class="close-modal" onclick="closePhotoModal()">✕</button>
+            <h2 id="photoModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">📷 Ajout Photo</h2>
+            
+            <form id="photoForm">
+                <input type="hidden" id="photoEditId">
+                <div class="form-group">
+                    <label>Titre / Sujet de la photo</label>
+                    <input type="text" id="photoTitle" class="form-input" placeholder="ex: Observation boite PCA J5" required>
+                </div>
+                
+                    <div class="form-group">
+                        <label>Catégorie</label>
+                        <div id="categoryChips" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px;">
+                            <!-- Dynamically filled -->
+                        </div>
+                        <div style="margin-top: 8px; display: flex; gap: 5px;">
+                            <input type="text" id="newPhotoCategory" placeholder="Nouvelle catégorie..." 
+                                style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.7rem;">
+                            <button type="button" onclick="addCustomPhotoCategory()" 
+                                style="background: var(--primary); color: #0f172a; border: none; padding: 5px 12px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.8rem;">＋</button>
+                        </div>
+                        <input type="hidden" id="photoCategory" value="ANALYSES">
+                    </div>
+
+                <div class="form-group">
+                    <label>Prendre / Choisir Photo</label>
+                    <div style="display:flex; flex-direction:column; gap:10px; align-items:center; background:rgba(255,255,255,0.03); padding:20px; border-radius:16px; border:1px dashed rgba(255,255,255,0.1);">
+                        <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="previewPhoto(this)">
+                        <button type="button" onclick="document.getElementById('photoInput').click()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:12px; cursor:pointer; font-weight:800; display:flex; align-items:center; gap:8px;">
+                            <span>📸</span> CAPTURER OU CHOISIR
+                        </button>
+                        <div id="photoPreviewContainer" style="width:100%; max-height:200px; border-radius:12px; overflow:hidden; display:none; border:1px solid var(--glass-border);">
+                            <img id="photoPreviewImg" style="width:100%; height:100%; object-fit:cover;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:20px;">
+                    <button type="submit" id="savePhotoBtn" class="save-btn">Enregistrer</button>
+                    <button type="button" onclick="closePhotoModal()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
+                </div>
+                <button type="button" class="delete-btn" id="deletePhotoBtn" style="display: none; margin-top: 10px;" onclick="deletePhoto()">Supprimer</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         // === SCRIPTS RÉPARÉS ===
         console.log("🚀 MICROBIO v4.4.0");
@@ -1763,11 +1820,18 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // GLOBAL ERROR CATCHER
+        window.onerror = function(msg, url, line) {
+            alert("⚠️ ERREUR SYSTEME: " + msg + "\nLigne: " + line);
+            return false;
+        };
+
         // Global State
         let currentTab = 'fiches';
         let sortOrder = localStorage.getItem('microbio_sort') || 'desc';
         let fiches = [];
         let analyses = [];
+        let photos = [];
         let catalogs = {
             germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
             consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
@@ -1775,7 +1839,117 @@
             reactifs: ['TWEEN 80', 'IPA 70%']
         };
 
+        const FICHES_COL = "fiches";
         const ANALYSES_COL = "analyses";
+        const PHOTOS_COL = "photos";
+        let lastUsedCategory = localStorage.getItem('microbio_last_photo_cat') || 'ANALYSES';
+        let customPhotoCategories = JSON.parse(localStorage.getItem('microbio_custom_photo_cats')) || ['ANALYSES', 'MILIEUX / PREPS', 'DIVERS'];
+        const PREPS_COL = "preparations";
+        const SETTINGS_COL = "settings";
+
+        // --- Photo Management Logic ---
+        window.openPhotoModal = function (id = null) {
+            const modal = document.getElementById('photoModalOverlay');
+            if (!modal) return;
+            
+            // Refresh Chips
+            window.renderCategoryChips();
+
+            const form = document.getElementById('photoForm');
+            if (form) form.reset();
+            
+            document.getElementById('photoEditId').value = id || '';
+            document.getElementById('photoPreviewContainer').style.display = 'none';
+            document.getElementById('deletePhotoBtn').style.display = id ? 'block' : 'none';
+            document.getElementById('photoModalTitle').innerText = id ? '📝 MODIFIER PHOTO' : '📸 AJOUTER UNE PHOTO';
+            
+            const initialCat = id ? 'ANALYSES' : lastUsedCategory;
+            window.setPhotoCategory(initialCat);
+
+            if (id && typeof photos !== 'undefined') {
+                const p = photos.find(x => x.id === id);
+                if (p && p.url) {
+                    document.getElementById('photoPreviewImg').src = p.url;
+                    document.getElementById('photoPreviewContainer').style.display = 'block';
+                    document.getElementById('photoTitle').value = p.title || '';
+                    window.setPhotoCategory(p.category || 'ANALYSES');
+                }
+            }
+            
+            modal.style.setProperty('display', 'flex', 'important');
+            modal.style.setProperty('opacity', '1', 'important');
+            modal.style.setProperty('visibility', 'visible', 'important');
+            modal.style.setProperty('z-index', '1000000', 'important');
+            modal.classList.add('active');
+        };
+
+        window.renderCategoryChips = function() {
+            const container = document.getElementById('categoryChips');
+            if (!container) return;
+            const current = document.getElementById('photoCategory').value;
+            container.innerHTML = customPhotoCategories.map(cat => `
+                <button type="button" class="category-chip ${cat === current ? 'active' : ''}" onclick="setPhotoCategory('${cat}', this)">${cat}</button>
+            `).join('');
+        };
+
+        window.addCustomPhotoCategory = function() {
+            const input = document.getElementById('newPhotoCategory');
+            const val = input.value.trim().toUpperCase();
+            if (val && !customPhotoCategories.includes(val)) {
+                customPhotoCategories.push(val);
+                localStorage.setItem('microbio_custom_photo_cats', JSON.stringify(customPhotoCategories));
+                input.value = '';
+                window.renderCategoryChips();
+                window.setPhotoCategory(val);
+            }
+        };
+
+        window.setPhotoCategory = function(cat, btn) {
+            document.getElementById('photoCategory').value = cat;
+            document.querySelectorAll('.category-chip').forEach(b => {
+                if (b.innerText === cat) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+            if (cat) {
+                lastUsedCategory = cat;
+                localStorage.setItem('microbio_last_photo_cat', cat);
+            }
+        };
+
+        window.closePhotoModal = function () {
+            const modal = document.getElementById('photoModalOverlay');
+            if (modal) {
+                modal.style.cssText = "";
+                modal.classList.remove('active');
+            }
+        };
+
+        window.previewPhoto = function (input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const previewImg = document.getElementById('photoPreviewImg');
+                const container = document.getElementById('photoPreviewContainer');
+                if (previewImg) previewImg.src = e.target.result;
+                if (container) container.style.display = 'block';
+            };
+            reader.onerror = () => alert("Erreur lors de la lecture du fichier.");
+            reader.readAsDataURL(file);
+        };
+
+        window.zoomPhoto = function(url) {
+            const over = document.getElementById('photoZoomOverlay');
+            const img = document.getElementById('photoZoomImg');
+            if(over && img) {
+                img.src = url;
+                over.style.display = 'flex';
+                over.style.opacity = '1';
+                over.style.visibility = 'visible';
+            }
+        };
+
+        // (IndexedDB code removed to return to Firestore Cache)
 
         window.toggleSort = function () {
             sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
@@ -1803,6 +1977,9 @@
             } else if (tab === 'preps') {
                 addBtn.innerText = "+ NOUVELLE PRÉPARATION";
                 searchInput.placeholder = "Chercher milieu, lot, code...";
+            } else if (tab === 'photos') {
+                addBtn.innerText = "+ NOUVELLE PHOTO";
+                searchInput.placeholder = "Chercher une photo...";
             }
 
             render();
@@ -1849,32 +2026,18 @@
         };
 
         window.openAddModal = function () {
-            if (currentTab === 'fiches') {
-                modalOverlay.classList.add('active');
-                document.getElementById('modalTitle').innerText = 'Nouvelle Fiche';
-                document.getElementById('editId').value = '';
-                if (ficheForm) ficheForm.reset();
-                renderCatalogs();
-                deleteBtn.style.display = 'none';
+            if (currentTab === 'photos') {
+                window.openPhotoModal();
             } else if (currentTab === 'analyses') {
                 document.getElementById('analysisModalOverlay').classList.add('active');
-                document.getElementById('analysisModalTitle').innerText = 'Nouvelle Analyse';
-                document.getElementById('analysisEditId').value = '';
-                document.getElementById('analysisForm').reset();
-                document.getElementById('analysisRows').innerHTML = '';
-                window.addAnalysisRow();
-                document.getElementById('addRowBtn').style.display = 'block';
-                document.getElementById('out5j').innerText = '--/--';
-                document.getElementById('out7j').innerText = '--/--';
-                document.getElementById('dateSortie').value = '';
-                document.getElementById('isLibere').checked = false;
-                document.getElementById('deleteAnalysisBtn').style.display = 'none';
             } else if (currentTab === 'preps') {
                 window.openPrepModal();
+            } else {
+                document.getElementById('modalOverlay').classList.add('active');
             }
         };
 
-        const PREPS_COL = "preparations";
+        // Constantes déplacées en haut
         let preps = [];
 
         window.openPrepModal = function (id = null) {
@@ -2059,14 +2222,14 @@
             });
         }
 
-        document.getElementById('addBtn').onclick = window.openAddModal;
+        // document.getElementById('addBtn').onclick = window.openAddModal; // Directement dans HTML maintenant
 
         // Use persistence for offline access
         db.enablePersistence().catch((err) => {
             console.warn("Persistence failed", err.code);
         });
 
-        const FICHES_COL = "fiches";
+        // Constantes déplacées en haut
         const CATALOGS_DOC = "catalogs";
 
         const fichesList = document.getElementById('fiches-list');
@@ -2380,6 +2543,11 @@
             if (currentTab === 'preps') render();
         });
 
+        db.collection(PHOTOS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
+            photos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (currentTab === 'photos') render();
+        });
+
         db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
                 catalogs = doc.data() || {};
@@ -2525,11 +2693,18 @@
             selectedCountLabel.innerText = `${selectedFiches.size} sélectionnée(s)`;
         }
 
-        window.toggleFicheSelection = function (id, event) {
-            event.stopPropagation();
-            if (selectedFiches.has(id)) selectedFiches.delete(id);
-            else selectedFiches.add(id);
+        window.toggleItemSelection = function (id, col, e) {
+            if (e) e.stopPropagation();
+            if (selectedFiches.has(id)) {
+                selectedFiches.delete(id);
+            } else {
+                selectedFiches.add(id);
+            }
             updateSelectionUI();
+        };
+
+        window.toggleFicheSelection = function (id, e) {
+            window.toggleItemSelection(id, 'fiches', e);
         };
 
         // Render List
@@ -2839,16 +3014,71 @@
                         ` : ''}
                     </div>
                 `}).join('');
+            } else if (currentTab === 'photos') {
+                let filtered = photos.filter(p => 
+                    (p.title && p.title.toLowerCase().includes(query)) ||
+                    (p.category && p.category.toLowerCase().includes(query))
+                );
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📸</div><h3>Aucune photo trouvée</h3></div>`;
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 5px;">
+                        ${filtered.map(p => {
+                            const isSelected = selectedFiches.has(p.id);
+                            return `
+                            <div class="photo-card ${isSelected ? 'selected' : ''}" 
+                                 onclick="${isSelectionMode ? `toggleItemSelection('${p.id}', 'photos', event); render();` : ''}"
+                                 style="background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.03)'}; border-radius: 16px; overflow: hidden; border: 1px solid ${isSelected ? '#ef4444' : 'rgba(255,255,255,0.05)'}; position: relative; transition: all 0.3s; ${isSelectionMode ? 'cursor: pointer;' : ''}">
+                                
+                                <div style="width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #000; ${!isSelectionMode ? 'cursor: zoom-in;' : ''}" 
+                                     ${!isSelectionMode ? `onclick="zoomPhoto('${p.url}')"` : ''}>
+                                    <img src="${p.url}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${isSelected ? '0.5' : '1'}">
+                                    <div style="position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 0.5rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px);">
+                                        ${p.category || 'DIVERS'}
+                                    </div>
+                                    ${isSelected ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ef4444; font-size: 2rem; font-weight: 900;">✓</div>' : ''}
+                                </div>
+
+                                <div style="padding: 10px; ${!isSelectionMode ? 'cursor: pointer;' : ''}" 
+                                     ${!isSelectionMode ? `onclick="openPhotoModal('${p.id}')"` : ''}>
+                                    <div style="font-size: 0.75rem; font-weight: 800; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;">
+                                        ${p.title} ${!isSelectionMode ? '<span style="float:right; opacity:0.5;">📝</span>' : ''}
+                                    </div>
+                                    <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center;">
+                                        <span>📅 ${p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--'}</span>
+                                        <span>⏰ ${p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</span>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                `;
             }
         }
 
-        // CSS additionnel pour la sélection
+        // CSS additionnel
         const style = document.createElement('style');
         style.textContent = `
-            .fiche-card.selected {
-                border-color: #ef4444 !important;
-                background: rgba(239, 68, 68, 0.05) !important;
-                transform: scale(0.98);
+            .fiche-card.selected { border-color: #ef4444 !important; background: rgba(239, 68, 68, 0.05) !important; }
+            .category-chip {
+                padding: 8px 12px;
+                border-radius: 8px;
+                border: 1px solid rgba(255,255,255,0.1);
+                background: rgba(255,255,255,0.05);
+                color: white;
+                cursor: pointer;
+                font-size: 0.7rem;
+                font-weight: 700;
+                transition: all 0.2s;
+            }
+            .category-chip.active {
+                background: var(--primary);
+                border-color: var(--primary);
+                color: #0f172a;
             }
         `;
         document.head.appendChild(style);
@@ -2856,20 +3086,7 @@
         // Search events
         searchInput.addEventListener('input', render);
 
-        // Ouvre le formulaire ajout
-        window.openAddModal = function () {
-            modalOverlay.classList.add('active');
-            document.getElementById('modalTitle').innerText = 'Nouvelle Fiche';
-            document.getElementById('editId').value = '';
-            if (ficheForm) ficheForm.reset();
-            renderCatalogs();
-            deleteBtn.style.display = 'none';
-        };
-
-        // Ferme le formulaire
-        window.closeAddModal = function () {
-            modalOverlay.classList.remove('active');
-        };
+        // Handlers already defined above
 
         window.openEdit = function (id) {
             const f = fiches.find(x => x.id === id);
@@ -2991,8 +3208,12 @@
                 return;
             }
 
-            const targetCol = currentTab === 'fiches' ? FICHES_COL : ANALYSES_COL;
-            const label = currentTab === 'fiches' ? "fiche(s)" : "analyse(s)";
+            let targetCol = FICHES_COL;
+            let label = "fiche(s)";
+
+            if (currentTab === 'analyses') { targetCol = ANALYSES_COL; label = "analyse(s)"; }
+            else if (currentTab === 'photos') { targetCol = PHOTOS_COL; label = "photo(s)"; }
+            else if (currentTab === 'preps') { targetCol = PREPS_COL; label = "préparation(s)"; }
 
             if (confirm(`⚠️ Supprimer définitivement ${selectedFiches.size} ${label} ?`)) {
                 const batch = db.batch();
@@ -3055,7 +3276,7 @@
                                 <input type="checkbox" checked class="row-germ-check">
                                 <span style="font-size:0.7rem; flex:1; color:white;">${g.name}</span>
                                 <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                                <input type="text" class="row-germ-remark" value="${g.remark || ''}" placeholder="Remarque..." style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px;">
+                                <input type="text" class="row-germ-remark" value="${g.remark || ''}" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
                         `).join('') : (data && Array.isArray(data.germs) ? data.germs.map(gname => `
@@ -3063,7 +3284,7 @@
                                 <input type="checkbox" checked class="row-germ-check">
                                 <span style="font-size:0.7rem; flex:1; color:white;">${gname}</span>
                                 <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                                <input type="text" class="row-germ-remark" placeholder="Remarque..." style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px;">
+                                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
                         `).join('') : '')}
@@ -3453,6 +3674,99 @@
             document.getElementById('noteZoomOverlay').classList.remove('active');
             currentZoomInput = null;
         };
+
+        // Functions moved to top for reliability
+
+        // Functions moved to top
+
+        window.deletePhoto = function () {
+            const id = document.getElementById('photoEditId').value;
+            if (!id) return;
+            if (confirm("Supprimer cette photo ?")) {
+                db.collection(PHOTOS_COL).doc(id).delete().then(() => closePhotoModal());
+            }
+        };
+
+        // Submit photo
+        document.getElementById('photoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('photoEditId').value;
+            const title = document.getElementById('photoTitle').value;
+            const category = document.getElementById('photoCategory').value;
+            const fileInput = document.getElementById('photoInput');
+            const saveBtn = document.getElementById('savePhotoBtn');
+            
+            saveBtn.disabled = true;
+            saveBtn.innerText = "⏳ TRAITEMENT...";
+
+            try {
+                let url = '';
+                if (id) {
+                    const existing = photos.find(x => x.id === id);
+                    if (existing) url = existing.url;
+                }
+                
+                if (fileInput.files.length > 0) {
+                    saveBtn.innerText = "⚡ COMPRESSION...";
+                    const compressedDataUrl = await compressImage(fileInput.files[0]);
+                    url = compressedDataUrl;
+                }
+
+                if (!url) throw new Error("Veuillez choisir une photo.");
+
+                const data = {
+                    title: title || "Sans titre",
+                    category: category || "DIVERS",
+                    url: url,
+                    updatedAt: Date.now()
+                };
+
+                saveBtn.innerText = "💾 SAUVEGARDE...";
+                if (id) {
+                    db.collection(PHOTOS_COL).doc(id).update(data);
+                } else {
+                    db.collection(PHOTOS_COL).add(data);
+                }
+                
+                alert("✅ Photo enregistrée avec succès !");
+                closePhotoModal();
+            } catch (err) {
+                alert("❌ ERREUR PHOTO : " + err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Enregistrer";
+            }
+        });
+
+        async function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error("Temps dépassé")), 10000);
+                
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 1500; // Taille idéale pour la lecture de documents
+                    let w = img.width;
+                    let h = img.height;
+
+                    if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+                    else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+                    
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    
+                    URL.revokeObjectURL(img.src);
+                    clearTimeout(timeout);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8)); // Bonne qualité
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(img.src);
+                    reject(new Error("Fichier illisible"));
+                };
+            });
+        }
     </script>
 </body>
 

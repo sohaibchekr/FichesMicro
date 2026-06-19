@@ -26,15 +26,15 @@
 
     <style>
         :root {
-            --bg: #0f172a;
-            --card-bg: #1e293b;
-            --primary: #0ea5e9;
-            --primary-dark: #0284c7;
-            --secondary: #6366f1;
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --success: #22c55e;
+            --bg: #1e293b;
+            --card-bg: #334155;
+            --primary: #38bdf8;
+            --primary-dark: #0ea5e9;
+            --secondary: #818cf8;
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --text-main: #ffffff;
+            --text-dim: #cbd5e1;
+            --success: #4ade80;
         }
 
         * {
@@ -45,9 +45,9 @@
         }
 
         body {
-            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
             color: var(--text-main);
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Outfit', 'Inter', system-ui, sans-serif;
             min-height: 100vh;
             overflow-x: hidden;
             display: flex;
@@ -76,8 +76,8 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(20px);
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(25px);
             border-bottom: 1px solid var(--glass-border);
         }
 
@@ -1322,6 +1322,7 @@
         </div>
     </div>
     <!-- Preparation Modal -->
+    <!-- Preparation Modal -->
     <div id="prepModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px;">
             <button class="close-modal" onclick="closePrepModal()">✕</button>
@@ -1343,9 +1344,15 @@
                         <label>Fournisseur (Milieu)</label>
                         <input type="text" id="prepSupplier" class="form-input" placeholder="ex: Merk, Biokar...">
                     </div>
-                    <div class="form-group">
-                        <label>Quantité Pesée (g/ml)</label>
-                        <input type="text" id="prepWeight" class="form-input" placeholder="ex: 23.5">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label>Qté Pesée (g)</label>
+                            <input type="text" id="prepWeight" class="form-input" placeholder="ex: 23.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Qté Préparée</label>
+                            <input type="text" id="prepQtyFinal" class="form-input" placeholder="ex: 500ml">
+                        </div>
                     </div>
                 </div>
 
@@ -1415,6 +1422,7 @@
 
                     <div id="additifFormUI"
                         style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
+                        <input type="hidden" id="editAdditifIdx" value="">
                         <div class="form-group" style="margin-bottom:10px;">
                             <input type="text" id="newAdditifName" class="form-input" style="font-size:0.8rem;"
                                 placeholder="Nom de l'additif...">
@@ -1422,18 +1430,23 @@
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
                             <input type="text" id="newAdditifLot" class="form-input"
                                 style="font-size:0.75rem; padding:8px;" placeholder="Lot">
+                            <input type="text" id="newAdditifCode" class="form-input"
+                                style="font-size:0.75rem; padding:8px;" placeholder="Code">
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
                             <input type="text" id="newAdditifFourn" class="form-input"
                                 style="font-size:0.75rem; padding:8px;" placeholder="Fourn.">
-                        </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                             <input type="text" id="newAdditifBoite" class="form-input"
                                 style="font-size:0.75rem; padding:8px;" placeholder="Boîte">
-                            <input type="text" id="newAdditifQty" class="form-input"
-                                style="font-size:0.75rem; padding:8px;" placeholder="Qté pesée">
                         </div>
-                        <button type="button" onclick="addAdditifToPrep()"
+                        <div class="form-group">
+                            <input type="text" id="newAdditifQty" class="form-input"
+                                style="font-size:0.75rem; padding:8px;" placeholder="Quantité pesée (g/ml)...">
+                        </div>
+                        <button type="button" id="btnAddAdditif" onclick="addAdditifToPrep()"
                             style="width:100%; margin-top:12px; background:var(--secondary); color:white; border:none; padding:10px; border-radius:12px; cursor:pointer; font-weight:800; font-size:0.7rem;">+
                             AJOUTER CET ADDITIF À LA LISTE</button>
+                        <button type="button" id="btnCancelEditAdditif" onclick="clearAdditifForm()" style="display:none; width:100%; margin-top:5px; background:rgba(255,255,255,0.05); color:white; border:none; padding:8px; border-radius:10px; cursor:pointer; font-size:0.6rem;">Annuler la modification</button>
                     </div>
 
                     <div id="prepAdditifsContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
@@ -1447,6 +1460,18 @@
                 <button type="button" class="delete-btn" id="deletePrepBtn" style="display: none; margin-top: 10px;"
                     onclick="deletePrep()">Supprimer</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Note Zoom Modal -->
+    <div id="noteZoomOverlay" class="modal-overlay" style="z-index:10001;">
+        <div class="modal-content" style="max-width:400px; padding:20px;">
+            <h3 style="color:var(--secondary); margin-bottom:15px; font-size:1rem;">📝 Note / Remarque</h3>
+            <textarea id="noteZoomTextarea" style="width:100%; height:150px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; padding:15px; font-size:0.9rem; resize:none; outline:none; font-family:inherit;"></textarea>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
+                <button type="button" onclick="window.saveZoomNote()" style="background:var(--success); color:white; border:none; padding:12px; border-radius:10px; font-weight:800; cursor:pointer;">Enregistrer</button>
+                <button type="button" onclick="window.closeZoomNote()" style="background:rgba(255,255,255,0.05); color:white; border:none; padding:12px; border-radius:10px; font-weight:800; cursor:pointer;">Annuler</button>
+            </div>
         </div>
     </div>
 
@@ -1855,6 +1880,7 @@
         window.openPrepModal = function (id = null) {
             const form = document.getElementById('prepForm');
             if (form) form.reset();
+            window.clearAdditifForm();
             document.getElementById('prepEditId').value = id || '';
             document.getElementById('prepAdditifsContainer').innerHTML = '';
             document.getElementById('deletePrepBtn').style.display = id ? 'block' : 'none';
@@ -1867,6 +1893,7 @@
                     document.getElementById('prepDesignation').value = p.designation || '';
                     document.getElementById('prepSupplier').value = p.supplier || '';
                     document.getElementById('prepWeight').value = p.weight || '';
+                    document.getElementById('prepQtyFinal').value = p.qtyFinal || '';
                     document.getElementById('prepLot').value = p.lot || '';
                     document.getElementById('prepLotFourn').value = p.lotFourn || '';
                     document.getElementById('prepCode').value = p.code || '';
@@ -1897,42 +1924,97 @@
             const container = document.getElementById('prepAdditifsContainer');
 
             let data = obj;
+            const editIdx = document.getElementById('editAdditifIdx').value;
+
             if (!obj) {
                 const name = document.getElementById('newAdditifName').value.trim();
                 if (!name) return;
                 data = {
                     name: name,
                     lot: document.getElementById('newAdditifLot').value.trim(),
+                    code: document.getElementById('newAdditifCode').value.trim(),
                     fourn: document.getElementById('newAdditifFourn').value.trim(),
                     boite: document.getElementById('newAdditifBoite').value.trim(),
                     qty: document.getElementById('newAdditifQty').value.trim()
                 };
 
+                if (editIdx !== "") {
+                    // Modification
+                    const entries = container.querySelectorAll('.additif-entry');
+                    const target = entries[parseInt(editIdx)];
+                    if (target) {
+                        target.dataset.info = JSON.stringify(data);
+                        target.innerHTML = getAdditifHTML(data);
+                    }
+                    window.clearAdditifForm();
+                    return;
+                }
+
                 // Reset inputs
-                document.getElementById('newAdditifName').value = '';
-                document.getElementById('newAdditifLot').value = '';
-                document.getElementById('newAdditifFourn').value = '';
-                document.getElementById('newAdditifBoite').value = '';
-                document.getElementById('newAdditifQty').value = '';
+                window.clearAdditifForm();
             }
 
             const div = document.createElement('div');
             div.className = "additif-entry";
             div.dataset.info = JSON.stringify(data);
-            div.style = "background:rgba(255,255,255,0.05); padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,0.1); position:relative;";
-            div.innerHTML = `
+            div.style = "background:rgba(255,255,255,0.05); padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,0.1); position:relative; cursor:pointer;";
+            div.onclick = function(e) {
+                if(e.target.tagName === 'BUTTON') return;
+                const idx = Array.from(container.children).indexOf(this);
+                window.editExistingAdditif(idx);
+            };
+            div.innerHTML = getAdditifHTML(data);
+            container.appendChild(div);
+        };
+
+        function getAdditifHTML(data) {
+            return `
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                     <span style="font-weight:800; color:var(--secondary); font-size:0.85rem;">${data.name}</span>
                     <button type="button" onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer;">✕</button>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.65rem; color:var(--text-dim);">
                     <div>Lot: <span style="color:white;">${data.lot || '-'}</span></div>
-                    <div>Fourn: <span style="color:white;">${data.fourn || '-'}</span></div>
-                    <div>Boîte: <span style="color:white;">${data.boite || '-'}</span></div>
+                    <div>Code: <span style="color:white;">${data.code || '-'}</span></div>
+                    <div>Boîte: <span style="color:var(--secondary); font-weight:800;">${data.boite || '-'}</span></div>
                     <div>Qté: <span style="color:white; font-weight:800;">${data.qty || '-'}</span></div>
                 </div>
             `;
-            container.appendChild(div);
+        }
+
+        window.editExistingAdditif = function(idx) {
+            const container = document.getElementById('prepAdditifsContainer');
+            const entry = container.children[idx];
+            if(!entry) return;
+            const data = JSON.parse(entry.dataset.info);
+            
+            document.getElementById('newAdditifName').value = data.name || '';
+            document.getElementById('newAdditifLot').value = data.lot || '';
+            document.getElementById('newAdditifCode').value = data.code || '';
+            document.getElementById('newAdditifFourn').value = data.fourn || '';
+            document.getElementById('newAdditifBoite').value = data.boite || '';
+            document.getElementById('newAdditifQty').value = data.qty || '';
+            document.getElementById('editAdditifIdx').value = idx;
+            
+            document.getElementById('btnAddAdditif').innerText = "✅ METTRE À JOUR L'ADDITIF";
+            document.getElementById('btnAddAdditif').style.background = "var(--success)";
+            document.getElementById('btnCancelEditAdditif').style.display = "block";
+            
+            // Focus
+            document.getElementById('newAdditifQty').focus();
+        };
+
+        window.clearAdditifForm = function() {
+            document.getElementById('newAdditifName').value = '';
+            document.getElementById('newAdditifLot').value = '';
+            document.getElementById('newAdditifCode').value = '';
+            document.getElementById('newAdditifFourn').value = '';
+            document.getElementById('newAdditifBoite').value = '';
+            document.getElementById('newAdditifQty').value = '';
+            document.getElementById('editAdditifIdx').value = '';
+            document.getElementById('btnAddAdditif').innerText = "+ AJOUTER CET ADDITIF À LA LISTE";
+            document.getElementById('btnAddAdditif').style.background = "var(--secondary)";
+            document.getElementById('btnCancelEditAdditif').style.display = "none";
         };
 
         window.deletePrep = function () {
@@ -1957,6 +2039,7 @@
                     designation: document.getElementById('prepDesignation').value,
                     supplier: document.getElementById('prepSupplier').value,
                     weight: document.getElementById('prepWeight').value,
+                    qtyFinal: document.getElementById('prepQtyFinal').value || '',
                     lot: document.getElementById('prepLot').value,
                     lotFourn: document.getElementById('prepLotFourn').value,
                     code: document.getElementById('prepCode').value,
@@ -2558,6 +2641,7 @@
                                 </div>
                                 <div style="text-align:right; display:flex; flex-direction:column; gap:2px;">
                                     <div style="font-size:0.65rem; color:var(--secondary); font-weight:800;">📦 B-${p.boite || '?'} | ⚖️ ${p.weight || '0'}g</div>
+                                    ${p.qtyFinal ? `<div style="font-size: 0.55rem; color: #a5b4fc; font-weight: 700;">💧 VOL : ${p.qtyFinal}</div>` : ''}
                                     ${isExpired ? '<span style="color:#ef4444; font-size:0.6rem; font-weight:800;">⚠️ EXPIRÉ</span>' : ''}
                                 </div>
                             </div>
@@ -2565,9 +2649,16 @@
                             ${p.additifs && p.additifs.length > 0 ? `
                                 <div style="display:flex; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
                                     ${p.additifs.map(a => `
-                                        <div style="display:flex; justify-content:space-between; font-size:0.55rem; background:rgba(99,102,241,0.05); padding:4px 8px; border-radius:6px; border:1px solid rgba(99,102,241,0.1);">
-                                            <span style="color:var(--secondary); font-weight:800;">${a.name}</span>
-                                            <span style="color:var(--text-dim);">L: ${a.lot || '-'} | ⚖️ ${a.qty || '0'}</span>
+                                        <div style="display:flex; flex-direction:column; gap:2px; background:rgba(99,102,241,0.08); padding:6px 10px; border-radius:8px; border:1px solid rgba(99,102,241,0.15);">
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <span style="color:var(--secondary); font-weight:800; font-size:0.65rem;">${a.name}</span>
+                                                <span style="color:white; font-weight:800; font-size:0.6rem;">⚖️ ${a.qty || '0'}</span>
+                                            </div>
+                                            <div style="display:flex; gap:10px; font-size:0.55rem; color:var(--text-dim);">
+                                                <span>L: <span style="color:white;">${a.lot || '-'}</span></span>
+                                                <span>C: <span style="color:white;">${a.code || '-'}</span></span>
+                                                <span>B: <span style="color:var(--secondary); font-weight:700;">${a.boite || '-'}</span></span>
+                                            </div>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -2702,22 +2793,38 @@
                                          <div style="text-align: right;">
                                              <div style="font-size: 0.7rem; color: var(--success); font-weight: 800; background: rgba(34, 197, 94, 0.1); padding: 2px 6px; border-radius: 4px;">
                                                  ${(() => {
-                                if (i.isLibere) return '✔️ LIBÉRÉ';
-                                if (i.dailyReadings && i.dailyReadings.length > 0) {
-                                    const lastVal = [...i.dailyReadings].reverse().find(v => v !== '');
-                                    return lastVal ? `🔴 ${lastVal}` : '⏳ En cours';
-                                }
-                                return i.resultats || '';
-                            })()}
+                                                    if (i.isLibere) return '✔️ LIBÉRÉ';
+                                                    if (i.dailyReadings && i.dailyReadings.length > 0) {
+                                                        const last = [...i.dailyReadings].reverse().find(r => {
+                                                            const val = (typeof r === 'object') ? r.val : r;
+                                                            return val && val.trim() !== '';
+                                                        });
+                                                        if (last) {
+                                                            const displayVal = (typeof last === 'object') ? last.val : last;
+                                                            const displayRemark = (typeof last === 'object') ? last.remark : '';
+                                                            return `
+                                                                <div style="text-align:right;">
+                                                                    <div style="font-size:0.8rem;">🔴 ${displayVal}</div>
+                                                                    ${displayRemark ? `<div style="font-size:0.5rem; font-weight:400; color:var(--text-dim); font-style:italic;">"${displayRemark}"</div>` : ''}
+                                                                </div>
+                                                            `;
+                                                        }
+                                                        return '⏳ En cours';
+                                                    }
+                                                    return i.resultats || '';
+                                                })()}
                                              </div>
                                          </div>
                                      </div>
 
-                                     <div style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.6rem; color: var(--primary); font-weight: 700; border-top: 1px solid rgba(255,255,255,0.05); pt: 5px;">
+                                     <div style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.6rem; color: var(--primary); font-weight: 700; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">
                                          ${i.germsDetails ? i.germsDetails.map(g => `
-                                             <span style="background: rgba(99,102,241,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(99,102,241,0.2);">
-                                                 ${g.name}: <span style="color:white;">${g.result || '...'}</span>
-                                             </span>
+                                             <div style="background: rgba(99,102,241,0.1); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(99,102,241,0.2); display:flex; flex-direction:column; gap:2px;">
+                                                 <div style="display:flex; justify-content:space-between; gap:10px;">
+                                                     <span>${g.name}: <span style="color:white;">${g.result || '...'}</span></span>
+                                                 </div>
+                                                 ${g.remark ? `<div style="font-size:0.45rem; color:var(--text-dim); font-weight:400; font-style:italic; border-top:1px solid rgba(255,255,255,0.05); padding-top:2px;">"${g.remark}"</div>` : ''}
+                                             </div>
                                          `).join('') : (Array.isArray(i.germs) ? i.germs.map(g => `<span class="mini-tag">${g}</span>`).join('') : (i.germs || ''))}
                                      </div>
                                  </div>
@@ -2947,14 +3054,16 @@
                             <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
                                 <span style="font-size:0.7rem; flex:1; color:white;">${g.name}</span>
-                                <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Résultat..." style="width:70px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                                <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                                <input type="text" class="row-germ-remark" value="${g.remark || ''}" placeholder="Remarque..." style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
                         `).join('') : (data && Array.isArray(data.germs) ? data.germs.map(gname => `
                             <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
                                 <span style="font-size:0.7rem; flex:1; color:white;">${gname}</span>
-                                <input type="text" class="row-germ-result" placeholder="Résultat..." style="width:70px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                                <input type="text" class="row-germ-remark" placeholder="Remarque..." style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
                         `).join('') : '')}
@@ -2985,7 +3094,8 @@
             div.innerHTML = `
                 <input type="checkbox" checked class="row-germ-check">
                 <span style="font-size:0.7rem; flex:1; color:white;">${name}</span>
-                <input type="text" class="row-germ-result" placeholder="Résultat..." style="width:70px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
             `;
             container.appendChild(div);
@@ -2996,7 +3106,7 @@
             const dateSortie = document.getElementById('dateSortie').value;
             const container = row.querySelector('.daily-readings-grid');
             if (!dateAnalyse || !dateSortie) {
-                container.innerHTML = '<span style="font-size:0.6rem; opacity:0.5;">Définissez les dates pour générer les jours...</span>';
+                container.innerHTML = '<span style="font-size:0.6rem; opacity:0.5;">Définissez les dates...</span>';
                 return;
             }
 
@@ -3007,16 +3117,34 @@
 
             let html = '';
             for (let i = 1; i <= daysCount; i++) {
-                const val = (existing && existing[i - 1]) ? existing[i - 1] : '';
+                const dayData = (existing && existing[i - 1]) ? existing[i - 1] : { val: '', remark: '' };
+                const val = (typeof dayData === 'object') ? dayData.val : dayData;
+                const remark = (typeof dayData === 'object') ? dayData.remark : '';
+
                 html += `
-                    <div style="display:flex; flex-direction:column; gap:2px; width:45px;">
-                        <span style="font-size:0.5rem; text-align:center; color:var(--text-dim);">J${i}</span>
-                        <input type="text" class="daily-input" value="${val}" style="width:100%; height:25px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:5px; color:white; text-align:center; font-size:0.65rem;">
+                    <div style="display:flex; flex-direction:column; gap:2px; width:70px; background:rgba(255,255,255,0.02); padding:5px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                        <span style="font-size:0.5rem; text-align:center; color:var(--secondary); font-weight:800;">J${i}</span>
+                        <input type="text" class="daily-input" value="${val}" oninput="autoUpdateDGAT(this)" style="width:100%; height:20px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; text-align:center; font-size:0.65rem;">
+                        <input type="text" class="daily-remark-input" value="${remark}" placeholder="Note..." readonly onclick="window.zoomNote(this)" title="${remark}" style="width:100%; height:15px; background:transparent; border:none; color:var(--text-dim); font-size:0.5rem; text-align:center; margin-top:2px; cursor:zoom-in;">
                     </div>
                 `;
             }
             container.innerHTML = html;
         }
+
+        window.autoUpdateDGAT = function (input) {
+            const row = input.closest('.analysis-row');
+            const allInputs = Array.from(row.querySelectorAll('.daily-input'));
+            // On prend la dernière valeur non vide
+            const lastVal = allInputs.reverse().find(i => i.value.trim() !== '')?.value || '';
+            
+            // On cherche le germe "DGAT" dans ce produit
+            const germRows = Array.from(row.querySelectorAll('.germs-dynamic-container div'));
+            const dgatRow = germRows.find(div => div.querySelector('span').innerText.toUpperCase().includes('DGAT'));
+            if (dgatRow) {
+                dgatRow.querySelector('.row-germ-result').value = lastVal;
+            }
+        };
 
         // Global watcher for date changes to update all rows
         ['dateAnalyse', 'dateSortie'].forEach(id => {
@@ -3036,7 +3164,8 @@
             div.innerHTML = `
                 <input type="checkbox" checked class="row-germ-check">
                 <span style="font-size:0.7rem; flex:1; color:white;">${value}</span>
-                <input type="text" class="row-germ-result" placeholder="Résultat..." style="width:70px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
             `;
             container.appendChild(div);
@@ -3067,10 +3196,14 @@
                     .filter(item => item.querySelector('.row-germ-check').checked)
                     .map(item => ({
                         name: item.querySelector('span').innerText,
-                        result: item.querySelector('.row-germ-result').value
+                        result: item.querySelector('.row-germ-result').value,
+                        remark: item.querySelector('.row-germ-remark').value
                     }));
 
-                const dailyReadings = Array.from(row.querySelectorAll('.daily-input')).map(inp => inp.value);
+                const dailyReadings = Array.from(row.querySelectorAll('.daily-readings-grid > div')).map(div => ({
+                    val: div.querySelector('.daily-input').value,
+                    remark: div.querySelector('.daily-remark-input').value
+                }));
 
                 const data = {
                     ...commonData,
@@ -3298,6 +3431,27 @@
             // Save PDF
             const fileName = `Résumé_${(f.designation || 'fiche').replace(/[^a-z0-9]/gi, '_')}.pdf`;
             doc.save(fileName);
+        };
+        let currentZoomInput = null;
+        window.zoomNote = function (input) {
+            currentZoomInput = input;
+            document.getElementById('noteZoomTextarea').value = input.value;
+            document.getElementById('noteZoomOverlay').classList.add('active');
+            setTimeout(() => document.getElementById('noteZoomTextarea').focus(), 100);
+        };
+
+        window.saveZoomNote = function () {
+            if (currentZoomInput) {
+                const val = document.getElementById('noteZoomTextarea').value;
+                currentZoomInput.value = val;
+                currentZoomInput.title = val;
+            }
+            window.closeZoomNote();
+        };
+
+        window.closeZoomNote = function () {
+            document.getElementById('noteZoomOverlay').classList.remove('active');
+            currentZoomInput = null;
         };
     </script>
 </body>

@@ -369,6 +369,7 @@
             display: flex;
             gap: 10px;
             line-height: 1.4;
+            white-space: pre-wrap;
         }
 
         .obs-card-footer span:first-child {
@@ -1756,13 +1757,13 @@
     <div id="photoModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 600px; width: 95%;">
             <button class="close-modal" onclick="closePhotoModal()">✕</button>
-            <h2 id="photoModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">📷 Ajout Photo</h2>
+            <h2 id="photoModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary); text-align: left;">📷 Ajout Photo</h2>
             
             <form id="photoForm">
                 <input type="hidden" id="photoEditId">
                 <div class="form-group">
                     <label>Titre / Sujet de la photo</label>
-                    <input type="text" id="photoTitle" class="form-input" placeholder="ex: Observation boite PCA J5" required>
+                    <textarea id="photoTitle" class="form-input" placeholder="ex: Observation boite PCA J5&#10;Lot: 12345" required style="height: 80px; resize: vertical; text-align: left;"></textarea>
                 </div>
                 
                     <div class="form-group">
@@ -1801,7 +1802,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
         // === SCRIPTS RÉPARÉS ===
         console.log("🚀 MICROBIO v4.4.0");
@@ -1947,25 +1947,6 @@
                 
                 if (previewImg) previewImg.src = e.target.result;
                 if (container) container.style.display = 'block';
-
-                // --- DÉBUT ANALYSE OCR ---
-                titleInput.placeholder = "🔍 IA en cours d'analyse...";
-                try {
-                    const result = await Tesseract.recognize(e.target.result, 'fra+eng', {
-                        logger: m => console.log(m)
-                    });
-                    
-                    // Nettoyage du texte pour le titre (on prend les premiers mots significatifs)
-                    const words = result.data.text.split(/[\n\s]+/).filter(w => w.length > 2);
-                    if (words.length > 0) {
-                        const suggestion = words.slice(0, 4).join(' ').toUpperCase();
-                        if (!titleInput.value) titleInput.value = suggestion;
-                        titleInput.placeholder = "Titre suggéré par IA ✅";
-                    }
-                } catch (err) {
-                    console.error("OCR Error:", err);
-                    titleInput.placeholder = "ex: Observation boite PCA J5";
-                }
             };
             reader.onerror = () => alert("Erreur lors de la lecture du fichier.");
             reader.readAsDataURL(file);
@@ -3039,12 +3020,7 @@
                             `}).join('')}
                         </div>
 
-                        ${g.observations ? `
-                            <div class="obs-card-footer">
-                                <span>📝</span>
-                                <span>${g.observations}</span>
-                            </div>
-                        ` : ''}
+                        ${g.observations ? `<div class="obs-card-footer"><span>📝</span><span>${g.observations}</span></div>` : ''}
                     </div>
                 `}).join('');
             } else if (currentTab === 'photos') {
@@ -3065,7 +3041,7 @@
                             return `
                             <div class="photo-card ${isSelected ? 'selected' : ''}" 
                                  onclick="${isSelectionMode ? `toggleItemSelection('${p.id}', 'photos', event); render();` : ''}"
-                                 style="background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.03)'}; border-radius: 16px; overflow: hidden; border: 1px solid ${isSelected ? '#ef4444' : 'rgba(255,255,255,0.05)'}; position: relative; transition: all 0.3s; ${isSelectionMode ? 'cursor: pointer;' : ''}">
+                                 style="display: flex; flex-direction: column; background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.03)'}; border-radius: 16px; overflow: hidden; border: 1px solid ${isSelected ? '#ef4444' : 'rgba(255,255,255,0.05)'}; position: relative; transition: all 0.3s; ${isSelectionMode ? 'cursor: pointer;' : ''}">
                                 
                                 <div style="width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #000; ${!isSelectionMode ? 'cursor: zoom-in;' : ''}" 
                                      ${!isSelectionMode ? `onclick="zoomPhoto('${p.url}')"` : ''}>
@@ -3075,13 +3051,10 @@
                                     </div>
                                     ${isSelected ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ef4444; font-size: 2rem; font-weight: 900;">✓</div>' : ''}
                                 </div>
-
-                                <div style="padding: 10px; ${!isSelectionMode ? 'cursor: pointer;' : ''}" 
+                                <div style="display: flex; flex-direction: column; flex: 1; padding: 10px; ${!isSelectionMode ? 'cursor: pointer;' : ''}" 
                                      ${!isSelectionMode ? `onclick="openPhotoModal('${p.id}')"` : ''}>
-                                    <div style="font-size: 0.75rem; font-weight: 800; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;">
-                                        ${p.title} ${!isSelectionMode ? '<span style="float:right; opacity:0.5;">📝</span>' : ''}
-                                    </div>
-                                    <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="flex: 1; font-size: 0.75rem; font-weight: 800; color: white; line-height: 1.2; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap; text-align: left;">${p.title} ${!isSelectionMode ? '<span style="opacity:0.5; font-size:0.6rem;">📝</span>' : ''}</div>
+                                    <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
                                         <span>📅 ${p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--'}</span>
                                         <span>⏰ ${p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</span>
                                     </div>

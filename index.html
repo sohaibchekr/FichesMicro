@@ -1754,7 +1754,7 @@
 
     <!-- Photo Modal -->
     <div id="photoModalOverlay" class="modal-overlay">
-        <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-content" style="max-width: 600px; width: 95%;">
             <button class="close-modal" onclick="closePhotoModal()">✕</button>
             <h2 id="photoModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">📷 Ajout Photo</h2>
             
@@ -1786,8 +1786,8 @@
                         <button type="button" onclick="document.getElementById('photoInput').click()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:12px; cursor:pointer; font-weight:800; display:flex; align-items:center; gap:8px;">
                             <span>📸</span> CAPTURER OU CHOISIR
                         </button>
-                        <div id="photoPreviewContainer" style="width:100%; max-height:200px; border-radius:12px; overflow:hidden; display:none; border:1px solid var(--glass-border);">
-                            <img id="photoPreviewImg" style="width:100%; height:100%; object-fit:cover;">
+                        <div id="photoPreviewContainer" style="width:100%; max-height:450px; border-radius:12px; overflow:auto; display:none; border:2px solid var(--primary); background: #000;">
+                            <img id="photoPreviewImg" style="width:100%; height:auto; display: block; object-fit: contain; cursor: zoom-in;" onclick="window.zoomPhoto(this.src)">
                         </div>
                     </div>
                 </div>
@@ -1801,6 +1801,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script>
         // === SCRIPTS RÉPARÉS ===
         console.log("🚀 MICROBIO v4.4.0");
@@ -1927,12 +1928,44 @@
         window.previewPhoto = function (input) {
             const file = input.files[0];
             if (!file) return;
+
+            // Anti-doublon basique (taille et type)
+            const photoCheck = `${file.size}-${file.name}`;
+            if (window.lastUploadedTag === photoCheck) {
+                if (!confirm("⚠️ Cette photo ressemble à la précédente. Continuer ?")) {
+                    input.value = "";
+                    return;
+                }
+            }
+            window.lastUploadedTag = photoCheck;
+
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 const previewImg = document.getElementById('photoPreviewImg');
                 const container = document.getElementById('photoPreviewContainer');
+                const titleInput = document.getElementById('photoTitle');
+                
                 if (previewImg) previewImg.src = e.target.result;
                 if (container) container.style.display = 'block';
+
+                // --- DÉBUT ANALYSE OCR ---
+                titleInput.placeholder = "🔍 IA en cours d'analyse...";
+                try {
+                    const result = await Tesseract.recognize(e.target.result, 'fra+eng', {
+                        logger: m => console.log(m)
+                    });
+                    
+                    // Nettoyage du texte pour le titre (on prend les premiers mots significatifs)
+                    const words = result.data.text.split(/[\n\s]+/).filter(w => w.length > 2);
+                    if (words.length > 0) {
+                        const suggestion = words.slice(0, 4).join(' ').toUpperCase();
+                        if (!titleInput.value) titleInput.value = suggestion;
+                        titleInput.placeholder = "Titre suggéré par IA ✅";
+                    }
+                } catch (err) {
+                    console.error("OCR Error:", err);
+                    titleInput.placeholder = "ex: Observation boite PCA J5";
+                }
             };
             reader.onerror = () => alert("Erreur lors de la lecture du fichier.");
             reader.readAsDataURL(file);

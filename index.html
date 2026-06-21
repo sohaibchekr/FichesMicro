@@ -1105,6 +1105,7 @@
                 <button class="calc-tab" onclick="window.setCalcMode('dilution', event)">Dilution (%)</button>
                 <button class="calc-tab" onclick="window.setCalcMode('ratio', event)">Rapport (1/10)</button>
                 <button class="calc-tab" onclick="window.setCalcMode('boites', event)">Boîtes</button>
+                <button class="calc-tab" onclick="window.setCalcMode('expiry', event)">Péremption</button>
             </div>
 
             <!-- MODE : DOSAGE (Règle de 3) -->
@@ -1306,6 +1307,28 @@
                 </div>
             </div>
 
+            <!-- MODE : PEREMPTION -->
+            <div id="section-expiry" class="calc-section">
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div class="form-group">
+                        <label>Date de préparation</label>
+                        <input type="date" id="calcPrepDate" class="form-input" onchange="window.calculateExpiry()">
+                    </div>
+                    <div class="form-group">
+                        <label>Durée de validité (Mois)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="calcMonths" class="form-input" placeholder="ex: 12" oninput="window.calculateExpiry()">
+                        </div>
+                        <div class="quick-pick">
+                            <button class="pick-btn" onclick="document.getElementById('calcMonths').value=6; window.calculateExpiry()">6 MOIS</button>
+                            <button class="pick-btn" onclick="document.getElementById('calcMonths').value=12; window.calculateExpiry()">12 MOIS</button>
+                            <button class="pick-btn" onclick="document.getElementById('calcMonths').value=18; window.calculateExpiry()">18 MOIS</button>
+                            <button class="pick-btn" onclick="document.getElementById('calcMonths').value=24; window.calculateExpiry()">24 MOIS</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- RESULTAT -->
             <div
                 style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 24px; text-align: center; box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);">
@@ -1336,10 +1359,31 @@
             <form id="prepForm">
                 <input type="hidden" id="prepEditId">
 
-                <div class="form-group">
-                    <label>Désignation / Milieu</label>
-                    <input type="text" id="prepDesignation" class="form-input" placeholder="ex: Gélose PCA"
-                        list="prep-suggestions" required>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Désignation / Milieu</label>
+                        <input type="text" id="prepDesignation" class="form-input" placeholder="ex: Gélose PCA"
+                            list="prep-suggestions" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="prepType" class="form-input" onchange="autoSetTypeExpiry()">
+                            <option value="">Sélectionner...</option>
+                            <option value="gelose">Gélose (Agar)</option>
+                            <option value="bouillon">Bouillon / Sol.</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Date Préparation</label>
+                        <input type="date" id="datePrep" class="form-input" required onchange="setPrepExpiry(12)">
+                    </div>
+                    <div class="form-group">
+                        <label>Date Péremption</label>
+                        <input type="date" id="datePeremption" class="form-input" required>
+                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -1381,31 +1425,6 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>Date Préparation</label>
-                        <input type="date" id="datePrep" class="form-input" required onchange="setPrepExpiry(12)">
-                    </div>
-                    <div class="form-group">
-                        <label>Date Péremption</label>
-                        <input type="date" id="datePeremption" class="form-input" required>
-                    </div>
-                </div>
-
-                <div id="prepExpiryAssistant"
-                    style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99,102,241,0.2); padding: 12px; border-radius: 12px; margin-bottom: 20px; font-size: 0.75rem;">
-                    <div
-                        style="font-weight: 800; color: var(--secondary); margin-bottom: 8px; text-transform: uppercase;">
-                        🕒 Assistant Péremption</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <button type="button" onclick="setPrepExpiry(6)"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+6
-                            MOIS</button>
-                        <button type="button" onclick="setPrepExpiry(12)"
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px; cursor:pointer; font-size:0.65rem;">+1
-                            AN</button>
-                    </div>
-                </div>
 
                 <div class="form-group">
                     <label style="color:var(--secondary);">🧪 Additifs / Suppléments (Détails de pesée)</label>
@@ -2059,6 +2078,7 @@
             if (form) form.reset();
             window.clearAdditifForm();
             document.getElementById('prepEditId').value = id || '';
+            document.getElementById('datePrep').value = id ? '' : new Date().toISOString().split('T')[0]; // Par défaut aujourd'hui si nouveau
             document.getElementById('prepAdditifsContainer').innerHTML = '';
             document.getElementById('deletePrepBtn').style.display = id ? 'block' : 'none';
             document.getElementById('prepModalTitle').innerText = id ? 'Modifier Préparation' : 'Nouvelle Préparation';
@@ -2077,6 +2097,7 @@
                     document.getElementById('prepBoite').value = p.boite || '';
                     document.getElementById('datePrep').value = p.datePrep || '';
                     document.getElementById('datePeremption').value = p.datePeremption || '';
+                    document.getElementById('prepType').value = p.type || '';
                     if (p.additifs) {
                         p.additifs.forEach(a => addAdditifToPrep(a));
                     }
@@ -2090,11 +2111,26 @@
         };
 
         window.setPrepExpiry = function (months) {
+            if (!months || months <= 0) return;
             const prepDateVal = document.getElementById('datePrep').value;
             if (!prepDateVal) return alert("Sélectionnez d'abord la date de préparation.");
+            
             const d = new Date(prepDateVal);
             d.setMonth(d.getMonth() + months);
+            
+            // On diminue d'un jour (Règle du labo)
+            d.setDate(d.getDate() - 1);
+            
             document.getElementById('datePeremption').value = d.toISOString().split('T')[0];
+        };
+
+        window.autoSetTypeExpiry = function() {
+            const type = document.getElementById('prepType').value;
+            if (type === 'gelose') {
+                window.setPrepExpiry(12); // 1 an
+            } else if (type === 'bouillon') {
+                window.setPrepExpiry(6);  // 6 mois
+            }
         };
 
         window.addAdditifToPrep = function (obj = null) {
@@ -2223,16 +2259,19 @@
                     boite: document.getElementById('prepBoite').value,
                     datePrep: document.getElementById('datePrep').value,
                     datePeremption: document.getElementById('datePeremption').value,
+                    type: document.getElementById('prepType').value || '',
                     additifs: additifs,
                     updatedAt: Date.now()
                 };
 
                 if (id) {
-                    db.collection(PREPS_COL).doc(id).update(data).then(() => closePrepModal());
+                    db.collection(PREPS_COL).doc(id).update(data);
                 } else {
-                    db.collection(PREPS_COL).add(data).then(() => closePrepModal());
+                    db.collection(PREPS_COL).add(data);
                 }
-                closePrepModal();
+                
+                window.closePrepModal();
+                setTimeout(() => render(), 300);
             });
         }
 
@@ -2263,6 +2302,10 @@
 
         // --- Calculator Logic ---
         openCalcBtn.onclick = () => {
+            const dateInput = document.getElementById('calcPrepDate');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
             calcOverlay.classList.add('active');
         };
 
@@ -2334,12 +2377,42 @@
                 unit.innerText = "ml de produit + ml de diluant";
                 window.calculateRatio();
             } else if (mode === 'boites') {
-                label.innerText = "Total Boites Utilises";
-                unit.innerText = "boites (Petri)";
+                label.innerText = "Nb de Boîtes Total";
+                unit.innerText = "unités";
                 if (document.getElementById('milieux-list').children.length === 0) {
                     window.addMilieuRow();
                 }
                 window.calculateBoites();
+            } else if (mode === 'expiry') {
+                label.innerText = "Date d'Expiration (-1 jour)";
+                unit.innerText = "Date calculée";
+                window.calculateExpiry();
+            }
+        };
+
+        window.calculateExpiry = function () {
+            const dateVal = document.getElementById('calcPrepDate').value;
+            const months = parseInt(document.getElementById('calcMonths').value) || 0;
+            
+            if (!dateVal || months <= 0) {
+                document.getElementById('calcResult').innerText = "---";
+                return;
+            }
+            
+            const d = new Date(dateVal);
+            d.setMonth(d.getMonth() + months);
+            d.setDate(d.getDate() - 1);
+            
+            const resultStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            document.getElementById('calcResult').innerText = resultStr;
+
+            // Si le modal prep est ouvert, on peut mettre à jour directement
+            const prepModal = document.getElementById('prepModalOverlay');
+            if (prepModal && prepModal.classList.contains('active')) {
+                const datePeremption = document.getElementById('datePeremption');
+                if (datePeremption) {
+                    datePeremption.value = d.toISOString().split('T')[0];
+                }
             }
         };
 
@@ -2786,11 +2859,25 @@
                     </div>
                 `).join('');
             } else if (currentTab === 'preps') {
-                let filtered = preps.filter(p =>
-                    (p.designation && p.designation.toLowerCase().includes(query)) ||
-                    (p.lot && p.lot.toLowerCase().includes(query)) ||
-                    (p.code && p.code.toLowerCase().includes(query))
-                );
+                const dateFilter = document.getElementById('dateFilter').value;
+                let filtered = preps.filter(p => {
+                    const matchesText = (p.designation && p.designation.toLowerCase().includes(query)) ||
+                        (p.lot && p.lot.toLowerCase().includes(query)) ||
+                        (p.code && p.code.toLowerCase().includes(query)) ||
+                        (p.supplier && p.supplier.toLowerCase().includes(query)) ||
+                        (p.boite && p.boite.toLowerCase().includes(query));
+
+                    const matchesDate = !dateFilter || p.datePrep === dateFilter;
+
+                    return matchesText && matchesDate;
+                });
+
+                // Tri des préparations
+                filtered.sort((a, b) => {
+                    const da = new Date(a.datePrep || 0).getTime();
+                    const db = new Date(b.datePrep || 0).getTime();
+                    return sortOrder === 'desc' ? db - da : da - db;
+                });
 
                 if (filtered.length === 0) {
                     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚗️</div><h3>Aucune préparation trouvée</h3></div>`;
@@ -3332,6 +3419,8 @@
             const dateAnalyse = document.getElementById('dateAnalyse').value;
             const dateSortie = document.getElementById('dateSortie').value;
             const container = row.querySelector('.daily-readings-grid');
+            if (!container) return; // Sécurité si conteneur non trouvé
+            
             if (!dateAnalyse || !dateSortie) {
                 container.innerHTML = '<span style="font-size:0.6rem; opacity:0.5;">Définissez les dates...</span>';
                 return;
@@ -3420,28 +3509,44 @@
                 const rowId = row.dataset.id;
                 const germItems = Array.from(row.querySelectorAll('.germs-dynamic-container div'));
                 const germsDetails = germItems
-                    .filter(item => item.querySelector('.row-germ-check').checked)
-                    .map(item => ({
-                        name: item.querySelector('span').innerText,
-                        result: item.querySelector('.row-germ-result').value,
-                        remark: item.querySelector('.row-germ-remark').value
-                    }));
+                    .filter(item => {
+                        const ck = item.querySelector('.row-germ-check');
+                        return ck && ck.checked;
+                    })
+                    .map(item => {
+                        const span = item.querySelector('span');
+                        const res = item.querySelector('.row-germ-result');
+                        const rem = item.querySelector('.row-germ-remark');
+                        return {
+                            name: span ? span.innerText : 'Inconnu',
+                            result: res ? res.value : '',
+                            remark: rem ? rem.value : ''
+                        };
+                    });
 
-                const dailyReadings = Array.from(row.querySelectorAll('.daily-readings-grid > div')).map(div => ({
-                    val: div.querySelector('.daily-input').value,
-                    remark: div.querySelector('.daily-remark-input').value
-                }));
+                const dailyReadings = Array.from(row.querySelectorAll('.daily-readings-grid > div')).map(div => {
+                    const inp = div.querySelector('.daily-input');
+                    const rem = div.querySelector('.daily-remark-input');
+                    return {
+                        val: inp ? inp.value : '',
+                        remark: rem ? rem.value : ''
+                    };
+                });
+
+                const elProd = row.querySelector('.row-prod');
+                const elLot = row.querySelector('.row-lot');
+                const elCode = row.querySelector('.row-code');
+                const elLibere = row.querySelector('.row-libere');
 
                 const data = {
                     ...commonData,
-                    produit: row.querySelector('.row-prod').value,
-                    lot: row.querySelector('.row-lot').value,
-                    codeControl: row.querySelector('.row-code').value,
-                    isLibere: row.querySelector('.row-libere').checked,
+                    produit: elProd ? elProd.value : '',
+                    lot: elLot ? elLot.value : '',
+                    codeControl: elCode ? elCode.value : '',
+                    isLibere: elLibere ? elLibere.checked : false,
                     germsDetails: germsDetails,
-                    dailyReadings: dailyReadings
-                    // Compatibilité ancienne : on garde germs comme liste simple de noms
-                    , germs: germsDetails.map(g => g.name)
+                    dailyReadings: dailyReadings,
+                    germs: germsDetails.map(g => g.name)
                 };
 
                 if (rowId) {

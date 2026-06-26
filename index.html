@@ -26,7 +26,7 @@
             flex-direction: column;
         }
     </style>
-    <title>MICROBIO v4.4.6 - Labo</title>
+    <title>MICROBIO v4.4.7 - Labo</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1134,7 +1134,7 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.6 • Stockage Local Direct</div>
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.7 • Stockage Local Direct</div>
         <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
@@ -1921,7 +1921,7 @@
     <script>
         // === VERSION 4.4.6 - STABLE ===
 
-        // --- SERVICE WORKER (OFFLINE MODE) ---
+        // --- SERVICE WORKER & SAFETY ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -1929,6 +1929,12 @@
                     .catch(err => console.log('SW Error:', err));
             });
         }
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.modal-overlay').forEach(m => {
+                m.style.display = 'none';
+                m.classList.remove('active');
+            });
+        });
 
         // Global State & Functions
         window.currentTab = 'fiches';
@@ -1937,7 +1943,7 @@
             // DEBUG ALERT (A retirer après test)
             // alert("CLIC REÇU : Tab " + tab);
 
-            window.window.currentTab = tab;
+            window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
             if (activeTab) activeTab.classList.add('active');

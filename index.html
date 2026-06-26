@@ -27,15 +27,6 @@
         }
     </style>
     <title>MICROBIO v4.4.6 - Labo</title>
-    <script>
-        // TRÈS IMPORTANT : Tue uniquement le cache logiciel, pas les données utilisateur
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) { registration.unregister(); }
-            });
-        }
-        console.log("Software cache purged");
-    </script>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1928,8 +1919,7 @@
     </div>
 
     <script>
-        // === VERSION 4.4.6 - DATA SAFE MODE ===
-        alert("🛡️ SÉCURITÉ v4.4.6 : Vos données sont conservées. Chargement du logiciel...");
+        // === VERSION 4.4.6 - STABLE ===
 
         // FORCE CLOSE ALL MODALS AT START
         window.addEventListener('DOMContentLoaded', () => {
@@ -2009,11 +1999,11 @@
             const el = document.getElementById(id);
             if (!el) return;
             el.classList.add('active');
-            if (el.style.display !== 'block') {
-                // Ensure visibility if class toggle isn't enough for some styles
-                el.style.display = 'block';
-                el.style.opacity = '1';
-            }
+            // Toujours restaurer les styles de visibilité forcée
+            el.style.display = 'block';
+            el.style.opacity = '1';
+            el.style.visibility = 'visible';
+            
             window.activeModals.push(id);
             history.pushState({ modalId: id }, "");
         };

@@ -26,16 +26,15 @@
             flex-direction: column;
         }
     </style>
-    <title>MICROBIO v4.4.4 - FINAL FIX</title>
+    <title>MICROBIO v4.4.6 - Labo</title>
     <script>
-        // TRÈS IMPORTANT : Tue le cache immédiatement au chargement de la page
+        // TRÈS IMPORTANT : Tue uniquement le cache logiciel, pas les données utilisateur
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) { registration.unregister(); }
             });
         }
-        localStorage.clear();
-        console.log("Caches Purged at HEAD");
+        console.log("Software cache purged");
     </script>
 
     <!-- Firebase SDKs -->
@@ -1144,7 +1143,7 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.4 • Stockage Local Direct</div>
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.6 • Stockage Local Direct</div>
         <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
@@ -1929,12 +1928,24 @@
     </div>
 
     <script>
-        // === VERSION 4.4.4 - COMPATIBILITÉ TOTALE ===
-        alert("🚀 DERNIÈRE ÉTAPE v4.4.4 : Nettoyage final du système...");
+        // === VERSION 4.4.6 - DATA SAFE MODE ===
+        alert("🛡️ SÉCURITÉ v4.4.6 : Vos données sont conservées. Chargement du logiciel...");
+
+        // FORCE CLOSE ALL MODALS AT START
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.modal-overlay').forEach(m => {
+                m.style.display = 'none';
+                m.classList.remove('active');
+            });
+        });
 
         // Global State & Functions
         window.currentTab = 'fiches';
         window.switchTab = function (tab) {
+            console.log("Switching to " + tab);
+            // DEBUG ALERT (A retirer après test)
+            // alert("CLIC REÇU : Tab " + tab);
+
             window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
@@ -1971,12 +1982,19 @@
             measurementId: "G-5ZE6ZJFBF6"
         };
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        try {
+            firebase.initializeApp(firebaseConfig);
+            window.db = firebase.firestore();
+            console.log("Firebase Init OK");
+        } catch (e) {
+            alert("❌ ERREUR CONNEXION : " + e.message);
+        }
 
         // Safe Persistence
         try {
-            db.enablePersistence({ synchronizeTabs: true }).catch(err => console.warn("Persistence offline:", err.code));
+            if (window.db) {
+                window.db.enablePersistence({ synchronizeTabs: true }).catch(err => console.warn("Persistence offline:", err.code));
+            }
         } catch(e) {}
 
         window.onerror = function(msg, url, line) {
@@ -2198,13 +2216,13 @@
         };
 
         // Snapshot Listeners Uni
-        db.collection(FICHES_COL).onSnapshot(s => { fiches = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        db.collection(ANALYSES_COL).onSnapshot(s => { analyses = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        db.collection(PHOTOS_COL).onSnapshot(s => { photos = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        db.collection(PREPS_COL).onSnapshot(s => { preps = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        db.collection(REGISTRES_COL).onSnapshot(s => { registres = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        db.collection(R_ENTRIES_COL).onSnapshot(s => { rEntries = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        db.collection("settings").doc(CATALOGS_DOC).onSnapshot(d => { if (d.exists) { catalogs = d.data(); renderCatalogs(); } });
+        window.db.collection(FICHES_COL).onSnapshot(s => { fiches = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        window.db.collection(ANALYSES_COL).onSnapshot(s => { analyses = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        window.db.collection(PHOTOS_COL).onSnapshot(s => { photos = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        window.db.collection(PREPS_COL).onSnapshot(s => { preps = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        window.db.collection(REGISTRES_COL).onSnapshot(s => { registres = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        window.db.collection(R_ENTRIES_COL).onSnapshot(s => { rEntries = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(d => { if (d.exists) { catalogs = d.data(); renderCatalogs(); } });
 
         window.calcIncubation = function () {
             const dateVal = document.getElementById('dateAnalyse').value;
@@ -2422,7 +2440,7 @@
             const id = document.getElementById('prepEditId').value;
             if (!id) return;
             if (confirm("Supprimer cette préparation ?")) {
-                db.collection(PREPS_COL).doc(id).delete().then(() => {
+                window.db.collection(PREPS_COL).doc(id).delete().then(() => {
                     closePrepModal();
                 });
             }
@@ -2453,9 +2471,9 @@
                 };
 
                 if (id) {
-                    db.collection(PREPS_COL).doc(id).update(data);
+                    window.db.collection(PREPS_COL).doc(id).update(data);
                 } else {
-                    db.collection(PREPS_COL).add(data);
+                    window.db.collection(PREPS_COL).add(data);
                 }
                 
                 window.closePrepModal();
@@ -2793,13 +2811,13 @@
         }
 
         // --- Real-time Sync ---
-        db.collection(FICHES_COL).onSnapshot(snapshot => {
+        window.db.collection(FICHES_COL).onSnapshot(snapshot => {
             fiches = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             updateSuggestions();
             if (currentTab === 'fiches') render();
         });
 
-        db.collection(ANALYSES_COL).orderBy('dateAnalyse', 'desc').onSnapshot(snapshot => {
+        window.db.collection(ANALYSES_COL).orderBy('dateAnalyse', 'desc').onSnapshot(snapshot => {
             analyses = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             updateSuggestions();
             if (currentTab === 'analyses') render();
@@ -2807,17 +2825,17 @@
             console.error("Analyses Sync Error:", err);
         });
 
-        db.collection(PREPS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
+        window.db.collection(PREPS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
             preps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (currentTab === 'preps') render();
         });
 
-        db.collection(PHOTOS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
+        window.db.collection(PHOTOS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
             photos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (currentTab === 'photos') render();
         });
 
-        db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
+        window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
                 catalogs = doc.data() || {};
                 // Initialisation des listes si absentes
@@ -2826,7 +2844,7 @@
                 });
                 renderCatalogs();
             } else {
-                db.collection("settings").doc(CATALOGS_DOC).set({
+                window.db.collection("settings").doc(CATALOGS_DOC).set({
                     germes: [], consommables: [], diluants: [], reactifs: [], additifs: []
                 });
             }
@@ -2844,7 +2862,7 @@
                 renderCatalogs();
                 input.value = '';
                 const newCatalogs = JSON.parse(JSON.stringify(catalogs));
-                db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs)
+                window.db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs)
                     .catch(err => {
                         console.error("Erreur Sync Cloud:", err);
                         alert("Note: Enregistré localement, mais vérifiez vos règles Firebase pour le Cloud.");
@@ -2856,7 +2874,7 @@
             if (confirm(`Supprimer "${val}" du catalogue permanent ?`)) {
                 const newCatalogs = JSON.parse(JSON.stringify(catalogs));
                 newCatalogs[type] = newCatalogs[type].filter(v => v !== val);
-                db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs);
+                window.db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs);
             }
         };
 
@@ -3074,8 +3092,8 @@
                 // Tri des préparations
                 filtered.sort((a, b) => {
                     const da = new Date(a.datePrep || 0).getTime();
-                    const db = new Date(b.datePrep || 0).getTime();
-                    return sortOrder === 'desc' ? db - da : da - db;
+                    const dateB = new Date(b.datePrep || 0).getTime();
+                    return sortOrder === 'desc' ? dateB - da : da - dateB;
                 });
 
                 if (filtered.length === 0) {
@@ -3155,8 +3173,8 @@
 
                     // 2. Ensuite par date
                     const da = new Date(a.dateAnalyse).getTime();
-                    const db = new Date(b.dateAnalyse).getTime();
-                    return sortOrder === 'desc' ? db - da : da - db;
+                    const dateB = new Date(b.dateAnalyse).getTime();
+                    return sortOrder === 'desc' ? dateB - da : da - dateB;
                 });
 
                 // Filtering
@@ -3509,8 +3527,8 @@
                 columns: cols,
                 updatedAt: Date.now()
             };
-            if (id) await db.collection(REGISTRES_COL).doc(id).update(data);
-            else await db.collection(REGISTRES_COL).add(data);
+            if (id) await window.db.collection(REGISTRES_COL).doc(id).update(data);
+            else await window.db.collection(REGISTRES_COL).add(data);
             
             // Fermeture explicite
             window.closeModal('registreModalOverlay');
@@ -3585,7 +3603,7 @@
             const id = document.getElementById('entryEditId').value;
             if(!id) return;
             if(confirm("Supprimer cette ligne du registre ?")) {
-                await db.collection(R_ENTRIES_COL).doc(id).delete();
+                await window.db.collection(R_ENTRIES_COL).doc(id).delete();
                 window.closeModal('entryModalOverlay');
             }
         };
@@ -3615,8 +3633,8 @@
                 data: vals,
                 updatedAt: Date.now()
             };
-            if (id) await db.collection(R_ENTRIES_COL).doc(id).update(data);
-            else await db.collection(R_ENTRIES_COL).add(data);
+            if (id) await window.db.collection(R_ENTRIES_COL).doc(id).update(data);
+            else await window.db.collection(R_ENTRIES_COL).add(data);
             
             window.closeModal('entryModalOverlay');
             document.getElementById('entryModalOverlay').style.display = 'none';
@@ -3627,7 +3645,7 @@
             const id = document.getElementById('regEditId').value;
             if(!id) return;
             if(confirm("Supprimer ce registre ET toutes ses données ?")) {
-                await db.collection(REGISTRES_COL).doc(id).delete();
+                await window.db.collection(REGISTRES_COL).doc(id).delete();
                 window.closeModal('registreModalOverlay');
             }
         }
@@ -3794,8 +3812,8 @@
             };
 
             const promise = id ?
-                db.collection(FICHES_COL).doc(id).update(data) :
-                db.collection(FICHES_COL).add(data);
+                window.db.collection(FICHES_COL).doc(id).update(data) :
+                window.db.collection(FICHES_COL).add(data);
 
             promise.then(() => {
                 window.closeAddModal();
@@ -3810,7 +3828,7 @@
             const idToDel = document.getElementById('editId').value;
             if (!idToDel) return;
             if (confirm("⚠️ Supprimer cette fiche définitivement ?")) {
-                db.collection(FICHES_COL).doc(idToDel).delete().then(() => {
+                window.db.collection(FICHES_COL).doc(idToDel).delete().then(() => {
                     alert("✅ Fiche supprimée !");
                     window.closeAddModal();
                 }).catch(err => alert("Erreur Firebase: " + err.message));
@@ -3833,17 +3851,17 @@
             else if (currentTab === 'registres') { targetCol = R_ENTRIES_COL; label = "entrée(s) de registre"; }
 
             if (confirm(`⚠️ Supprimer définitivement ${selectedFiches.size} ${label} ?`)) {
-                const batch = db.batch();
+                const batch = window.db.batch();
                 selectedFiches.forEach(id => {
                     if (id.startsWith('reg:')) {
                         const realId = id.replace('reg:', '');
-                        batch.delete(db.collection(REGISTRES_COL).doc(realId));
+                        batch.delete(window.db.collection(REGISTRES_COL).doc(realId));
                         // Supprimer aussi toutes les lignes de ce carnet
                         rEntries.filter(e => e.regId === realId).forEach(e => {
-                            batch.delete(db.collection(R_ENTRIES_COL).doc(e.id));
+                            batch.delete(window.db.collection(R_ENTRIES_COL).doc(e.id));
                         });
                     } else {
-                        batch.delete(db.collection(targetCol).doc(id));
+                        batch.delete(window.db.collection(targetCol).doc(id));
                     }
                 });
 
@@ -4037,7 +4055,7 @@
             };
 
             const rows = document.querySelectorAll('.analysis-row');
-            const batch = db.batch();
+            const batch = window.db.batch();
             const promises = [];
 
             rows.forEach(row => {
@@ -4085,9 +4103,9 @@
                 };
 
                 if (rowId) {
-                    batch.update(db.collection(ANALYSES_COL).doc(rowId), data);
+                    batch.update(window.db.collection(ANALYSES_COL).doc(rowId), data);
                 } else {
-                    const newRef = db.collection(ANALYSES_COL).doc();
+                    const newRef = window.db.collection(ANALYSES_COL).doc();
                     if (rows.length > 1) data.batchId = id ? (analyses.find(x => x.id === id).batchId || 'batch_' + Date.now()) : 'batch_' + Date.now();
                     batch.set(newRef, data);
                 }
@@ -4139,7 +4157,7 @@
             const id = document.getElementById('analysisEditId').value;
             if (!id) return;
             if (confirm("⚠️ Supprimer cette analyse ?")) {
-                db.collection(ANALYSES_COL).doc(id).delete().then(() => {
+                window.db.collection(ANALYSES_COL).doc(id).delete().then(() => {
                     alert("✅ Analyse supprimée !");
                     window.closeAnalysisModal();
                 }).catch(err => alert("Erreur : " + err.message));
@@ -4318,7 +4336,7 @@
             const id = document.getElementById('photoEditId').value;
             if (!id) return;
             if (confirm("Supprimer cette photo ?")) {
-                db.collection(PHOTOS_COL).doc(id).delete().then(() => closePhotoModal());
+                window.db.collection(PHOTOS_COL).doc(id).delete().then(() => closePhotoModal());
             }
         };
 
@@ -4358,9 +4376,9 @@
 
                 saveBtn.innerText = "💾 SAUVEGARDE...";
                 if (id) {
-                    db.collection(PHOTOS_COL).doc(id).update(data);
+                    window.db.collection(PHOTOS_COL).doc(id).update(data);
                 } else {
-                    db.collection(PHOTOS_COL).add(data);
+                    window.db.collection(PHOTOS_COL).add(data);
                 }
                 
                 alert("✅ Photo enregistrée avec succès !");

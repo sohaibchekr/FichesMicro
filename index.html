@@ -26,7 +26,7 @@
             flex-direction: column;
         }
     </style>
-    <title>MICROBIO v4.4.2 - Labo [UP]</title>
+    <title>MICROBIO v4.4.3 - Labo [FORCE_UPDATE]</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1134,7 +1134,7 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.2 • Stockage Local Direct</div>
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.3 • Stockage Local Direct</div>
         <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
@@ -1919,10 +1919,18 @@
     </div>
 
     <script>
-        // === VERSION 4.4.2 - RESET TOTAL ===
-        alert("🔍 DIAGNOSTIC : Initialisation du système v4.4.2...");
+        // === VERSION 4.4.3 - FORCE CACHE CLEAR ===
+        
+        // KILL SERVICE WORKERS IMMEDIATELY
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) { registration.unregister(); }
+            });
+        }
 
-        // Global State & Functions (Moving to TOP for availability)
+        alert("🚀 UPDATE CRITIQUE v4.4.3 : Chargement du nouveau système...");
+
+        // Global State & Functions
         window.currentTab = 'fiches';
         window.switchTab = function (tab) {
             window.currentTab = tab;
@@ -4137,24 +4145,9 @@
         // On branche le bouton PHYSIQUE sur la fonction GLOBALE
         deleteBtn.onclick = window.confirmDeleteFiche;
 
-        // Service Worker pour le mode Hors-ligne / PWA
+        // Service Worker Bypass Active - Version 4.4.3
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => {
-                        reg.onupdatefound = () => {
-                            const installingWorker = reg.installing;
-                            installingWorker.onstatechange = () => {
-                                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    if (confirm('Nouvelle version disponible ! Recharger ?')) {
-                                        window.location.reload();
-                                    }
-                                }
-                            };
-                        };
-                    })
-                    .catch(err => console.log('Erreur SW:', err));
-            });
+            console.log("SW Bypass Active");
         }
 
         // --- PDF GENERATION ---

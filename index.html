@@ -460,13 +460,46 @@
             overflow-y: auto;
         }
 
-        .modal-overlay.active {
-            display: block;
-            opacity: 1;
-        }
-
         .modal-overlay.active .modal-content {
             transform: translateY(0);
+        }
+
+        /* --- MOBILE OPTIMIZATIONS --- */
+        @media (max-width: 600px) {
+            .modal-overlay {
+                padding: 10px;
+                display: flex;
+                align-items: center; /* Center on mobile if not too tall */
+            }
+            .modal-content {
+                margin: auto;
+                max-height: 98vh;
+                padding: 20px 15px;
+                border-radius: 24px;
+                width: 100%;
+            }
+            
+            /* Prevents iOS from zooming in on input focus (requires font-size >= 16px) */
+            input, select, textarea, button, .form-input {
+                font-size: 16px !important;
+            }
+
+            .fab {
+                bottom: 20px;
+                right: 20px;
+                width: 55px;
+                height: 55px;
+            }
+
+            .main-tabs-container {
+                padding: 5px;
+                overflow-x: auto;
+                justify-content: flex-start;
+            }
+            .main-tab {
+                padding: 8px 15px;
+                white-space: nowrap;
+            }
         }
 
         .close-modal {
@@ -1053,6 +1086,9 @@
             <button onclick="switchTab('photos')" id="tab-photos" class="main-tab"
                 style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📸
                 PHOTOS</button>
+            <button onclick="switchTab('registres')" id="tab-registres" class="main-tab"
+                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📓
+                REGISTRES</button>
         </div>
 
         <div style="display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 15px; flex-wrap: wrap;">
@@ -1069,12 +1105,14 @@
             </button>
         </div>
         <div id="selectionActions"
-            style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center;">
-            <span id="selectedCount" style="color: #ef4444; font-weight: 800; font-size: 0.8rem;">0
-                sélectionnée(s)</span>
-            <button onclick="window.runBatchDelete()"
-                style="background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 800; font-size: 0.7rem; cursor: pointer;">SUPPRIMER
-                DÉFINITIVEMENT</button>
+            style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center; gap: 10px;">
+            <span id="selectedCount" style="color: #ef4444; font-weight: 800; font-size: 0.8rem;">0 sélectionnée(s)</span>
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.selectAllVisible()"
+                    style="background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">TOUT SÉLECTIONNER</button>
+                <button onclick="window.runBatchDelete()"
+                    style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">SUPPRIMER DÉFINITIVEMENT</button>
+            </div>
         </div>
     </header>
 
@@ -1821,6 +1859,52 @@
         </div>
     </div>
 
+    <!-- Registre Config Modal -->
+    <div id="registreModalOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="window.closeModal('registreModalOverlay')">✕</button>
+            <h2 id="regModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">📓 Nouveau Registre</h2>
+            <form id="registreForm">
+                <input type="hidden" id="regEditId">
+                <div class="form-group">
+                    <label>Nom du registre / Titre</label>
+                    <input type="text" id="regName" class="form-input" placeholder="ex: Suivi Nettoyage" required>
+                </div>
+                <input type="hidden" id="regIcon" value="📓">
+                <div style="margin: 15px 0; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <label style="font-size: 0.65rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">Liste des colonnes</label>
+                    <div id="regColumnsContainer" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                        <!-- Dynamique -->
+                    </div>
+                    <button type="button" onclick="window.addRegColumn()" style="margin-top: 10px; width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px dashed var(--primary); color: var(--primary); border-radius: 12px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">+ AJOUTER UN TITRE DE COLONNE</button>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="save-btn" style="flex:2;">Enregistrer</button>
+                    <button type="button" id="deleteRegBtn" class="delete-btn" style="display:none; flex:1;" onclick="window.deleteRegistre()">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Entry Modal -->
+    <div id="entryModalOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="window.closeModal('entryModalOverlay')">✕</button>
+            <h2 id="entryModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--success);">Ajouter Résultat</h2>
+            <form id="entryForm">
+                <input type="hidden" id="entryRegId">
+                <input type="hidden" id="entryEditId">
+                <div id="entryFieldsContainer" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                    <!-- Dynamique -->
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="save-btn" style="flex:2; background: var(--success);">Sauvegarder</button>
+                    <button type="button" id="deleteEntryBtn" class="delete-btn" style="flex:1; display:none;" onclick="window.deleteEntry()">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // === SCRIPTS RÉPARÉS ===
         console.log("🚀 MICROBIO v4.4.0");
@@ -1840,6 +1924,15 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // ENABLE OFFLINE PERSISTENCE
+        db.enablePersistence({ synchronizeTabs: true }).catch(function (err) {
+            if (err.code == 'failed-precondition') {
+                console.warn("Persistence failed: Multiple tabs open");
+            } else if (err.code == 'unimplemented') {
+                console.warn("Persistence unimplemented");
+            }
+        });
+
         // GLOBAL ERROR CATCHER
         window.onerror = function(msg, url, line) {
             alert("⚠️ ERREUR SYSTEME: " + msg + "\nLigne: " + line);
@@ -1849,19 +1942,67 @@
         // Global State
         let currentTab = 'fiches';
         let sortOrder = localStorage.getItem('microbio_sort') || 'desc';
+
+        // --- Modal & History Management ---
+        window.activeModals = [];
+        window.openModal = function(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.add('active');
+            if (el.style.display !== 'block') {
+                // Ensure visibility if class toggle isn't enough for some styles
+                el.style.display = 'block';
+                el.style.opacity = '1';
+            }
+            window.activeModals.push(id);
+            history.pushState({ modalId: id }, "");
+        };
+
+        window.closeModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('active');
+                el.style.display = 'none';
+                el.style.opacity = '0';
+                el.style.visibility = 'hidden';
+            }
+            window.activeModals = window.activeModals.filter(m => m !== id);
+            // On ne fait pas history.back() ici pour éviter les conflits si déjà fermé
+        };
+
+        window.onpopstate = function(event) {
+            // Close all active modals when back button is pressed
+            document.querySelectorAll('.modal-overlay').forEach(m => {
+                m.classList.remove('active');
+                // Support both class and style methods used in codebase
+                if (m.id !== 'photoModalOverlay') { // Special case handled by its own styles
+                     m.style.setProperty('display', 'none', 'important');
+                } else {
+                     m.style.display = 'none';
+                }
+            });
+            window.activeModals = [];
+        };
         let fiches = [];
         let analyses = [];
         let photos = [];
+        let preps = [];
+        let registres = [];
+        let rEntries = [];
         let catalogs = {
             germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
             consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
             diluants: ['SNT 90ML', 'PH7', 'Eau Peptonée'],
             reactifs: ['TWEEN 80', 'IPA 70%']
         };
-
+        
         const FICHES_COL = "fiches";
         const ANALYSES_COL = "analyses";
         const PHOTOS_COL = "photos";
+        const REGISTRES_COL = "registres_config";
+        const R_ENTRIES_COL = "registres_data";
+        const CATALOGS_DOC = "laboratoires"; // Pour le catalogue permanent
+
         let lastUsedCategory = localStorage.getItem('microbio_last_photo_cat') || 'ANALYSES';
         let customPhotoCategories = JSON.parse(localStorage.getItem('microbio_custom_photo_cats')) || ['ANALYSES', 'MILIEUX / PREPS', 'DIVERS'];
         const PREPS_COL = "preparations";
@@ -1896,11 +2037,8 @@
                 }
             }
             
-            modal.style.setProperty('display', 'flex', 'important');
-            modal.style.setProperty('opacity', '1', 'important');
-            modal.style.setProperty('visibility', 'visible', 'important');
-            modal.style.setProperty('z-index', '1000000', 'important');
             modal.classList.add('active');
+            window.openModal('photoModalOverlay'); // Unified call
         };
 
         window.renderCategoryChips = function() {
@@ -1937,11 +2075,7 @@
         };
 
         window.closePhotoModal = function () {
-            const modal = document.getElementById('photoModalOverlay');
-            if (modal) {
-                modal.style.cssText = "";
-                modal.classList.remove('active');
-            }
+            window.closeModal('photoModalOverlay');
         };
 
         window.previewPhoto = function (input) {
@@ -2013,10 +2147,22 @@
             } else if (tab === 'photos') {
                 addBtn.innerText = "+ NOUVELLE PHOTO";
                 searchInput.placeholder = "Chercher une photo...";
+            } else if (tab === 'registres') {
+                addBtn.innerText = "+ RÉGLAGES / NOUVELLE ENTRÉE";
+                searchInput.placeholder = "Chercher dans les registres...";
             }
 
             render();
         };
+
+        // Snapshot Listeners Uni
+        db.collection(FICHES_COL).onSnapshot(s => { fiches = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        db.collection(ANALYSES_COL).onSnapshot(s => { analyses = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        db.collection(PHOTOS_COL).onSnapshot(s => { photos = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        db.collection(PREPS_COL).onSnapshot(s => { preps = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        db.collection(REGISTRES_COL).onSnapshot(s => { registres = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        db.collection(R_ENTRIES_COL).onSnapshot(s => { rEntries = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
+        db.collection("settings").doc(CATALOGS_DOC).onSnapshot(d => { if (d.exists) { catalogs = d.data(); renderCatalogs(); } });
 
         window.calcIncubation = function () {
             const dateVal = document.getElementById('dateAnalyse').value;
@@ -2047,31 +2193,31 @@
         };
 
         window.closeAnalysisModal = function () {
-            const modal = document.getElementById('analysisModalOverlay');
-            if (modal) modal.classList.remove('active');
+            window.closeModal('analysisModalOverlay');
             document.getElementById('analysisForm').reset();
         };
 
         window.closeAddModal = function () {
-            const modal = document.getElementById('modalOverlay');
-            if (modal) modal.classList.remove('active');
-            if (ficheForm) ficheForm.reset();
+            window.closeModal('modalOverlay');
+            if (typeof ficheForm !== 'undefined') ficheForm.reset();
         };
 
         window.openAddModal = function () {
             if (currentTab === 'photos') {
                 window.openPhotoModal();
             } else if (currentTab === 'analyses') {
-                document.getElementById('analysisModalOverlay').classList.add('active');
+                window.openModal('analysisModalOverlay');
             } else if (currentTab === 'preps') {
                 window.openPrepModal();
+            } else if (currentTab === 'registres') {
+                // Créer un nouveau carnet directement
+                window.openRegistreConfig();
             } else {
-                document.getElementById('modalOverlay').classList.add('active');
+                window.openModal('modalOverlay');
             }
         };
 
         // Constantes déplacées en haut
-        let preps = [];
 
         window.openPrepModal = function (id = null) {
             const form = document.getElementById('prepForm');
@@ -2107,7 +2253,7 @@
         };
 
         window.closePrepModal = function () {
-            document.getElementById('prepModalOverlay').classList.remove('active');
+            window.closeModal('prepModalOverlay');
         };
 
         window.setPrepExpiry = function (months) {
@@ -2277,13 +2423,7 @@
 
         // document.getElementById('addBtn').onclick = window.openAddModal; // Directement dans HTML maintenant
 
-        // Use persistence for offline access
-        db.enablePersistence().catch((err) => {
-            console.warn("Persistence failed", err.code);
-        });
-
         // Constantes déplacées en haut
-        const CATALOGS_DOC = "catalogs";
 
         const fichesList = document.getElementById('fiches-list');
         const searchInput = document.getElementById('searchInput');
@@ -2780,6 +2920,23 @@
             selectedCountLabel.innerText = `${selectedFiches.size} sélectionnée(s)`;
         }
 
+        window.selectAllVisible = function() {
+            // Cible les fiches, analyses, preps et registres (tr + card header pour tout le carnet)
+            const cards = document.querySelectorAll('.fiche-card, .photo-card, .fiche-card-prep');
+            const rows = document.querySelectorAll('tr[onclick*="toggleItemSelection"]');
+            const regHeaders = document.querySelectorAll('div[onclick*="toggleItemSelection"]'); // Pour les carnets entiers
+            
+            [...cards, ...rows, ...regHeaders].forEach(item => {
+                const onclick = item.getAttribute('onclick') || '';
+                const idMatch = onclick.match(/'([^']+)'/); 
+                if (idMatch && idMatch[1]) {
+                    selectedFiches.add(idMatch[1]);
+                }
+            });
+            updateSelectionUI();
+            render();
+        };
+
         window.toggleItemSelection = function (id, col, e) {
             if (e) e.stopPropagation();
             if (selectedFiches.has(id)) {
@@ -2891,6 +3048,8 @@
                     if (expDate) expDate.setHours(0, 0, 0, 0);
                     const isExpired = expDate && expDate < today;
                     const isExpiringSoon = expDate && (expDate - today) / (1000 * 3600 * 24) <= 7;
+
+                    const isSelected = selectedFiches.has(p.id);
 
                     return `
                         <div class="fiche-card" onclick="openPrepModal('${p.id}')" style="border-left: 5px solid var(--secondary);">
@@ -3150,8 +3309,330 @@
                         }).join('')}
                     </div>
                 `;
+            } else if (currentTab === 'registres') {
+                if (registres.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📓</div><h3>Aucun registre configuré</h3><p style="font-size:0.7rem; opacity:0.6;">Cliquez sur + RÉGLAGES pour créer votre premier carnet.</p></div>`;
+                    return;
+                }
+                container.innerHTML = registres.map(reg => {
+                    let entries = rEntries.filter(e => e.regId === reg.id);
+                    
+                    // Filtrage par recherche
+                    if (query) {
+                        const matchesName = (reg.name || "").toLowerCase().includes(query);
+                        const filteredEntries = entries.filter(e => Object.values(e.data || {}).some(v => String(v).toLowerCase().includes(query)));
+                        
+                        if (!matchesName && filteredEntries.length === 0) return ""; // Rien ne correspond
+                        if (!matchesName) entries = filteredEntries; // On ne garde que les lignes qui matchent
+                    }
+
+                    entries.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                    
+                    return `
+                        <div style="background:rgba(255,255,255,0.03); border-radius:24px; border:1px solid var(--glass-border); margin-bottom:20px; overflow:hidden;">
+                            <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    ${isSelectionMode ? `
+                                        <div onclick="window.toggleItemSelection('reg:${reg.id}', 'registres_config', event); render();" 
+                                             style="width:24px; height:24px; border:2px solid ${selectedFiches.has('reg:'+reg.id) ? '#ef4444' : 'rgba(255,255,255,0.2)'}; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#ef4444; font-weight:bold; background:${selectedFiches.has('reg:'+reg.id) ? 'rgba(239, 68, 68, 0.1)' : 'transparent'};">
+                                            ${selectedFiches.has('reg:'+reg.id) ? '✓' : ''}
+                                        </div>
+                                    ` : ''}
+                                    <span style="font-size:1.5rem;">${reg.icon || '📓'}</span>
+                                    <div>
+                                        <div style="font-weight:900; color:white; font-size:1rem;">${reg.name}</div>
+                                        <div style="font-size:0.55rem; color:var(--text-dim); font-weight:700;">${entries.length} LIGNES</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button onclick="window.exportRegistry('${reg.id}')" style="background:rgba(34, 197, 94, 0.1); color:var(--success); border:1px solid var(--success); padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">📥 EXCEL</button>
+                                    <button onclick="window.openEntryModal('${reg.id}')" style="background:var(--success); color:white; border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.7rem; cursor:pointer;">+ LIGNE</button>
+                                    <button onclick="window.openRegistreConfig('${reg.id}')" style="background:rgba(255,255,255,0.05); color:var(--text-dim); border:1px solid rgba(255,255,255,0.1); padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">⚙️</button>
+                                </div>
+                            </div>
+                            
+                            <div style="overflow-x:auto;">
+                                <table style="width:100%; border-collapse:collapse; font-size:0.7rem; text-align:left;">
+                                    <thead>
+                                        <tr style="background:rgba(255,255,255,0.02); color:var(--primary); border-bottom:1px solid rgba(255,255,255,0.05);">
+                                            ${isSelectionMode ? '<th style="width:40px; padding:12px;"></th>' : ''}
+                                            ${(reg.columns || []).map(c => `<th style="padding:12px 15px; font-weight:900; white-space:nowrap;">${typeof c === 'string' ? c : c.name}</th>`).join('')}
+                                            <th style="width:40px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${entries.length === 0 ? `<tr><td colspan="${(reg.columns || []).length + (isSelectionMode ? 2 : 1)}" style="padding:20px; text-align:center; color:var(--text-dim); opacity:0.5;">Aucune donnée enregistrée</td></tr>` : ''}
+                                        ${entries.map(e => `
+                                            <tr onclick="${isSelectionMode ? `window.toggleItemSelection('${e.id}', 'registres', event); render();` : `window.openEntryModal('${reg.id}', '${e.id}')`}" style="border-bottom:1px solid rgba(255,255,255,0.03); cursor:pointer; transition:background 0.2s; ${selectedFiches.has(e.id) ? 'background:rgba(239, 68, 68, 0.1);' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='${selectedFiches.has(e.id) ? 'rgba(239, 68, 68, 0.1)' : 'transparent'}'">
+                                                ${isSelectionMode ? `<td style="padding:12px; text-align:center;"><div style="width:20px; height:20px; border-radius:6px; border:2px solid ${selectedFiches.has(e.id) ? '#ef4444' : 'var(--glass-border)'}; display:flex; align-items:center; justify-content:center; color:#ef4444; font-weight:bold;">${selectedFiches.has(e.id) ? '✓' : ''}</div></td>` : ''}
+                                                ${(reg.columns || []).map(c => {
+                                                    const colName = typeof c === 'string' ? c : c.name;
+                                                    let val = e.data ? e.data[colName] : null;
+                                                    
+                                                    if (typeof c === 'object' && c.type === 'checkbox') {
+                                                        return `<td style="padding:12px 15px; color:rgba(255,255,255,0.8);">${(val === true || val === 'true') ? '✅' : '❌'}</td>`;
+                                                    }
+                                                    if (typeof c === 'object' && c.type === 'multicheckbox') {
+                                                        const opts = (c.options || '').split(',').filter(x => x.trim());
+                                                        const checkedCount = Object.values(val || {}).filter(v => v === true || v === 'true').length;
+                                                        return `<td style="padding:12px 15px; color:rgba(255,255,255,0.8); font-size:0.6rem;">${checkedCount} / ${opts.length} ✅</td>`;
+                                                    }
+                                                    return `<td style="padding:12px 15px; color:rgba(255,255,255,0.8);">${val || '-'}</td>`;
+                                                }).join('')}
+                                                <td style="text-align:center; opacity:0.3; font-size:0.6rem;">✏️</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             }
         }
+        
+        // REGISTRES LOGIC Helpers
+        window.openRegistreConfig = function(id = null) {
+            const form = document.getElementById('registreForm');
+            form.reset();
+            document.getElementById('regEditId').value = id || '';
+            document.getElementById('regColumnsContainer').innerHTML = '';
+            document.getElementById('regModalTitle').innerText = id ? "⚙️ Modifier le Registre" : "📓 Nouveau Registre";
+            document.getElementById('deleteRegBtn').style.display = id ? 'block' : 'none';
+            
+            if (id) {
+                const r = registres.find(x => x.id === id);
+                if (r) {
+                    document.getElementById('regName').value = r.name || '';
+                    document.getElementById('regIcon').value = r.icon || '📓';
+                    (r.columns || []).forEach(c => {
+                        window.addRegColumn(c.name, c.type, c.options || '');
+                    });
+                }
+            } else {
+                // Colonnes par défaut
+                window.addRegColumn('Date', 'date');
+                window.addRegColumn('Heure', 'time');
+                window.addRegColumn('Désignation', 'text');
+            }
+            window.openModal('registreModalOverlay');
+        }
+
+        window.addRegColumn = function(name = '', type = 'text', options = '') {
+            const container = document.getElementById('regColumnsContainer');
+            const div = document.createElement('div');
+            div.className = "reg-col-setup";
+            div.dataset.type = type;
+            div.style = "background:rgba(255,255,255,0.03); padding:12px; border-radius:15px; border:1px solid rgba(255,255,255,0.05); margin-bottom:5px; position:relative;";
+            
+            div.innerHTML = `
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                    <select class="form-input col-type" onchange="window.updateColHint(this)" style="width:120px; margin-bottom:0; font-size:0.7rem; background:#0f172a; padding:8px; border-radius:10px;">
+                        <option value="date" ${type==='date'?'selected':''}>📅 Date</option>
+                        <option value="time" ${type==='time'?'selected':''}>⌚ Heure</option>
+                        <option value="text" ${type==='text'?'selected':''}>📄 Texte</option>
+                        <option value="number" ${type==='number'?'selected':''}>🔢 Nombre</option>
+                        <option value="checkbox" ${type==='checkbox'?'selected':''}>☑️ Case</option>
+                        <option value="multicheckbox" ${type==='multicheckbox'?'selected':''}>📁 Multi-cases</option>
+                    </select>
+                    <input type="text" class="form-input col-name" placeholder="Titre de la colonne (ex: État)" value="${name}" required style="flex:1; margin-bottom:0; padding:8px;">
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;">✕</button>
+                </div>
+                <div class="options-container" style="display:${type==='multicheckbox'?'block':'none'}; margin-top:8px; padding-left:10px; border-left:2px solid var(--primary);">
+                    <label style="font-size:0.55rem; color:var(--text-dim); display:block; margin-bottom:4px;">LISTE DES CASES (Séparées par des virgules)</label>
+                    <input type="text" class="form-input col-options" placeholder="Ex: Sols, Vitres, Paillasse" value="${options}" style="width:100%; font-size:0.7rem; padding:8px; background:rgba(0,0,0,0.2);">
+                </div>
+            `;
+            container.appendChild(div);
+        };
+
+        window.updateColHint = function(select) {
+            const parent = select.parentElement.parentElement;
+            const optionsDiv = parent.querySelector('.options-container');
+            optionsDiv.style.display = select.value === 'multicheckbox' ? 'block' : 'none';
+        };
+
+        document.getElementById('registreForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('regEditId').value;
+            const cols = Array.from(document.querySelectorAll('.reg-col-setup')).map(div => ({
+                name: div.querySelector('.col-name').value.trim(),
+                type: div.querySelector('.col-type').value,
+                options: div.querySelector('.col-options') ? div.querySelector('.col-options').value.trim() : ''
+            })).filter(c => c.name !== '');
+
+            const data = {
+                name: document.getElementById('regName').value,
+                icon: document.getElementById('regIcon').value || '📓',
+                columns: cols,
+                updatedAt: Date.now()
+            };
+            if (id) await db.collection(REGISTRES_COL).doc(id).update(data);
+            else await db.collection(REGISTRES_COL).add(data);
+            
+            // Fermeture explicite
+            window.closeModal('registreModalOverlay');
+            document.getElementById('registreModalOverlay').style.display = 'none';
+        });
+
+        window.openEntryModal = function(regId, entryId = null) {
+            const reg = registres.find(r => r.id === regId);
+            if (!reg) return;
+            document.getElementById('entryRegId').value = regId;
+            document.getElementById('entryEditId').value = entryId || '';
+            document.getElementById('entryModalTitle').innerText = reg.name + (entryId ? " - Modifier" : " - Nouveau");
+            const container = document.getElementById('entryFieldsContainer');
+            container.innerHTML = '';
+            const entry = entryId ? rEntries.find(e => e.id === entryId) : null;
+
+            (reg.columns || []).forEach(c => {
+                const colName = typeof c === 'string' ? c : c.name;
+                const colType = typeof c === 'string' ? 'text' : (c.type || 'text');
+                const val = (entry && entry.data && entry.data[colName]) || (colType === 'multicheckbox' ? {} : '');
+                
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                
+                let inputHtml = '';
+                if (colType === 'checkbox') {
+                    const isChecked = val === true || val === 'true';
+                    inputHtml = `
+                        <label class="checkbox-container" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                            <input type="checkbox" class="entry-val" data-col="${colName}" ${isChecked ? 'checked' : ''} style="width:25px; height:25px; accent-color:var(--success);">
+                            <span style="font-size:0.8rem; color:white;">Action effectuée / OK</span>
+                        </label>
+                    `;
+                } else if (colType === 'multicheckbox') {
+                    const opts = (c.options || '').split(',').filter(x => x.trim());
+                    inputHtml = `<div class="entry-multi-val" data-col="${colName}" style="display:flex; flex-direction:column; gap:8px; background:rgba(255,255,255,0.02); padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">`;
+                    opts.forEach(opt => {
+                        const cleanOpt = opt.trim();
+                        const isChecked = val && (val[cleanOpt] === true || val[cleanOpt] === 'true');
+                        inputHtml += `
+                            <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                                <input type="checkbox" class="sub-check" data-opt="${cleanOpt}" ${isChecked ? 'checked' : ''} style="width:20px; height:20px; accent-color:var(--secondary);">
+                                <span style="font-size:0.75rem; color:white;">${cleanOpt}</span>
+                            </label>
+                        `;
+                    });
+                    inputHtml += `</div>`;
+                } else if (colType === 'date') {
+                    const finalVal = val || new Date().toISOString().split('T')[0];
+                    inputHtml = `<input type="date" class="form-input entry-val" data-col="${colName}" value="${finalVal}" onfocus="this.select()">`;
+                } else if (colType === 'time') {
+                    const now = new Date();
+                    const finalVal = val || now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+                    inputHtml = `<input type="time" class="form-input entry-val" data-col="${colName}" value="${finalVal}" onfocus="this.select()">`;
+                } else if (colType === 'number') {
+                    inputHtml = `<input type="number" class="form-input entry-val" data-col="${colName}" value="${val}" placeholder="Saisir nombre..." onfocus="this.select()">`;
+                } else {
+                    inputHtml = `<input type="text" class="form-input entry-val" data-col="${colName}" value="${val}" placeholder="Saisir ${colName}..." onfocus="this.select()">`;
+                }
+                
+                div.innerHTML = `
+                    <label style="color:var(--primary); font-weight:800; font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; display:block;">${colName}</label>
+                    ${inputHtml}
+                `;
+                container.appendChild(div);
+            });
+            document.getElementById('deleteEntryBtn').style.display = entryId ? 'block' : 'none';
+            window.openModal('entryModalOverlay');
+        };
+
+        window.deleteEntry = async function() {
+            const id = document.getElementById('entryEditId').value;
+            if(!id) return;
+            if(confirm("Supprimer cette ligne du registre ?")) {
+                await db.collection(R_ENTRIES_COL).doc(id).delete();
+                window.closeModal('entryModalOverlay');
+            }
+        };
+
+        document.getElementById('entryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const regId = document.getElementById('entryRegId').value;
+            const id = document.getElementById('entryEditId').value;
+            const vals = {};
+            document.querySelectorAll('.entry-val').forEach(i => {
+                if (i.type === 'checkbox') {
+                    vals[i.dataset.col] = i.checked;
+                } else {
+                    vals[i.dataset.col] = i.value;
+                }
+            });
+            document.querySelectorAll('.entry-multi-val').forEach(div => {
+                const col = div.dataset.col;
+                const subVals = {};
+                div.querySelectorAll('.sub-check').forEach(sc => {
+                    subVals[sc.dataset.opt] = sc.checked;
+                });
+                vals[col] = subVals;
+            });
+            const data = {
+                regId: regId,
+                data: vals,
+                updatedAt: Date.now()
+            };
+            if (id) await db.collection(R_ENTRIES_COL).doc(id).update(data);
+            else await db.collection(R_ENTRIES_COL).add(data);
+            
+            window.closeModal('entryModalOverlay');
+            document.getElementById('entryModalOverlay').style.display = 'none';
+            if(typeof calcOverlay !== 'undefined') calcOverlay.classList.remove('active');
+        });
+
+        window.deleteRegistre = async function() {
+            const id = document.getElementById('regEditId').value;
+            if(!id) return;
+            if(confirm("Supprimer ce registre ET toutes ses données ?")) {
+                await db.collection(REGISTRES_COL).doc(id).delete();
+                window.closeModal('registreModalOverlay');
+            }
+        }
+
+        window.exportRegistry = function(regId) {
+            const reg = registres.find(r => r.id === regId);
+            if (!reg) return;
+            const entries = rEntries.filter(e => e.regId === regId);
+            if (entries.length === 0) return alert("Aucune donnée à exporter.");
+
+            // Construction du CSV
+            const cols = reg.columns || [];
+            let csv = cols.map(c => typeof c === 'string' ? c : c.name).join(';') + '\n';
+            
+            entries.forEach(e => {
+                const row = cols.map(c => {
+                    const colName = typeof c === 'string' ? c : c.name;
+                    let val = e.data ? e.data[colName] : '';
+                    if (val === undefined || val === null) val = '';
+                    
+                    // Gestion des objets (Multi-cases)
+                    if (typeof val === 'object' && val !== null) {
+                        val = Object.entries(val)
+                            .filter(([_, v]) => v === true || v === 'true')
+                            .map(([k, _]) => k)
+                            .join(', ');
+                    }
+                    // Gestion des booléens simple
+                    if (val === true) val = 'OK';
+                    if (val === false) val = 'NON';
+
+                    return `"${String(val).replace(/"/g, '""')}"`;
+                });
+                csv += row.join(';') + '\n';
+            });
+
+            // Téléchargement
+            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `REGISTRE_${reg.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
 
         // CSS additionnel
         const style = document.createElement('style');
@@ -3227,7 +3708,7 @@
 
             document.getElementById('modalTitle').innerText = 'Modifier la Fiche';
             deleteBtn.style.display = 'block';
-            modalOverlay.classList.add('active');
+            window.openModal('modalOverlay');
         };
 
         // CRUD Operations
@@ -3307,11 +3788,21 @@
             if (currentTab === 'analyses') { targetCol = ANALYSES_COL; label = "analyse(s)"; }
             else if (currentTab === 'photos') { targetCol = PHOTOS_COL; label = "photo(s)"; }
             else if (currentTab === 'preps') { targetCol = PREPS_COL; label = "préparation(s)"; }
+            else if (currentTab === 'registres') { targetCol = R_ENTRIES_COL; label = "entrée(s) de registre"; }
 
             if (confirm(`⚠️ Supprimer définitivement ${selectedFiches.size} ${label} ?`)) {
                 const batch = db.batch();
                 selectedFiches.forEach(id => {
-                    batch.delete(db.collection(targetCol).doc(id));
+                    if (id.startsWith('reg:')) {
+                        const realId = id.replace('reg:', '');
+                        batch.delete(db.collection(REGISTRES_COL).doc(realId));
+                        // Supprimer aussi toutes les lignes de ce carnet
+                        rEntries.filter(e => e.regId === realId).forEach(e => {
+                            batch.delete(db.collection(R_ENTRIES_COL).doc(e.id));
+                        });
+                    } else {
+                        batch.delete(db.collection(targetCol).doc(id));
+                    }
                 });
 
                 batch.commit().then(() => {
@@ -3597,7 +4088,7 @@
 
             document.getElementById('analysisModalTitle').innerText = a.batchId ? 'Modifier la Session' : 'Modifier l\'Analyse';
             document.getElementById('deleteAnalysisBtn').style.display = 'block';
-            document.getElementById('analysisModalOverlay').classList.add('active');
+            window.openModal('analysisModalOverlay');
         };
 
         window.deleteAnalysis = function () {
@@ -3769,7 +4260,11 @@
             currentZoomInput = input;
             document.getElementById('noteZoomTextarea').value = input.value;
             document.getElementById('noteZoomOverlay').classList.add('active');
-            setTimeout(() => document.getElementById('noteZoomTextarea').focus(), 100);
+            setTimeout(() => {
+                const area = document.getElementById('noteZoomTextarea');
+                area.focus();
+                area.select(); // Sélection complète activée
+            }, 100);
         };
 
         window.saveZoomNote = function () {

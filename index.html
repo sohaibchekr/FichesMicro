@@ -3,7 +3,31 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background: #0f172a;
+        }
+
+        body {
+            font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
     <title>MICROBIO v4.4.0 - Labo</title>
 
     <!-- Firebase SDKs -->
@@ -27,32 +51,59 @@
 
     <style>
         :root {
-            --bg: #1e293b;
-            --card-bg: #334155;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
             --primary: #38bdf8;
             --primary-dark: #0ea5e9;
             --secondary: #818cf8;
-            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.1);
             --text-main: #ffffff;
-            --text-dim: #cbd5e1;
-            --success: #4ade80;
+            --text-dim: #94a3b8;
+            --success: #22c55e;
+            --danger: #ef4444;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-            color: var(--text-main);
-            font-family: 'Outfit', 'Inter', system-ui, sans-serif;
-            min-height: 100vh;
-            overflow-x: hidden;
+        /* App Layout */
+        .header {
+            width: 100%;
+            padding: 15px;
             display: flex;
             flex-direction: column;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #0f172a;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 1;
+        }
+
+        .logo-img {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+        }
+
+        .logo-text {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #ffffff;
+            white-space: nowrap;
         }
 
         /* Animations */
@@ -66,49 +117,6 @@
                 opacity: 1;
                 transform: translateY(0);
             }
-        }
-
-        /* App Layout */
-        .header {
-            padding: 40px 20px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(25px);
-            border-bottom: 1px solid var(--glass-border);
-        }
-
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-img {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
-            box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
-        }
-
-        .logo-text {
-            font-size: 1.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.5px;
         }
 
         .search-container {
@@ -204,9 +212,26 @@
             color: white;
         }
 
+        .main-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-dim);
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
         .main-tab.active {
-            background: var(--primary) !important;
-            color: white !important;
+            background: var(--primary);
+            color: white;
             box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
         }
 
@@ -464,42 +489,44 @@
             transform: translateY(0);
         }
 
+        .main-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding: 5px 0;
+            width: 100%;
+        }
+        .main-tabs::-webkit-scrollbar { display: none; }
+
+        .main-tab {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px;
+            border: none;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-dim);
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
         /* --- MOBILE OPTIMIZATIONS --- */
         @media (max-width: 600px) {
-            .modal-overlay {
-                padding: 10px;
-                display: flex;
-                align-items: center; /* Center on mobile if not too tall */
-            }
-            .modal-content {
-                margin: auto;
-                max-height: 98vh;
-                padding: 20px 15px;
-                border-radius: 24px;
-                width: 100%;
-            }
+            .header { padding: 15px 15px; gap: 12px; }
+            .logo-text { font-size: 1.2rem; }
+            .main-tab { min-width: 90px; padding: 10px; font-size: 0.7rem; }
             
-            /* Prevents iOS from zooming in on input focus (requires font-size >= 16px) */
-            input, select, textarea, button, .form-input {
-                font-size: 16px !important;
-            }
-
-            .fab {
-                bottom: 20px;
-                right: 20px;
-                width: 55px;
-                height: 55px;
-            }
-
-            .main-tabs-container {
-                padding: 5px;
-                overflow-x: auto;
-                justify-content: flex-start;
-            }
-            .main-tab {
-                padding: 8px 15px;
-                white-space: nowrap;
-            }
+            .modal-overlay { padding: 10px; display: flex; align-items: center; }
+            .modal-content { margin: auto; max-height: 98vh; padding: 20px 15px; border-radius: 24px; width: 100%; }
         }
 
         .close-modal {
@@ -1073,36 +1100,24 @@
             </div>
         </div>
 
-        <div class="main-tabs" style="display: flex; gap: 10px; margin-top: 5px;">
-            <button onclick="switchTab('fiches')" id="tab-fiches" class="main-tab active"
-                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📋
-                FICHES</button>
-            <button onclick="switchTab('analyses')" id="tab-analyses" class="main-tab"
-                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">🧪
-                ANALYSES</button>
-            <button onclick="switchTab('preps')" id="tab-preps" class="main-tab"
-                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">⚗️
-                PREPS</button>
-            <button onclick="switchTab('photos')" id="tab-photos" class="main-tab"
-                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📸
-                PHOTOS</button>
-            <button onclick="switchTab('registres')" id="tab-registres" class="main-tab"
-                style="flex: 1; padding: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.3s;">📓
-                REGISTRES</button>
+        <div class="main-tabs" style="width: 100%;">
+            <button onclick="window.switchTab('fiches')" id="tab-fiches" class="main-tab active">📋 FICHES</button>
+            <button onclick="window.switchTab('analyses')" id="tab-analyses" class="main-tab">🧪 ANALYSES</button>
+            <button onclick="window.switchTab('preps')" id="tab-preps" class="main-tab">⚗️ PREPS</button>
+            <button onclick="window.switchTab('photos')" id="tab-photos" class="main-tab">📸 PHOTOS</button>
+            <button onclick="window.switchTab('registres')" id="tab-registres" class="main-tab">📓 REGISTRES</button>
         </div>
 
-        <div style="display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 15px; flex-wrap: wrap;">
-            <div class="search-container" style="flex: 1; min-width: 200px;">
+        <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
+            <div class="search-container" style="flex: 1; min-width: 150px;">
                 <span class="search-icon">🔍</span>
                 <input type="text" id="searchInput" class="search-input" placeholder="Produit, lot, code...">
             </div>
-            <div class="search-container" style="width: 150px;">
-                <input type="date" id="dateFilter" class="search-input" style="padding-left: 15px;" onchange="render()">
+            <div class="search-container" style="width: auto; flex: 0 0 auto;">
+                <input type="date" id="dateFilter" class="search-input" style="padding: 10px; width: 45px;" onchange="render()">
             </div>
-            <button id="sortBtn" onclick="toggleSort()" title="Inverser l'ordre"
-                style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 12px; border-radius: 16px; color: var(--text-dim); cursor: pointer; transition: all 0.3s; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                ⇅
-            </button>
+            <button id="sortBtn" onclick="toggleSort()"
+                style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 5px; border-radius: 12px; color: var(--text-dim); cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">⇅</button>
         </div>
         <div id="selectionActions"
             style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center; gap: 10px;">

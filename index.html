@@ -26,7 +26,17 @@
             flex-direction: column;
         }
     </style>
-    <title>MICROBIO v4.4.3 - Labo [FORCE_UPDATE]</title>
+    <title>MICROBIO v4.4.4 - FINAL FIX</title>
+    <script>
+        // TRÈS IMPORTANT : Tue le cache immédiatement au chargement de la page
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) { registration.unregister(); }
+            });
+        }
+        localStorage.clear();
+        console.log("Caches Purged at HEAD");
+    </script>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1134,7 +1144,7 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.3 • Stockage Local Direct</div>
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.4 • Stockage Local Direct</div>
         <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
@@ -1919,16 +1929,8 @@
     </div>
 
     <script>
-        // === VERSION 4.4.3 - FORCE CACHE CLEAR ===
-        
-        // KILL SERVICE WORKERS IMMEDIATELY
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) { registration.unregister(); }
-            });
-        }
-
-        alert("🚀 UPDATE CRITIQUE v4.4.3 : Chargement du nouveau système...");
+        // === VERSION 4.4.4 - COMPATIBILITÉ TOTALE ===
+        alert("🚀 DERNIÈRE ÉTAPE v4.4.4 : Nettoyage final du système...");
 
         // Global State & Functions
         window.currentTab = 'fiches';
@@ -3983,7 +3985,9 @@
             const row = input.closest('.analysis-row');
             const allInputs = Array.from(row.querySelectorAll('.daily-input'));
             // On prend la dernière valeur non vide
-            const lastVal = allInputs.reverse().find(i => i.value.trim() !== '')?.value || '';
+            let lastVal = '';
+            const nonEmpty = allInputs.reverse().find(i => i.value.trim() !== '');
+            if (nonEmpty) lastVal = nonEmpty.value;
             
             // On cherche le germe "DGAT" dans ce produit
             const germRows = Array.from(row.querySelectorAll('.germs-dynamic-container div'));

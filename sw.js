@@ -1,10 +1,10 @@
-const CACHE_NAME = 'microbio-cache-v3.5.0';
+const CACHE_NAME = 'microbio-cache-v4.4.6';
 const ASSETS = [
   'index.html',
-  'manifest.json'
+  'manifest.json',
+  'sohaib.png'
 ];
 
-// Installation : Mise en cache initiale
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -14,7 +14,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activation : Nettoyage radical des anciens caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -30,15 +29,20 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Stratégie Network First (Toujours essayer le réseau pour avoir la v3.0.0)
+// NETWORK FIRST strategy
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  
   event.respondWith(
     fetch(event.request)
       .then(networkResponse => {
-        return caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
       })
       .catch(() => {
         return caches.match(event.request);

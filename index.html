@@ -14,10 +14,8 @@
 
         html, body {
             width: 100%;
-            height: 100%;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
             background: #0f172a;
         }
 
@@ -28,7 +26,7 @@
             flex-direction: column;
         }
     </style>
-    <title>MICROBIO v4.4.1 - Labo [UP] </title>
+    <title>MICROBIO v4.4.2 - Labo [UP]</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1136,7 +1134,7 @@
     </main>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.1 • Stockage Local Direct</div>
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.2 • Stockage Local Direct</div>
         <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
@@ -1921,9 +1919,36 @@
     </div>
 
     <script>
-        // === SCRIPTS RÉPARÉS ===
-        console.log("🚀 MICROBIO v4.4.1");
-        alert("✅ APPLICATION MISE À JOUR (v4.4.1) - CLIQUEZ SUR OK");
+        // === VERSION 4.4.2 - RESET TOTAL ===
+        alert("🔍 DIAGNOSTIC : Initialisation du système v4.4.2...");
+
+        // Global State & Functions (Moving to TOP for availability)
+        window.currentTab = 'fiches';
+        window.switchTab = function (tab) {
+            window.currentTab = tab;
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            const activeTab = document.getElementById('tab-' + tab);
+            if (activeTab) activeTab.classList.add('active');
+
+            const addBtn = document.getElementById('addBtn');
+            const searchInput = document.getElementById('searchInput');
+            if (addBtn && searchInput) {
+                if (tab === 'fiches') {
+                    addBtn.innerText = "+ NOUVELLE FICHE";
+                    searchInput.placeholder = "Chercher un produit ou un code...";
+                } else if (tab === 'analyses') {
+                    addBtn.innerText = "+ NOUVELLE ANALYSE";
+                    searchInput.placeholder = "Chercher produit, lot, n° de contrôle...";
+                } else if (tab === 'preps') {
+                    addBtn.innerText = "+ NOUVELLE PRÉPARATION";
+                } else if (tab === 'photos') {
+                    addBtn.innerText = "+ AJOUTER PHOTO";
+                } else if (tab === 'registres') {
+                    addBtn.innerText = "+ CONFIG. REGISTRE";
+                }
+            }
+            if (typeof render === 'function') render();
+        };
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -1936,27 +1961,18 @@
             measurementId: "G-5ZE6ZJFBF6"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // ENABLE OFFLINE PERSISTENCE
-        db.enablePersistence({ synchronizeTabs: true }).catch(function (err) {
-            if (err.code == 'failed-precondition') {
-                console.warn("Persistence failed: Multiple tabs open");
-            } else if (err.code == 'unimplemented') {
-                console.warn("Persistence unimplemented");
-            }
-        });
+        // Safe Persistence
+        try {
+            db.enablePersistence({ synchronizeTabs: true }).catch(err => console.warn("Persistence offline:", err.code));
+        } catch(e) {}
 
-        // GLOBAL ERROR CATCHER
         window.onerror = function(msg, url, line) {
-            alert("⚠️ ERREUR SYSTEME: " + msg + "\nLigne: " + line);
+            alert("⚠️ SYSTEM ERROR: " + msg + " (Ligne " + line + ")");
             return false;
         };
-
-        // Global State
-        let currentTab = 'fiches';
         let sortOrder = localStorage.getItem('microbio_sort') || 'desc';
 
         // --- Modal & History Management ---

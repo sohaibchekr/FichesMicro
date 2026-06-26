@@ -1930,13 +1930,13 @@
         });
 
         // Global State & Functions
-        window.currentTab = 'fiches';
+        window.window.currentTab = 'fiches';
         window.switchTab = function (tab) {
             console.log("Switching to " + tab);
             // DEBUG ALERT (A retirer après test)
             // alert("CLIC REÇU : Tab " + tab);
 
-            window.currentTab = tab;
+            window.window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
             if (activeTab) activeTab.classList.add('active');
@@ -1991,7 +1991,7 @@
             alert("⚠️ SYSTEM ERROR: " + msg + " (Ligne " + line + ")");
             return false;
         };
-        let sortOrder = localStorage.getItem('microbio_sort') || 'desc';
+        window.sortOrder = localStorage.getItem('microbio_sort') || 'desc';
 
         // --- Modal & History Management ---
         window.activeModals = [];
@@ -2169,17 +2169,17 @@
         // (IndexedDB code removed to return to Firestore Cache)
 
         window.toggleSort = function () {
-            sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
-            localStorage.setItem('microbio_sort', sortOrder);
+            window.sortOrder = window.sortOrder === 'desc' ? 'asc' : 'desc';
+            localStorage.setItem('microbio_sort', window.sortOrder);
             const btn = document.getElementById('sortBtn');
-            btn.style.color = sortOrder === 'asc' ? 'var(--primary)' : 'var(--text-dim)';
-            btn.style.transform = sortOrder === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)';
+            btn.style.color = window.sortOrder === 'asc' ? 'var(--primary)' : 'var(--text-dim)';
+            btn.style.transform = window.sortOrder === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)';
             render();
         };
 
         // Tab Switching Logic
         window.switchTab = function (tab) {
-            currentTab = tab;
+            window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.add('active');
 
@@ -2205,14 +2205,7 @@
             render();
         };
 
-        // Snapshot Listeners Uni
-        window.db.collection(FICHES_COL).onSnapshot(s => { fiches = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        window.db.collection(ANALYSES_COL).onSnapshot(s => { analyses = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        window.db.collection(PHOTOS_COL).onSnapshot(s => { photos = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        window.db.collection(PREPS_COL).onSnapshot(s => { preps = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        window.db.collection(REGISTRES_COL).onSnapshot(s => { registres = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        window.db.collection(R_ENTRIES_COL).onSnapshot(s => { rEntries = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(d => { if (d.exists) { catalogs = d.data(); renderCatalogs(); } });
+        // Listeners groupés plus bas
 
         window.calcIncubation = function () {
             const dateVal = document.getElementById('dateAnalyse').value;
@@ -2253,13 +2246,13 @@
         };
 
         window.openAddModal = function () {
-            if (currentTab === 'photos') {
+            if (window.currentTab === 'photos') {
                 window.openPhotoModal();
-            } else if (currentTab === 'analyses') {
+            } else if (window.currentTab === 'analyses') {
                 window.openModal('analysisModalOverlay');
-            } else if (currentTab === 'preps') {
+            } else if (window.currentTab === 'preps') {
                 window.openPrepModal();
-            } else if (currentTab === 'registres') {
+            } else if (window.currentTab === 'registres') {
                 // Créer un nouveau carnet directement
                 window.openRegistreConfig();
             } else {
@@ -2804,25 +2797,35 @@
         window.db.collection(FICHES_COL).onSnapshot(snapshot => {
             fiches = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             updateSuggestions();
-            if (currentTab === 'fiches') render();
+            if (window.currentTab === 'fiches') render();
         });
 
         window.db.collection(ANALYSES_COL).orderBy('dateAnalyse', 'desc').onSnapshot(snapshot => {
             analyses = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             updateSuggestions();
-            if (currentTab === 'analyses') render();
+            if (window.currentTab === 'analyses') render();
         }, err => {
             console.error("Analyses Sync Error:", err);
         });
 
         window.db.collection(PREPS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
             preps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (currentTab === 'preps') render();
+            if (window.currentTab === 'preps') render();
         });
 
         window.db.collection(PHOTOS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
             photos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (currentTab === 'photos') render();
+            if (window.currentTab === 'photos') render();
+        });
+
+        window.db.collection(REGISTRES_COL).onSnapshot(s => {
+            registres = s.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (window.currentTab === 'registres') render();
+        });
+
+        window.db.collection(R_ENTRIES_COL).onSnapshot(s => {
+            rEntries = s.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (window.currentTab === 'registres') render();
         });
 
         window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
@@ -3006,13 +3009,17 @@
             const query = searchInput.value.toLowerCase().trim();
             const container = fichesList;
 
-            if (currentTab === 'fiches') {
+            if (window.currentTab === 'fiches') {
                 let filtered = fiches.filter(f =>
                     (f.designation && f.designation.toLowerCase().includes(query)) ||
                     (f.code && f.code.toLowerCase().includes(query)) ||
                     (f.methode && f.methode.toLowerCase().includes(query))
                 );
-                filtered.sort((a, b) => (a.designation || "").localeCompare(b.designation || ""));
+                filtered.sort((a, b) => {
+                    const nameA = a.designation || "";
+                    const nameB = b.designation || "";
+                    return window.sortOrder === 'desc' ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
+                });
 
                 if (filtered.length === 0) {
                     container.innerHTML = `<div class="empty-state"><div class="empty-icon">📂</div><h3>Aucune fiche trouvée</h3></div>`;
@@ -3065,7 +3072,7 @@
                         ${f.observation ? `<div class="obs-card-footer"><span>📝</span><span>${f.observation}</span></div>` : ''}
                     </div>
                 `).join('');
-            } else if (currentTab === 'preps') {
+            } else if (window.currentTab === 'preps') {
                 const dateFilter = document.getElementById('dateFilter').value;
                 let filtered = preps.filter(p => {
                     const matchesText = (p.designation && p.designation.toLowerCase().includes(query)) ||
@@ -3083,7 +3090,7 @@
                 filtered.sort((a, b) => {
                     const da = new Date(a.datePrep || 0).getTime();
                     const dateB = new Date(b.datePrep || 0).getTime();
-                    return sortOrder === 'desc' ? dateB - da : da - dateB;
+                    return window.sortOrder === 'desc' ? dateB - da : da - dateB;
                 });
 
                 if (filtered.length === 0) {
@@ -3151,7 +3158,7 @@
                         </div>
                     `;
                 }).join('');
-            } else if (currentTab === 'analyses') {
+            } else if (window.currentTab === 'analyses') {
                 // ANALYSES TAB
                 let filtered = analyses.slice(); // Copy
 
@@ -3164,7 +3171,7 @@
                     // 2. Ensuite par date
                     const da = new Date(a.dateAnalyse).getTime();
                     const dateB = new Date(b.dateAnalyse).getTime();
-                    return sortOrder === 'desc' ? dateB - da : da - dateB;
+                    return window.sortOrder === 'desc' ? dateB - da : da - dateB;
                 });
 
                 // Filtering
@@ -3319,7 +3326,7 @@
                         ${g.observations ? `<div class="obs-card-footer"><span>📝</span><span>${g.observations}</span></div>` : ''}
                     </div>
                 `}).join('');
-            } else if (currentTab === 'photos') {
+            } else if (window.currentTab === 'photos') {
                 let filtered = photos.filter(p => 
                     (p.title && p.title.toLowerCase().includes(query)) ||
                     (p.category && p.category.toLowerCase().includes(query))
@@ -3359,7 +3366,7 @@
                         }).join('')}
                     </div>
                 `;
-            } else if (currentTab === 'registres') {
+            } else if (window.currentTab === 'registres') {
                 if (registres.length === 0) {
                     container.innerHTML = `<div class="empty-state"><div class="empty-icon">📓</div><h3>Aucun registre configuré</h3><p style="font-size:0.7rem; opacity:0.6;">Cliquez sur + RÉGLAGES pour créer votre premier carnet.</p></div>`;
                     return;
@@ -3835,10 +3842,10 @@
             let targetCol = FICHES_COL;
             let label = "fiche(s)";
 
-            if (currentTab === 'analyses') { targetCol = ANALYSES_COL; label = "analyse(s)"; }
-            else if (currentTab === 'photos') { targetCol = PHOTOS_COL; label = "photo(s)"; }
-            else if (currentTab === 'preps') { targetCol = PREPS_COL; label = "préparation(s)"; }
-            else if (currentTab === 'registres') { targetCol = R_ENTRIES_COL; label = "entrée(s) de registre"; }
+            if (window.currentTab === 'analyses') { targetCol = ANALYSES_COL; label = "analyse(s)"; }
+            else if (window.currentTab === 'photos') { targetCol = PHOTOS_COL; label = "photo(s)"; }
+            else if (window.currentTab === 'preps') { targetCol = PREPS_COL; label = "préparation(s)"; }
+            else if (window.currentTab === 'registres') { targetCol = R_ENTRIES_COL; label = "entrée(s) de registre"; }
 
             if (confirm(`⚠️ Supprimer définitivement ${selectedFiches.size} ${label} ?`)) {
                 const batch = window.db.batch();

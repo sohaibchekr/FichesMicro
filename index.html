@@ -10,20 +10,29 @@
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            font-family: inherit;
         }
 
         html, body {
             width: 100%;
+            height: 100%;
             margin: 0;
             padding: 0;
-            background: #0f172a;
+            background: #f8fafc;
+            overscroll-behavior: none;
+            overflow-x: hidden;
         }
 
         body {
-            font-family: 'Outfit', 'Inter', system-ui, sans-serif;
-            color: #ffffff;
+            font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+            color: #0f172a;
+            user-select: none;
             display: flex;
             flex-direction: column;
+        }
+
+        input, textarea, select {
+            user-select: text !important;
         }
     </style>
     <title>MICROBIO v4.4.7 - Labo</title>
@@ -39,7 +48,7 @@
 
     <!-- SEO & Icons -->
     <meta name="description" content="Application de consultation des résumés de laboratoire microbiologique.">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#f8fafc">
     <link rel="manifest" href="manifest.json">
 
     <!-- Fonts -->
@@ -49,30 +58,51 @@
 
     <style>
         :root {
-            --bg: #0f172a;
-            --card-bg: #1e293b;
-            --primary: #38bdf8;
-            --primary-dark: #0ea5e9;
-            --secondary: #818cf8;
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #ffffff;
-            --text-dim: #94a3b8;
-            --success: #22c55e;
-            --danger: #ef4444;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --surface-hover: #f1f5f9;
+            --primary: #4f46e5;
+            --primary-glow: rgba(79, 70, 229, 0.15);
+            --accent: #0ea5e9;
+            --accent-glow: rgba(14, 165, 233, 0.15);
+            --secondary: #7c3aed;
+            --glass: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.06);
+            --text-main: #0f172a;
+            --text-dim: #64748b;
+            --success: #059669;
+            --danger: #dc2626;
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            --radius-xl: 24px;
+            --radius-lg: 16px;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(79, 70, 229, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
         }
 
         /* App Layout */
         .header {
             width: 100%;
-            padding: 15px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             gap: 12px;
             position: sticky;
             top: 0;
             z-index: 1000;
-            background: #0f172a;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--glass-border);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
         }
 
         .header-top {
@@ -80,28 +110,35 @@
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            gap: 10px;
+            gap: 12px;
         }
 
         .logo-container {
             display: flex;
             align-items: center;
-            gap: 8px;
-            flex-shrink: 1;
+            gap: 12px;
+            padding: 6px 16px 6px 6px;
+            background: #fff;
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            box-shadow: var(--shadow-lg);
         }
 
         .logo-img {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            object-fit: cover;
         }
 
         .logo-text {
             font-size: 1.1rem;
             font-weight: 800;
-            color: #ffffff;
-            white-space: nowrap;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--text-main), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         /* Animations */
@@ -120,34 +157,44 @@
         .search-container {
             position: relative;
             width: 100%;
+            margin-bottom: 4px;
         }
 
         .search-input {
             width: 100%;
-            background: rgba(255, 255, 255, 0.05);
+            background: #fff;
             border: 1px solid var(--glass-border);
-            padding: 16px 20px 16px 50px;
-            border-radius: 16px;
-            color: white;
+            padding: 18px 24px 18px 56px;
+            border-radius: 20px;
+            color: var(--text-main);
             font-size: 1rem;
             font-family: inherit;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
             outline: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         }
 
         .search-input:focus {
-            background: rgba(255, 255, 255, 0.1);
+            background: #fff;
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.2);
+            box-shadow: 0 8px 30px rgba(79, 70, 229, 0.1);
+            transform: scale(1.005);
         }
 
         .search-icon {
             position: absolute;
-            left: 18px;
+            left: 20px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-dim);
-            font-size: 1.2rem;
+            color: var(--primary);
+            font-size: 1.3rem;
+            opacity: 0.8;
+            transition: 0.3s;
+        }
+
+        .search-input:focus + .search-icon {
+            color: var(--primary);
+            filter: drop-shadow(0 0 8px var(--primary-glow));
         }
 
         /* Tabs for Calculator */
@@ -155,7 +202,7 @@
             display: flex;
             gap: 5px;
             margin-bottom: 20px;
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.05);
             padding: 5px;
             border-radius: 12px;
         }
@@ -212,25 +259,35 @@
 
         .main-tab {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
             border: none;
-            background: rgba(255,255,255,0.05);
+            background: #fff;
             color: var(--text-dim);
-            border-radius: 12px;
-            font-weight: 800;
-            font-size: 0.8rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 8px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        }
+
+        .main-tab:hover {
+            background: var(--surface-hover);
+            color: var(--text-main);
         }
 
         .main-tab.active {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+            box-shadow: 0 8px 20px var(--primary-glow);
+            border-color: transparent;
         }
 
         /* Content List */
@@ -243,23 +300,28 @@
         }
 
         .fiche-card {
-            background: var(--card-bg);
+            background: #ffffff;
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 20px;
+            border-radius: 24px;
+            padding: 24px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
             position: relative;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 16px;
+            overflow: hidden;
         }
 
         .fiche-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-8px);
             border-color: var(--primary);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .fiche-card:hover::before {
+            opacity: 1;
         }
 
         .card-header {
@@ -316,40 +378,49 @@
 
         .card-stats-row {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
+            margin-bottom: 8px;
         }
 
         .stat-chip {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 6px 12px;
-            border-radius: 10px;
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            padding: 8px 16px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            transition: 0.3s;
+        }
+
+        .stat-chip:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--primary);
         }
 
         .stat-label {
             color: var(--text-dim);
-            font-weight: 600;
-            font-size: 0.6rem;
+            font-weight: 700;
+            font-size: 0.65rem;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-value {
             color: var(--text-main);
             font-weight: 800;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
         }
 
         .germes-grid {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(79, 70, 229, 0.03);
             border-radius: 12px;
             padding: 12px;
             display: flex;
             flex-direction: column;
             gap: 8px;
+            border: 1px solid rgba(79, 70, 229, 0.08);
         }
 
         .prep-section {
@@ -360,44 +431,48 @@
         }
 
         .prep-box {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            padding: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(79, 70, 229, 0.02);
+            border-radius: 16px;
+            padding: 14px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         .prep-label {
-            font-size: 0.55rem;
-            color: var(--primary);
+            font-size: 0.65rem;
+            color: var(--accent);
             text-transform: uppercase;
             font-weight: 800;
-            margin-bottom: 6px;
-            display: block;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
         }
 
-        .prep-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
+        .mini-tag {
+            background: #fff;
+            border: 1px solid var(--glass-border);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
 
         .obs-card-footer {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.9rem;
-            /* Agrandissement de l'observation */
+            margin-top: 12px;
+            padding: 14px;
+            background: rgba(251, 191, 36, 0.05);
+            border-radius: 16px;
+            border: 1px solid rgba(251, 191, 36, 0.1);
+            font-size: 0.85rem;
             color: #fbbf24;
             font-style: italic;
             display: flex;
-            gap: 10px;
-            line-height: 1.4;
+            gap: 12px;
+            line-height: 1.5;
             white-space: pre-wrap;
-        }
-
-        .obs-card-footer span:first-child {
-            opacity: 0.8;
-            font-size: 1.1rem;
         }
 
         .empty-state {
@@ -419,27 +494,29 @@
         /* Floating Action Button */
         .fab {
             position: fixed;
-            bottom: 30px;
+            bottom: 40px;
             right: 30px;
-            width: 60px;
-            height: 60px;
-            background: var(--primary);
-            border-radius: 20px;
+            min-width: 68px;
+            width: auto;
+            height: 68px;
+            padding: 0 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.5rem;
-            box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
+            font-size: 2rem;
+            box-shadow: 0 15px 35px var(--primary-glow);
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 200;
-            border: none;
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            z-index: 2000;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .fab:hover {
-            transform: translateY(-5px) rotate(90deg);
-            background: var(--primary-dark);
+            transform: translateY(-8px) scale(1.1) rotate(5deg);
+            box-shadow: 0 20px 45px var(--primary-glow);
         }
 
         .fab:active {
@@ -453,38 +530,40 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2100;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
             padding: 20px;
-            overflow-y: auto;
         }
 
         .modal-overlay.active {
-            display: block !important;
+            display: flex !important;
             opacity: 1;
         }
 
         .modal-content {
-            background: #1e293b;
+            background: #ffffff;
             width: 100%;
-            max-width: 600px;
-            margin: 40px auto;
-            border-radius: 32px;
-            padding: 30px;
-            position: relative;
-            transform: translateY(20px);
-            transition: transform 0.3s;
-            border: 1px solid var(--glass-border);
+            max-width: 580px;
             max-height: 85vh;
             overflow-y: auto;
+            border-radius: 32px;
+            padding: 32px;
+            position: relative;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
         .modal-overlay.active .modal-content {
-            transform: translateY(0);
+            transform: scale(1) translateY(0);
         }
 
         .main-tabs {
@@ -528,552 +607,453 @@
         }
 
         .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: none;
-            color: white;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            cursor: pointer;
+            position: absolute; top: 24px; right: 24px;
+            background: #f1f5f9; border: 1px solid var(--glass-border);
+            color: var(--text-main); width: 38px; height: 38px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; transition: 0.3s;
+        }
+
+        .checkbox-group { background: #f8fafc; border-radius: 20px; padding: 20px; border: 1px solid var(--glass-border); }
+        .checkbox-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; transition: 0.2s; cursor: pointer; }
+        .checkbox-item:hover { background: rgba(79, 70, 229, 0.04); }
+
+        .section-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin: 40px 0 25px; position: relative; }
+        .section-label { 
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background: #ffffff; padding: 2px 20px; font-size: 0.65rem; font-weight: 800;
+            color: var(--primary); text-transform: uppercase; letter-spacing: 2px;
+            border-radius: 50px; border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .norm-table { border-radius: 18px; overflow: hidden; border: 1px solid var(--glass-border); background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        .norm-table-header { 
+            background: rgba(79, 70, 229, 0.05); padding: 14px 20px; font-weight: 800; font-size: 0.7rem;
+            color: var(--primary); text-transform: uppercase; display: grid; grid-template-columns: 1fr auto;
+        }
+        .norm-table-row { display: grid; grid-template-columns: 1fr auto; padding: 12px 20px; border-top: 1px solid var(--glass-border); font-size: 0.85rem; color: var(--text-main); }
+
+        @media (max-width: 600px) {
+            .header { padding: 16px; gap: 12px; }
+            .logo-text { font-size: 1.1rem; }
+            .main-tab { padding: 12px 8px; font-size: 0.65rem; min-width: 0; }
+            .search-input { padding: 14px 18px 14px 48px; border-radius: 16px; }
+            .search-icon { left: 16px; font-size: 1.1rem; }
+            .modal-content { padding: 24px 20px; margin: auto; max-height: 95vh; border-radius: 28px; width: 100%; }
+            .stat-chip { padding: 6px 12px; font-size: 0.7rem; }
+            .stat-value { font-size: 0.75rem; }
+        }
+
+        .calc-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px; margin-bottom: 24px; scrollbar-width: none; }
+        .calc-tabs::-webkit-scrollbar { display: none; }
+        .calc-tab {
+            padding: 10px 18px; background: #fff; border: 1px solid var(--glass-border);
+            border-radius: 12px; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); transition: 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        .calc-tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 8px 20px var(--primary-glow); }
+        .active-label { color: var(--success); font-weight: 800; }
+
+        /* ===========================
+           PREMIUM TYPOGRAPHY SYSTEM
+        =========================== */
+        .modal-content h2 {
+            font-size: 1.6rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+            margin-bottom: 28px;
+            line-height: 1.1;
+        }
+        .modal-content h3 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.3px;
+        }
+
+        /* ===========================
+           PREMIUM FORM DESIGN
+        =========================== */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+        .form-group label, .form-group > label {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--primary);
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 6px;
         }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-dim);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
         .form-input {
             width: 100%;
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid var(--glass-border);
+            padding: 13px 16px;
+            background: #f8fafc;
+            border: 1.5px solid var(--glass-border);
             border-radius: 14px;
-            padding: 14px;
-            color: white;
-            font-family: inherit;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
             outline: none;
-            transition: border-color 0.3s;
+            appearance: none;
+            -webkit-appearance: none;
         }
-
         .form-input:focus {
+            background: #fff;
             border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08), 0 4px 20px rgba(79, 70, 229, 0.06);
+            transform: translateY(-1px);
+        }
+        .form-input::placeholder {
+            color: #b0bec5;
+            font-weight: 400;
+        }
+        textarea.form-input {
+            resize: vertical;
+            line-height: 1.6;
+        }
+        select.form-input {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
+            cursor: pointer;
+            background-color: #f8fafc;
         }
 
+        /* ===========================
+           PREMIUM BUTTON DESIGN
+        =========================== */
         .save-btn {
             width: 100%;
-            padding: 18px;
-            background: var(--primary);
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             border: none;
             border-radius: 16px;
-            font-weight: 800;
-            font-size: 1rem;
+            font-weight: 900;
+            font-size: 0.9rem;
+            font-family: 'Outfit', sans-serif;
             cursor: pointer;
-            margin-top: 20px;
-            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 8px 24px var(--primary-glow);
         }
-
         .save-btn:hover {
-            filter: brightness(1.1);
+            transform: translateY(-3px);
+            box-shadow: 0 16px 36px var(--primary-glow);
         }
+        .save-btn:active { transform: scale(0.97); }
 
         .delete-btn {
             width: 100%;
             padding: 14px;
-            background: transparent;
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        .chip-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 5px;
-        }
-
-        .chip {
-            padding: 8px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            font-size: 0.8rem;
-            color: var(--text-dim);
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 600;
-        }
-
-        .chip.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-            box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
-        }
-
-        .section-divider {
-            height: 1px;
-            background: var(--glass-border);
-            margin: 30px 0 20px;
-            position: relative;
-        }
-
-        .section-label {
-            position: absolute;
-            top: -10px;
-            left: 20px;
-            background: #1e293b;
-            padding: 0 10px;
-            font-size: 0.65rem;
+            background: rgba(239, 68, 68, 0.06);
+            color: #dc2626;
+            border: 1.5px solid rgba(239, 68, 68, 0.2);
+            border-radius: 14px;
             font-weight: 800;
-            color: var(--primary);
+            font-size: 0.8rem;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
+
+        /* ===========================
+           PREMIUM TABLE / REGISTRY
+        =========================== */
+        .reg-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.78rem;
+        }
+        .reg-table thead tr {
+            background: linear-gradient(135deg, rgba(79,70,229,0.06), rgba(124,58,237,0.04));
+        }
+        .reg-table thead th {
+            padding: 13px 16px;
+            font-size: 0.6rem;
+            font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 1.5px;
+            color: var(--primary);
+            border-bottom: 2px solid rgba(79, 70, 229, 0.12);
+            white-space: nowrap;
         }
-
-        .checkbox-group {
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 16px;
-            padding: 15px;
-            border: 1px solid var(--glass-border);
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            font-size: 0.85rem;
-            color: #cbd5e1;
+        .reg-table tbody tr {
+            border-bottom: 1px solid var(--glass-border);
+            transition: background 0.2s;
             cursor: pointer;
         }
-
-        .checkbox-item:last-child {
-            margin-bottom: 0;
+        .reg-table tbody tr:nth-child(even) {
+            background: rgba(79, 70, 229, 0.015);
+        }
+        .reg-table tbody tr:hover {
+            background: rgba(79, 70, 229, 0.04) !important;
+        }
+        .reg-table tbody td {
+            padding: 12px 16px;
+            color: var(--text-main);
+            font-weight: 600;
+            vertical-align: middle;
         }
 
-        .checkbox-item input {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--primary);
-        }
-
-        .dynamic-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-
-        .dynamic-list::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .dynamic-list::-webkit-scrollbar-thumb {
-            background: var(--glass-border);
-            border-radius: 10px;
-        }
-
+        /* ===========================
+           PREMIUM LIST ITEMS (Catalog)
+        =========================== */
         .list-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            background: rgba(255, 255, 255, 0.03);
-            padding: 12px 16px;
-            border-radius: 14px;
-            border: 1px solid var(--glass-border);
+            justify-content: space-between;
+            padding: 11px 14px;
+            border-radius: 12px;
+            border: 1.5px solid var(--glass-border);
+            background: #fff;
+            margin-bottom: 7px;
             transition: all 0.2s;
         }
-
         .list-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(14, 165, 233, 0.3);
+            border-color: rgba(79, 70, 229, 0.2);
+            background: rgba(79, 70, 229, 0.02);
+            transform: translateX(2px);
         }
-
         .list-item-main {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex: 1;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-main);
             cursor: pointer;
+            flex: 1;
         }
-
-        .list-item-main input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--primary);
-        }
-
         .delete-item-btn {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
+            background: none;
             border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 8px;
+            color: #dc2626;
+            font-size: 0.75rem;
+            font-weight: 900;
+            cursor: pointer;
+            opacity: 0.4;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        .delete-item-btn:hover {
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        /* Qty and norm inputs inside list items */
+        .qty-input, .germ-norm-input {
+            background: #f8fafc !important;
+            border: 1.5px solid var(--glass-border) !important;
+            border-radius: 8px !important;
+            padding: 4px 8px !important;
+            color: var(--text-main) !important;
+            font-weight: 700 !important;
+            font-family: 'Outfit', sans-serif !important;
+            transition: all 0.2s !important;
+        }
+        .qty-input:focus, .germ-norm-input:focus {
+            border-color: var(--primary) !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.08) !important;
+        }
+
+        /* ===========================
+           FAB PREMIUM PULSE
+        =========================== */
+        .fab {
+            font-size: 0.8rem !important;
+            font-weight: 900 !important;
+            letter-spacing: 0.5px !important;
+            text-transform: uppercase !important;
+        }
+        @keyframes fab-pulse {
+            0% { box-shadow: 0 15px 35px var(--primary-glow); }
+            50% { box-shadow: 0 15px 50px rgba(79, 70, 229, 0.4); }
+            100% { box-shadow: 0 15px 35px var(--primary-glow); }
+        }
+        .fab { animation: fab-pulse 3s ease-in-out infinite; }
+
+        /* ===========================
+           CHIP GROUP PREMIUM
+        =========================== */
+        .chip {
+            padding: 8px 16px;
+            border-radius: 50px;
+            background: #f8fafc;
+            border: 1.5px solid var(--glass-border);
+            color: var(--text-dim);
+            font-weight: 700;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.25s;
+            white-space: nowrap;
+        }
+        .chip:hover { border-color: var(--primary); color: var(--primary); background: rgba(79,70,229,0.04); }
+        .chip.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        /* ===========================
+           CODE BADGE PREMIUM
+        =========================== */
+        .code-badge {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(124, 58, 237, 0.06)) !important;
+            color: var(--primary) !important;
+            border: 1px solid rgba(79, 70, 229, 0.15) !important;
+            font-weight: 900;
+        }
+
+        /* ===========================
+           CONDITION BADGE PREMIUM
+        =========================== */
+        .condition-badge {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 0.6rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===========================
+           CLOSE MODAL BUTTON
+        =========================== */
+        .close-modal {
+            background: #f1f5f9;
+            border: 1.5px solid var(--glass-border);
+            color: var(--text-main);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            font-size: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: 0.3s;
             cursor: pointer;
-            font-weight: 800;
-            font-size: 0.7rem;
-            transition: all 0.2s;
         }
+        .close-modal:hover { background: #fee2e2; border-color: #ef4444; color: #ef4444; }
 
-        .delete-item-btn:hover {
-            background: var(--danger);
+        /* ===========================
+           SECTION DIVIDERS
+        =========================== */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.15), transparent);
+            margin: 30px 0 20px;
+            position: relative;
+        }
+        .section-label {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            transform: scale(1.1);
-        }
-
-        .add-catalog-ui {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .add-catalog-input {
-            flex: 1;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px dashed var(--glass-border);
-            border-radius: 12px;
-            padding: 10px 14px;
-            color: white;
-            font-size: 0.85rem;
-            outline: none;
-        }
-
-        .add-catalog-input:focus {
-            border-color: var(--primary);
-            border-style: solid;
-        }
-
-        .add-catalog-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0 15px;
-            border-radius: 10px;
-            font-weight: 800;
-            cursor: pointer;
-            font-size: 1.1rem;
-        }
-
-        .norm-table {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            overflow: hidden;
-            margin: 15px 0;
-            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .norm-table-header {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            background: rgba(255, 255, 255, 0.08);
-            padding: 12px 15px;
+            padding: 3px 20px;
+            font-size: 0.6rem;
             font-weight: 900;
-            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        /* ===========================
+           NORM TABLE
+        =========================== */
+        .norm-table {
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        }
+        .norm-table-header {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.06), rgba(124, 58, 237, 0.04));
+            padding: 14px 20px;
+            font-weight: 900;
+            font-size: 0.65rem;
             color: var(--primary);
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            border-bottom: 2px solid var(--primary);
+            display: grid;
+            grid-template-columns: 1fr auto;
         }
-
         .norm-table-row {
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            padding: 12px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            grid-template-columns: 1fr auto;
+            padding: 12px 20px;
+            border-top: 1px solid var(--glass-border);
             font-size: 0.85rem;
-            align-items: center;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .norm-table-row:nth-child(even) { background: rgba(79, 70, 229, 0.015); }
+
+        /* ===========================
+           CHECKBOX ITEMS
+        =========================== */
+        .checkbox-group { background: #f8fafc; border-radius: 20px; padding: 20px; border: 1.5px solid var(--glass-border); }
+        .checkbox-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; transition: 0.2s; cursor: pointer; }
+        .checkbox-item:hover { background: rgba(79, 70, 229, 0.04); }
+        .checkbox-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        .checkbox-item span { font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
+
+        /* ===========================
+           SUMMARY BOX (Calculator)
+        =========================== */
+        #boites-summary-display {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.04), rgba(124, 58, 237, 0.02));
+            border: 1.5px solid rgba(79, 70, 229, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+            margin-top: 16px;
         }
 
-        .norm-table-row:last-child {
-            border-bottom: none;
-        }
-
-        .norm-table-row span:first-child {
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .norm-table-row span:last-child {
-            font-weight: 900;
-            color: var(--success);
-            font-family: 'JetBrains Mono', monospace;
-            text-align: right;
-        }
-
-        .observation-box {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid var(--glass-border);
-            border-left: 4px solid var(--primary);
-            padding: 15px;
-            border-radius: 4px 12px 12px 4px;
-            margin-top: 15px;
-            font-size: 0.82rem;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            color: rgba(255, 255, 255, 0.95);
+        /* ===========================
+           ANALYSIS BOX
+        =========================== */
+        .analysis-box {
+            background: #f8fafc;
+            border: 1.5px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 18px;
             position: relative;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            margin-bottom: 14px;
+            transition: border-color 0.3s;
+        }
+        .analysis-box:focus-within {
+            border-color: rgba(79, 70, 229, 0.25);
         }
 
-        .qty-input {
-            width: 50px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            border-radius: 4px;
-            padding: 2px 5px;
-            font-size: 0.8rem;
-            text-align: center;
-        }
+        /* ===========================
+           PICK BUTTONS (Quick picks)
+        =========================== */
+        .pick-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(79,70,229,0.05); }
 
-        .resource-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 8px;
-            margin-bottom: 5px;
-        }
-
-        .observation-label-box {
-            font-weight: 900;
-            color: var(--primary);
-            margin-bottom: 8px;
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .observation-label-box::before {
-            content: "📝";
-            font-size: 0.9rem;
-        }
-
-        .norm-input-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
-        }
-
-        .norm-label-fix {
-            min-width: 80px;
-            font-weight: 800;
-            font-size: 0.85rem;
-            color: var(--text-dim);
-        }
-
-        #fiches-list {
-            display: grid;
-            gap: 20px;
-            padding: 20px;
-            min-height: 60vh;
-        }
-
-        @media (min-width: 768px) {
-            #fiches-list {
-                grid-template-columns: repeat(2, 1fr);
-                padding: 20px 15%;
-            }
-
-            .header {
-                padding: 40px 15% 20px;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .modal-content {
-                padding: 15px;
-                margin: 10px auto;
-                border-radius: 20px;
-                width: 95% !important;
-                /* Force la largeur sur mobile */
-                max-width: none;
-            }
-
-            #calcTitle {
-                font-size: 1.1rem !important;
-            }
-
-            #calcResult {
-                font-size: 1.8rem !important;
-            }
-
-            .calc-tab {
-                font-size: 0.6rem;
-                padding: 8px 4px;
-                min-width: 80px;
-            }
-
-            .form-input {
-                padding: 10px;
-                font-size: 0.85rem;
-            }
-
-            .pick-btn {
-                font-size: 0.6rem;
-                padding: 5px 10px;
-            }
-        }
-
-        /* Calculator Styles */
-        .quick-pick {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-            flex-wrap: wrap;
-        }
-
-        .pick-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .pick-btn:hover {
-            background: rgba(14, 165, 233, 0.2);
-            border-color: var(--primary);
-        }
-
-        .calc-tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
-            overflow-x: auto;
-            padding: 5px;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-
-        .calc-tabs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .calc-tab {
-            flex: 0 0 auto;
-            min-width: 85px;
-            padding: 10px 8px;
-            border: 1px solid var(--glass-border);
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text-dim);
-            border-radius: 12px;
-            font-size: 0.65rem;
-            font-weight: 800;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-
-        .calc-tab.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
-        }
-
-        .calc-section {
-            display: none;
-        }
-
-        .calc-section.active {
-            display: block;
-        }
-
-        /* Boîtes Calculator Styles */
-        .milieu-row {
-            display: grid;
-            grid-template-columns: 1fr 75px 55px 95px 125px auto;
-            gap: 8px;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 10px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .milieu-row .form-input {
-            padding: 10px 8px !important;
-            text-align: center;
-        }
-
-        .milieu-row .mil-name {
-            text-align: left !important;
-            padding-left: 15px !important;
-        }
-
-        .boites-summary {
-            margin-top: 15px;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            font-size: 0.8rem;
-        }
-
-        .condition-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 6px;
-            background: var(--primary);
-            color: white;
-            font-weight: 800;
-            font-size: 0.7rem;
-            margin-right: 5px;
-        }
-
-        @media (max-width: 600px) {
-            .milieu-row {
-                grid-template-columns: 1fr 1fr;
-                gap: 5px;
-            }
-
-            .milieu-row input,
-            .milieu-row select {
-                font-size: 0.65rem !important;
-            }
-
-            .milieu-row .delete-milieu {
-                grid-column: span 2;
-                width: 100% !important;
-                margin-top: 5px;
-            }
-        }
     </style>
 </head>
 
@@ -1082,28 +1062,21 @@
     <header class="header">
         <div class="header-top">
             <div class="logo-container">
-                <img src="sohaib.png" class="logo-img"
-                    alt="Logo">
-                <div style="display: flex; flex-direction: column;">
-                    <span class="logo-text">SOHAIB CHEKRI</span>
-                </div>
+                <img src="sohaib.png" class="logo-img" alt="Logo">
+                <span class="logo-text">SOHAIB CHEKRI</span>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <button id="addBtn" onclick="window.openAddModal()" 
-                    style="background: #10b981; color: white; border: none; padding: 5px 15px; border-radius: 8px; font-size: 0.8rem; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(16,185,129,0.3);">+ NOUVEAU</button>
-                <button id="openCalcBtn"
-                    style="background: rgba(14, 165, 233, 0.2); color: var(--primary); border: 1px solid var(--primary); padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">CALCULATRICE</button>
-                <button id="toggleSelectBtn"
-                    style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer;">SÉLECTIONNER</button>
+            <div style="display: flex; gap: 8px;">
+                <button id="openCalcBtn" class="main-tab" style="padding: 8px 12px; background: var(--glass); border: 1px solid var(--glass-border); min-width: 0;">🧮</button>
+                <button id="toggleSelectBtn" class="main-tab" style="padding: 8px 12px; background: var(--glass); border: 1px solid var(--glass-border); min-width: 0;">🗸</button>
             </div>
         </div>
 
-        <div class="main-tabs" style="width: 100%;">
-            <button onclick="window.switchTab('fiches')" id="tab-fiches" class="main-tab active">📋 FICHES</button>
-            <button onclick="window.switchTab('analyses')" id="tab-analyses" class="main-tab">🧪 ANALYSES</button>
-            <button onclick="window.switchTab('preps')" id="tab-preps" class="main-tab">⚗️ PREPS</button>
-            <button onclick="window.switchTab('photos')" id="tab-photos" class="main-tab">📸 PHOTOS</button>
-            <button onclick="window.switchTab('registres')" id="tab-registres" class="main-tab">📓 REGISTRES</button>
+        <div class="main-tabs">
+            <button onclick="window.switchTab('fiches')" id="tab-fiches" class="main-tab active">📋 Fiches</button>
+            <button onclick="window.switchTab('analyses')" id="tab-analyses" class="main-tab">🧪 Analyses</button>
+            <button onclick="window.switchTab('preps')" id="tab-preps" class="main-tab">⚗️ Preps</button>
+            <button onclick="window.switchTab('photos')" id="tab-photos" class="main-tab">📸 Photos</button>
+            <button onclick="window.switchTab('registres')" id="tab-registres" class="main-tab">📓 Registres</button>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
@@ -1112,10 +1085,12 @@
                 <input type="text" id="searchInput" class="search-input" placeholder="Produit, lot, code...">
             </div>
             <div class="search-container" style="width: auto; flex: 0 0 auto;">
-                <input type="date" id="dateFilter" class="search-input" style="padding: 10px; width: 45px;" onchange="render()">
+                <input type="date" id="dateFilter" class="search-input" style="padding: 10px; width: 120px;" onchange="render()">
             </div>
             <button id="sortBtn" onclick="toggleSort()"
-                style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 5px; border-radius: 12px; color: var(--text-dim); cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">⇅</button>
+                style="background: #fff; border: 1.5px solid var(--glass-border); padding: 0 14px; border-radius: 12px; color: var(--text-dim); cursor: pointer; height: 40px; display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;" id="sortBtn">
+                <span id="sortBtnIcon">📅</span><span id="sortBtnLabel">Date ↓</span>
+            </button>
         </div>
         <div id="selectionActions"
             style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center; gap: 10px;">
@@ -1132,6 +1107,8 @@
     <main id="fiches-list">
         <!-- JS renders cards here -->
     </main>
+
+    <button id="addBtn" class="fab" onclick="window.openAddModal()">+</button>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
         <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.7 • Stockage Local Direct</div>
@@ -1480,7 +1457,7 @@
                 <div class="form-group">
                     <label style="color:var(--secondary);">🧪 Additifs / Suppléments (Détails de pesée)</label>
 
-                    <div style="margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 12px;">
+                    <div style="margin-bottom: 15px; background: rgba(79, 70, 229, 0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(79, 70, 229, 0.1);">
                         <label style="font-size:0.6rem; color:var(--text-dim); margin-bottom:5px; display:block;">Mes
                             Additifs (Catalogue)</label>
                         <div id="additifs-catalog-prep"
@@ -1494,7 +1471,7 @@
                     </div>
 
                     <div id="additifFormUI"
-                        style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
+                        style="background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid var(--glass-border); margin-bottom:15px;">
                         <input type="hidden" id="editAdditifIdx" value="">
                         <div class="form-group" style="margin-bottom:10px;">
                             <input type="text" id="newAdditifName" class="form-input" style="font-size:0.8rem;"
@@ -1584,8 +1561,8 @@
                 </div>
 
                 <div id="analysisRows">
-                    <div class="analysis-row"
-                        style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
+                    <div class="analysis-box"
+                        style="background: #f8fafc; padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid var(--glass-border); position: relative;">
                         <div class="form-group">
                             <label>Produit</label>
                             <input type="text" class="form-input row-prod" placeholder="Nom du produit..."
@@ -1643,7 +1620,7 @@
                 <div id="incubationAssistant"
                     style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14,165,233,0.2); padding: 12px; border-radius: 12px; margin-bottom: 20px; font-size: 0.75rem;">
                     <div
-                        style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase;">
+                        style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; font-size: 0.6rem;">
                         🕒 Assistant de sortie</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <button type="button" onclick="setIncubation(5)"
@@ -1698,10 +1675,10 @@
     </div>
     <div id="modalOverlay" class="modal-overlay">
         <div
-            style="background:#1e293b; width:100%; max-width:500px; margin:40px auto; border-radius:32px; padding:30px; position:relative; border:1px solid rgba(255,255,255,0.1);">
+            style="background:#ffffff; width:100%; max-width:500px; margin:40px auto; border-radius:32px; padding:30px; position:relative; border:1px solid var(--glass-border); box-shadow: 0 40px 80px rgba(0, 0, 0, 0.1);">
             <button onclick="document.getElementById('modalOverlay').style.display='none';"
                 style="position:absolute; top:15px; right:15px; background:rgba(255,255,255,0.1); border:none; color:white; width:35px; height:35px; border-radius:50%; font-size:1rem; cursor:pointer;">✕</button>
-            <h2 id="modalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem;">Nouvelle Fiche</h2>
+            <h2 id="modalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">Nouvelle Fiche</h2>
 
             <form id="ficheForm">
                 <input type="hidden" id="editId">
@@ -1728,11 +1705,11 @@
 
                 <div class="norm-input-row">
                     <span class="norm-label-fix">DGAT</span>
-                    <input type="text" id="dgat" class="form-input" placeholder="ex: 10³" style="margin: 0;">
+                    <input type="text" id="dgat" class="form-input" placeholder="ex: 10³" style="margin: 0; background: #fff;">
                 </div>
                 <div class="norm-input-row">
                     <span class="norm-label-fix">DMLT</span>
-                    <input type="text" id="dmlt" class="form-input" placeholder="ex: 10²" style="margin: 0;">
+                    <input type="text" id="dmlt" class="form-input" placeholder="ex: 10²" style="margin: 0; background: #fff;">
                 </div>
 
                 <div class="form-group" style="margin-top: 20px;">
@@ -1815,7 +1792,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button type="submit" class="save-btn">Enregistrer</button>
                     <button type="button" onclick="window.closeAddModal()"
-                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
+                        style="background:#f1f5f9; border: 1px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
                 <button type="button" class="delete-btn" id="deleteBtn"
                     style="display: none; margin-top: 10px;">Supprimer cette fiche</button>
@@ -1843,9 +1820,9 @@
                         </div>
                         <div style="margin-top: 8px; display: flex; gap: 5px;">
                             <input type="text" id="newPhotoCategory" placeholder="Nouvelle catégorie..." 
-                                style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.7rem;">
+                                style="flex: 1; background: #fff; border: 1px solid var(--glass-border); color: var(--text-main); padding: 5px 10px; border-radius: 8px; font-size: 0.7rem;">
                             <button type="button" onclick="addCustomPhotoCategory()" 
-                                style="background: var(--primary); color: #0f172a; border: none; padding: 5px 12px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.8rem;">＋</button>
+                                style="background: var(--primary); color: white; border: none; padding: 5px 12px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.8rem;">＋</button>
                         </div>
                         <input type="hidden" id="photoCategory" value="ANALYSES">
                     </div>
@@ -2175,14 +2152,45 @@
 
         // (IndexedDB code removed to return to Firestore Cache)
 
-        window.toggleSort = function () {
-            window.sortOrder = window.sortOrder === 'desc' ? 'asc' : 'desc';
-            localStorage.setItem('microbio_sort', window.sortOrder);
+        // Sort state: cycles through date-desc → date-asc → name-asc → name-desc
+        const SORT_STATES = [
+            { by: 'date', order: 'desc', icon: '📅', label: 'Date ↓' },
+            { by: 'date', order: 'asc',  icon: '📅', label: 'Date ↑' },
+            { by: 'name', order: 'asc',  icon: '🔤', label: 'Nom ↑' },
+            { by: 'name', order: 'desc', icon: '🔤', label: 'Nom ↓' },
+        ];
+
+        function getSortStateIndex() {
+            return parseInt(localStorage.getItem('microbio_sort_state') || '0', 10);
+        }
+
+        function applySortButtonUI() {
+            const idx = getSortStateIndex();
+            const s = SORT_STATES[idx];
+            window.sortBy = s.by;
+            window.sortOrder = s.order;
+            const iconEl = document.getElementById('sortBtnIcon');
+            const labelEl = document.getElementById('sortBtnLabel');
             const btn = document.getElementById('sortBtn');
-            btn.style.color = window.sortOrder === 'asc' ? 'var(--primary)' : 'var(--text-dim)';
-            btn.style.transform = window.sortOrder === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)';
+            if (iconEl) iconEl.textContent = s.icon;
+            if (labelEl) labelEl.textContent = s.label;
+            if (btn) {
+                btn.style.color = s.by === 'name' ? 'var(--primary)' : 'var(--text-dim)';
+                btn.style.borderColor = s.by === 'name' ? 'rgba(79,70,229,0.3)' : 'var(--glass-border)';
+            }
+        }
+
+        window.toggleSort = function () {
+            let idx = getSortStateIndex();
+            idx = (idx + 1) % SORT_STATES.length;
+            localStorage.setItem('microbio_sort_state', idx);
+            applySortButtonUI();
             render();
         };
+
+        // Init sort on load
+        applySortButtonUI();
+
 
         // Tab Switching Logic
         window.switchTab = function (tab) {
@@ -2687,11 +2695,11 @@
                     if (tempSummary[temp] > 0) {
                         html += `<div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                             <span class="label-text"><span class="condition-badge">${temp}°C</span></span>
-                            <span class="val-text" style="font-weight: 900; color: white;">${tempSummary[temp]} boîtes</span>
+                            <span class="val-text" style="font-weight: 900; color: var(--primary);">${tempSummary[temp]} boîtes</span>
                         </div>`;
                     }
                 }
-                html += '<div style="font-weight: 800; color: var(--success); margin: 12px 0 8px; text-transform: uppercase; font-size: 0.65rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">Formats :</div>';
+                html += '<div style="font-weight: 800; color: var(--success); margin: 12px 0 8px; text-transform: uppercase; font-size: 0.65rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px;">Formats :</div>';
                 for (const format in formatSummary) {
                     if (formatSummary[format] > 0) {
                         let unitLabel = "unités";
@@ -2903,7 +2911,7 @@
                                 <input type="checkbox" class="${type}-check" data-val="${val}" ${currentState[val] ? 'checked' : ''}>
                                 <span style="flex: 1;">${val}</span>
                                 ${type === 'consommables' ? `<input type="number" class="qty-input" data-for="${val}" value="${currentState[val]?.qty || 1}" min="1" onClick="event.stopPropagation()">` : ''}
-                                ${type === 'germes' ? `<input type="text" class="germ-norm-input" data-for="${val}" placeholder="Norme" value="${currentState[val]?.norm || 'Absence'}" style="width: 100px; font-size: 0.7rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 2px 5px;" onClick="event.stopPropagation()">` : ''}
+                                ${type === 'germes' ? `<input type="text" class="germ-norm-input" data-for="${val}" placeholder="Norme" value="${currentState[val]?.norm || 'Absence'}" style="width: 100px; font-size: 0.7rem; background: #fff; border: 1px solid var(--glass-border); color: var(--text-main); border-radius: 4px; padding: 2px 5px;" onClick="event.stopPropagation()">` : ''}
                             </label>
                             <button type="button" class="delete-item-btn" onclick="deleteFromCatalog('${type}', '${val.replace(/'/g, "\\'")}')" title="Supprimer du catalogue">✕</button>
                         </div>
@@ -2916,7 +2924,7 @@
             if (catPrep) {
                 const list = catalogs['additifs'] || [];
                 catPrep.innerHTML = list.map(val => `
-                    <span class="mini-tag" style="cursor:pointer; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); display:flex; align-items:center; gap:8px;">
+                    <span class="mini-tag" style="cursor:pointer; background:rgba(79, 70, 229, 0.05); border:1px solid rgba(79, 70, 229, 0.1); display:flex; align-items:center; gap:8px;">
                         <span onclick="document.getElementById('newAdditifName').value = '${val.replace(/'/g, "\\'")}';">${val}</span>
                         <span onclick="deleteFromCatalog('additifs', '${val.replace(/'/g, "\\'")}')" style="color:#ef4444; font-weight:800; cursor:pointer; padding:2px;">✕</span>
                     </span>
@@ -3023,9 +3031,17 @@
                     (f.methode && f.methode.toLowerCase().includes(query))
                 );
                 filtered.sort((a, b) => {
-                    const nameA = a.designation || "";
-                    const nameB = b.designation || "";
-                    return window.sortOrder === 'desc' ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
+                    if (window.sortBy === 'name') {
+                        const na = (a.designation || '').toLowerCase();
+                        const nb = (b.designation || '').toLowerCase();
+                        return window.sortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
+                    } else {
+                        // date: use updatedAt if available, else fall back to name
+                        const da = a.updatedAt || 0;
+                        const db = b.updatedAt || 0;
+                        if (da === db) return (a.designation || '').localeCompare(b.designation || '');
+                        return window.sortOrder === 'desc' ? db - da : da - db;
+                    }
                 });
 
                 if (filtered.length === 0) {
@@ -3036,21 +3052,19 @@
                 container.innerHTML = filtered.map(f => `
                     <div class="fiche-card ${selectedFiches.has(f.id) ? 'selected' : ''}" onclick="${isSelectionMode ? `toggleFicheSelection('${f.id}', event); render();` : `openEdit('${f.id}')`}">
                         <div class="card-header">
-                            <div class="card-title-group" style="flex: 1;">
+                            <div class="card-title-group" style="flex: 1; padding-right: 12px;">
                                 <div class="designation">${f.designation}</div>
+                                <div class="code-badge" style="margin-top: 4px;">${f.code || 'SANS CODE'}</div>
                             </div>
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                                <div class="code-badge">${f.code || 'SANS CODE'}</div>
-                                <button class="pdf-btn" onclick="event.stopPropagation(); window.generatePDF('${f.id}')">
-                                    <svg viewBox="0 0 24 24"><path d="M12 16L16 12H13V4H11V12H8L12 16ZM20 18H4V20H20V18Z"/></svg>
-                                    PDF
-                                </button>
-                            </div>
+                            <button class="pdf-btn" onclick="event.stopPropagation(); window.generatePDF('${f.id}')">
+                                <svg viewBox="0 0 24 24"><path d="M12 16L16 12H13V4H11V12H8L12 16ZM20 18H4V20H20V18Z"/></svg>
+                                PDF
+                            </button>
                         </div>
                         <div class="card-stats-row">
                             ${f.dgat ? `<div class="stat-chip"><span class="stat-label">DGAT</span><span class="stat-value">${f.dgat}</span></div>` : ''}
                             ${f.dmlt ? `<div class="stat-chip"><span class="stat-label">DMLT</span><span class="stat-value">${f.dmlt}</span></div>` : ''}
-                            ${f.dilution ? `<div class="stat-chip" style="border-color:rgba(99,102,241,0.3);"><span class="stat-label" style="color:var(--secondary);">Dilution</span><span class="stat-value">${f.dilution}</span></div>` : ''}
+                            ${f.dilution ? `<div class="stat-chip" style="border-color:rgba(79, 70, 229, 0.2);"><span class="stat-label" style="color:var(--primary);">Dilution</span><span class="stat-value">${f.dilution}</span></div>` : ''}
                         </div>
                         <div class="prep-section">
                             <div class="prep-box">
@@ -3067,14 +3081,16 @@
                                 </div>
                             </div>
                         </div>
-                         <div class="germes-grid">
-                            <span class="prep-label" style="color:var(--success);">🧫 Germes Spécifiés</span>
+                         <div class="germes-grid" style="background: rgba(79, 70, 229, 0.03); padding: 12px; border-radius: 14px; border: 1px solid var(--glass-border); margin-top: 10px;">
+                            <span class="prep-label" style="color:var(--success); margin-bottom: 8px; display: block;">🧫 Germes Spécifiés</span>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
                             ${(f.germesDetails || []).map(g => `
-                                <div class="germe-item" style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                                    <span style="color:var(--text-dim); font-size:0.65rem;">${g.name}</span>
-                                    <span style="color:var(--success); font-weight:700;">${g.norm}</span>
+                                <div class="germe-item" style="display:flex; justify-content:space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                    <span style="color:var(--text-dim); font-size:0.75rem; font-weight: 600;">${g.name}</span>
+                                    <span style="color:var(--success); font-weight:800; font-size: 0.75rem;">${g.norm}</span>
                                 </div>
                             `).join('')}
+                            </div>
                         </div>
                         ${f.observation ? `<div class="obs-card-footer"><span>📝</span><span>${f.observation}</span></div>` : ''}
                     </div>
@@ -3095,9 +3111,15 @@
 
                 // Tri des préparations
                 filtered.sort((a, b) => {
-                    const da = new Date(a.datePrep || 0).getTime();
-                    const dateB = new Date(b.datePrep || 0).getTime();
-                    return window.sortOrder === 'desc' ? dateB - da : da - dateB;
+                    if (window.sortBy === 'name') {
+                        const na = (a.designation || '').toLowerCase();
+                        const nb = (b.designation || '').toLowerCase();
+                        return window.sortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
+                    } else {
+                        const da = new Date(a.datePrep || 0).getTime();
+                        const db = new Date(b.datePrep || 0).getTime();
+                        return window.sortOrder === 'desc' ? db - da : da - db;
+                    }
                 });
 
                 if (filtered.length === 0) {
@@ -3123,39 +3145,39 @@
                             </div>
                             
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                <div style="background:rgba(255,255,255,0.03); padding:8px; border-radius:10px; text-align:center;">
+                                <div style="background:rgba(0,0,0,0.02); padding:8px; border-radius:10px; text-align:center;">
                                     <div style="font-size:0.55rem; color:var(--text-dim); text-transform:uppercase;">Préparé le</div>
-                                    <div style="font-size:0.8rem; font-weight:800;">${p.datePrep ? new Date(p.datePrep).toLocaleDateString('fr-FR') : '-'}</div>
+                                    <div style="font-size:0.8rem; font-weight:800; color:var(--text-main);">${p.datePrep ? new Date(p.datePrep).toLocaleDateString('fr-FR') : '-'}</div>
                                 </div>
-                                <div style="background:${isExpired ? 'rgba(239,68,68,0.1)' : (isExpiringSoon ? 'rgba(251,191,36,0.1)' : 'rgba(34,197,94,0.1)')}; padding:8px; border-radius:10px; text-align:center; border:1px solid ${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'transparent')}">
-                                    <div style="font-size:0.55rem; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'var(--success)')}; text-transform:uppercase;">Péremption</div>
-                                    <div style="font-size:0.8rem; font-weight:800; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'white')}">${p.datePeremption ? new Date(p.datePeremption).toLocaleDateString('fr-FR') : '-'}</div>
+                                <div style="background:${isExpired ? 'rgba(239,68,68,0.05)' : (isExpiringSoon ? 'rgba(251,191,36,0.05)' : 'rgba(34,197,94,0.05)')}; padding:8px; border-radius:10px; text-align:center; border:1px solid ${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'transparent')}">
+                                    <div style="font-size:0.55rem; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#f59e0b' : 'var(--success)')}; text-transform:uppercase;">Péremption</div>
+                                    <div style="font-size:0.8rem; font-weight:800; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#f59e0b' : 'var(--text-main)')}">${p.datePeremption ? new Date(p.datePeremption).toLocaleDateString('fr-FR') : '-'}</div>
                                 </div>
                             </div>
 
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <div style="display:flex; flex-direction:column; gap:2px;">
-                                    <div style="font-size:0.65rem; color:var(--text-dim);">Lot Int: <span style="color:white; font-weight:800;">${p.lot}</span></div>
-                                    <div style="font-size:0.55rem; color:var(--text-dim);">${p.supplier || 'N/A'} : <span style="color:rgba(255,255,255,0.7);">${p.lotFourn || '-'}</span></div>
+                                    <div style="font-size:0.65rem; color:var(--text-dim);">Lot Int: <span style="color:var(--text-main); font-weight:800;">${p.lot}</span></div>
+                                    <div style="font-size:0.55rem; color:var(--text-dim);">${p.supplier || 'N/A'} : <span style="color:var(--text-dim);">${p.lotFourn || '-'}</span></div>
                                 </div>
                                 <div style="text-align:right; display:flex; flex-direction:column; gap:2px;">
                                     <div style="font-size:0.65rem; color:var(--secondary); font-weight:800;">📦 B-${p.boite || '?'} | ⚖️ ${p.weight || '0'}g</div>
-                                    ${p.qtyFinal ? `<div style="font-size: 0.55rem; color: #a5b4fc; font-weight: 700;">💧 VOL : ${p.qtyFinal}</div>` : ''}
+                                    ${p.qtyFinal ? `<div style="font-size: 0.55rem; color: var(--primary); font-weight: 700;">💧 VOL : ${p.qtyFinal}</div>` : ''}
                                     ${isExpired ? '<span style="color:#ef4444; font-size:0.6rem; font-weight:800;">⚠️ EXPIRÉ</span>' : ''}
                                 </div>
                             </div>
 
                             ${p.additifs && p.additifs.length > 0 ? `
-                                <div style="display:flex; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid rgba(255,255,255,0.05); padding-top:8px;">
+                                <div style="display:flex; flex-direction:column; gap:4px; margin-top:5px; border-top:1px solid rgba(0,0,0,0.05); padding-top:8px;">
                                     ${p.additifs.map(a => `
                                         <div style="display:flex; flex-direction:column; gap:2px; background:rgba(99,102,241,0.08); padding:6px 10px; border-radius:8px; border:1px solid rgba(99,102,241,0.15);">
                                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                                 <span style="color:var(--secondary); font-weight:800; font-size:0.65rem;">${a.name}</span>
-                                                <span style="color:white; font-weight:800; font-size:0.6rem;">⚖️ ${a.qty || '0'}</span>
+                                                <span style="color:var(--text-main); font-weight:800; font-size:0.6rem;">⚖️ ${a.qty || '0'}</span>
                                             </div>
                                             <div style="display:flex; gap:10px; font-size:0.55rem; color:var(--text-dim);">
-                                                <span>L: <span style="color:white;">${a.lot || '-'}</span></span>
-                                                <span>C: <span style="color:white;">${a.code || '-'}</span></span>
+                                                <span>L: <span style="color:var(--text-main);">${a.lot || '-'}</span></span>
+                                                <span>C: <span style="color:var(--text-main);">${a.code || '-'}</span></span>
                                                 <span>B: <span style="color:var(--secondary); font-weight:700;">${a.boite || '-'}</span></span>
                                             </div>
                                         </div>
@@ -3171,14 +3193,20 @@
 
                 // Sorting
                 filtered.sort((a, b) => {
-                    // 1. Les libérés vont en bas
+                    // 1. Les libérés vont toujours en bas
                     if (a.isLibere && !b.isLibere) return 1;
                     if (!a.isLibere && b.isLibere) return -1;
 
-                    // 2. Ensuite par date
-                    const da = new Date(a.dateAnalyse).getTime();
-                    const dateB = new Date(b.dateAnalyse).getTime();
-                    return window.sortOrder === 'desc' ? dateB - da : da - dateB;
+                    // 2. Selon le critère de tri choisi
+                    if (window.sortBy === 'name') {
+                        const na = (a.produit || '').toLowerCase();
+                        const nb = (b.produit || '').toLowerCase();
+                        return window.sortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
+                    } else {
+                        const da = new Date(a.dateAnalyse).getTime();
+                        const db = new Date(b.dateAnalyse).getTime();
+                        return window.sortOrder === 'desc' ? db - da : da - db;
+                    }
                 });
 
                 // Filtering
@@ -3258,18 +3286,18 @@
                             </div>
                         </div>
                         
-                        <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; margin: 10px 0; border: 1px solid ${isOverdue && !g.items.every(i => i.isLibere) ? 'rgba(239, 68, 68, 0.3)' : 'transparent'};">
+                        <div style="background: #f8fafc; padding: 14px; border-radius: 16px; margin: 12px 0; border: 1px solid var(--glass-border); box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <div class="prep-label" style="font-size:0.5rem;">DATE DE SORTIE</div>
-                                    <div style="font-size: 1.1rem; font-weight: 900; color: ${isOverdue && !g.items.every(i => i.isLibere) ? '#ef4444' : '#fbbf24'};">
-                                        ${g.dateSortie ? new Date(g.dateSortie).toLocaleDateString() : 'Non définie'}
+                                    <div class="prep-label" style="font-size:0.6rem; letter-spacing: 1px; color: var(--primary);">📅 SORTIE LABO</div>
+                                    <div style="font-size: 1.15rem; font-weight: 900; color: ${isOverdue && !g.items.every(i => i.isLibere) ? '#ef4444' : '#f59e0b'};">
+                                        ${g.dateSortie ? new Date(g.dateSortie).toLocaleDateString('fr-FR') : '---'}
                                         ${isOverdue && !g.items.every(i => i.isLibere) ? ' ⚠️' : ''}
                                     </div>
                                 </div>
-                                <div style="text-align: right; opacity: 0.5;">
-                                    <div style="font-size: 0.5rem; color: var(--text-dim);">Suggestions (5j / 7j)</div>
-                                    <div style="font-size: 0.6rem; color: white;">${d5.toLocaleDateString()} / ${d7.toLocaleDateString()}</div>
+                                <div style="text-align: right; opacity: 0.7;">
+                                    <div style="font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase;">Incub: 5j / 7j</div>
+                                    <div style="font-size: 0.65rem; color: var(--text-main); font-weight: 700;">${d5.toLocaleDateString('fr-FR')} / ${d7.toLocaleDateString('fr-FR')}</div>
                                 </div>
                             </div>
                         </div>
@@ -3282,11 +3310,11 @@
 
                         return `
                                 <div onclick="${itemAction}" 
-                                     style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid ${selectedFiches.has(i.id) ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; display: flex; flex-direction: column; gap: 8px; cursor: pointer; opacity: ${i.isLibere ? '0.5' : '1'};">
+                                     style="background: rgba(255,255,255,0.02); padding: 14px; border-radius: 14px; border: 1px solid ${selectedFiches.has(i.id) ? 'var(--primary)' : 'var(--glass-border)'}; display: flex; flex-direction: column; gap: 10px; cursor: pointer; transition: 0.3s; opacity: ${i.isLibere ? '0.6' : '1'};">
                                      
                                      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                                          <div style="${i.isLibere ? 'text-decoration: line-through; color: var(--text-dim);' : ''}; flex: 1;">
-                                             <div style="font-size: 0.9rem; font-weight: 700; color: ${i.isLibere ? 'var(--text-dim)' : 'white'};">${i.produit}</div>
+                                             <div style="font-size: 0.9rem; font-weight: 700; color: ${i.isLibere ? 'var(--text-dim)' : 'var(--text-main)'};">${i.produit}</div>
                                              <div style="font-size: 0.65rem; color: var(--text-dim);">Lot: ${i.lot || '-'} | Code: ${i.codeControl || '-'}</div>
                                          </div>
                                          <div style="text-align: right;">
@@ -3316,13 +3344,13 @@
                                          </div>
                                      </div>
 
-                                     <div style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.6rem; color: var(--primary); font-weight: 700; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">
+                                     <div style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.6rem; color: var(--primary); font-weight: 700; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 5px;">
                                          ${i.germsDetails ? i.germsDetails.map(g => `
-                                             <div style="background: rgba(99,102,241,0.1); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(99,102,241,0.2); display:flex; flex-direction:column; gap:2px;">
+                                             <div style="background: rgba(79, 70, 229, 0.05); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(79, 70, 229, 0.1); display:flex; flex-direction:column; gap:2px;">
                                                  <div style="display:flex; justify-content:space-between; gap:10px;">
-                                                     <span>${g.name}: <span style="color:white;">${g.result || '...'}</span></span>
+                                                     <span style="color:var(--primary); font-weight:800;">${g.name}: <span style="color:var(--text-main); font-weight:800;">${g.result || '...'}</span></span>
                                                  </div>
-                                                 ${g.remark ? `<div style="font-size:0.45rem; color:var(--text-dim); font-weight:400; font-style:italic; border-top:1px solid rgba(255,255,255,0.05); padding-top:2px;">"${g.remark}"</div>` : ''}
+                                                 ${g.remark ? `<div style="font-size:0.45rem; color:var(--text-dim); font-weight:400; font-style:italic; border-top:1px solid rgba(0,0,0,0.05); padding-top:2px;">"${g.remark}"</div>` : ''}
                                              </div>
                                          `).join('') : (Array.isArray(i.germs) ? i.germs.map(g => `<span class="mini-tag">${g}</span>`).join('') : (i.germs || ''))}
                                      </div>
@@ -3351,7 +3379,7 @@
                             return `
                             <div class="photo-card ${isSelected ? 'selected' : ''}" 
                                  onclick="${isSelectionMode ? `toggleItemSelection('${p.id}', 'photos', event); render();` : ''}"
-                                 style="display: flex; flex-direction: column; background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.03)'}; border-radius: 16px; overflow: hidden; border: 1px solid ${isSelected ? '#ef4444' : 'rgba(255,255,255,0.05)'}; position: relative; transition: all 0.3s; ${isSelectionMode ? 'cursor: pointer;' : ''}">
+                                 style="display: flex; flex-direction: column; background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : '#ffffff'}; border-radius: 16px; overflow: hidden; border: 1px solid ${isSelected ? '#ef4444' : 'var(--glass-border)'}; position: relative; transition: all 0.3s; ${isSelectionMode ? 'cursor: pointer;' : ''}; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                                 
                                 <div style="width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #000; ${!isSelectionMode ? 'cursor: zoom-in;' : ''}" 
                                      ${!isSelectionMode ? `onclick="zoomPhoto('${p.url}')"` : ''}>
@@ -3363,8 +3391,8 @@
                                 </div>
                                 <div style="display: flex; flex-direction: column; flex: 1; padding: 10px; ${!isSelectionMode ? 'cursor: pointer;' : ''}" 
                                      ${!isSelectionMode ? `onclick="openPhotoModal('${p.id}')"` : ''}>
-                                    <div style="flex: 1; font-size: 0.75rem; font-weight: 800; color: white; line-height: 1.2; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap; text-align: left;">${p.title} ${!isSelectionMode ? '<span style="opacity:0.5; font-size:0.6rem;">📝</span>' : ''}</div>
-                                    <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                                    <div style="flex: 1; font-size: 0.75rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap; text-align: left;">${p.title} ${!isSelectionMode ? '<span style="opacity:0.5; font-size:0.6rem;">📝</span>' : ''}</div>
+                                    <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--glass-border);">
                                         <span>📅 ${p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--'}</span>
                                         <span>⏰ ${p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</span>
                                     </div>
@@ -3390,11 +3418,23 @@
                         if (!matchesName) entries = filteredEntries; // On ne garde que les lignes qui matchent
                     }
 
-                    entries.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                    entries.sort((a, b) => {
+                        if (window.sortBy === 'name') {
+                            // Sort by first column value
+                            const firstCol = (reg.columns && reg.columns[0]) ? (typeof reg.columns[0] === 'string' ? reg.columns[0] : reg.columns[0].name) : null;
+                            const va = firstCol && a.data ? (a.data[firstCol] || '') : '';
+                            const vb = firstCol && b.data ? (b.data[firstCol] || '') : '';
+                            return window.sortOrder === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+                        } else {
+                            return window.sortOrder === 'desc'
+                                ? (b.updatedAt || 0) - (a.updatedAt || 0)
+                                : (a.updatedAt || 0) - (b.updatedAt || 0);
+                        }
+                    });
                     
                     return `
-                        <div style="background:rgba(255,255,255,0.03); border-radius:24px; border:1px solid var(--glass-border); margin-bottom:20px; overflow:hidden;">
-                            <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+                        <div style="background:#ffffff; border-radius:24px; border:1px solid var(--glass-border); margin-bottom:20px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
+                            <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.01);">
                                 <div style="display:flex; align-items:center; gap:12px;">
                                     ${isSelectionMode ? `
                                         <div onclick="window.toggleItemSelection('reg:${reg.id}', 'registres_config', event); render();" 
@@ -3404,7 +3444,7 @@
                                     ` : ''}
                                     <span style="font-size:1.5rem;">${reg.icon || '📓'}</span>
                                     <div>
-                                        <div style="font-weight:900; color:white; font-size:1rem;">${reg.name}</div>
+                                        <div style="font-weight:900; color:var(--text-main); font-size:1rem;">${reg.name}</div>
                                         <div style="font-size:0.55rem; color:var(--text-dim); font-weight:700;">${entries.length} LIGNES</div>
                                     </div>
                                 </div>
@@ -3415,35 +3455,35 @@
                                 </div>
                             </div>
                             
-                            <div style="overflow-x:auto;">
-                                <table style="width:100%; border-collapse:collapse; font-size:0.7rem; text-align:left;">
+                            <div style="overflow-x:auto; padding: 0 4px 4px;">
+                                <table class="reg-table">
                                     <thead>
-                                        <tr style="background:rgba(255,255,255,0.02); color:var(--primary); border-bottom:1px solid rgba(255,255,255,0.05);">
-                                            ${isSelectionMode ? '<th style="width:40px; padding:12px;"></th>' : ''}
-                                            ${(reg.columns || []).map(c => `<th style="padding:12px 15px; font-weight:900; white-space:nowrap;">${typeof c === 'string' ? c : c.name}</th>`).join('')}
+                                        <tr>
+                                            ${isSelectionMode ? '<th style="width:40px;"></th>' : ''}
+                                            ${(reg.columns || []).map(c => `<th>${typeof c === 'string' ? c : c.name}</th>`).join('')}
                                             <th style="width:40px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${entries.length === 0 ? `<tr><td colspan="${(reg.columns || []).length + (isSelectionMode ? 2 : 1)}" style="padding:20px; text-align:center; color:var(--text-dim); opacity:0.5;">Aucune donnée enregistrée</td></tr>` : ''}
+                                        ${entries.length === 0 ? `<tr><td colspan="${(reg.columns || []).length + (isSelectionMode ? 2 : 1)}" style="padding:30px; text-align:center; color:var(--text-dim); font-style:italic; font-size:0.8rem;">Aucune donnée enregistrée</td></tr>` : ''}
                                         ${entries.map(e => `
-                                            <tr onclick="${isSelectionMode ? `window.toggleItemSelection('${e.id}', 'registres', event); render();` : `window.openEntryModal('${reg.id}', '${e.id}')`}" style="border-bottom:1px solid rgba(255,255,255,0.03); cursor:pointer; transition:background 0.2s; ${selectedFiches.has(e.id) ? 'background:rgba(239, 68, 68, 0.1);' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='${selectedFiches.has(e.id) ? 'rgba(239, 68, 68, 0.1)' : 'transparent'}'">
+                                            <tr onclick="${isSelectionMode ? `window.toggleItemSelection('${e.id}', 'registres', event); render();` : `window.openEntryModal('${reg.id}', '${e.id}')`}" style="${selectedFiches.has(e.id) ? 'background:rgba(239, 68, 68, 0.07) !important;' : ''}">
                                                 ${isSelectionMode ? `<td style="padding:12px; text-align:center;"><div style="width:20px; height:20px; border-radius:6px; border:2px solid ${selectedFiches.has(e.id) ? '#ef4444' : 'var(--glass-border)'}; display:flex; align-items:center; justify-content:center; color:#ef4444; font-weight:bold;">${selectedFiches.has(e.id) ? '✓' : ''}</div></td>` : ''}
                                                 ${(reg.columns || []).map(c => {
                                                     const colName = typeof c === 'string' ? c : c.name;
                                                     let val = e.data ? e.data[colName] : null;
                                                     
                                                     if (typeof c === 'object' && c.type === 'checkbox') {
-                                                        return `<td style="padding:12px 15px; color:rgba(255,255,255,0.8);">${(val === true || val === 'true') ? '✅' : '❌'}</td>`;
+                                                        return `<td>${(val === true || val === 'true') ? '<span style="color:var(--success); font-size:1rem;">✅</span>' : '<span style="opacity:0.3; font-size:1rem;">❌</span>'}</td>`;
                                                     }
                                                     if (typeof c === 'object' && c.type === 'multicheckbox') {
                                                         const opts = (c.options || '').split(',').filter(x => x.trim());
                                                         const checkedCount = Object.values(val || {}).filter(v => v === true || v === 'true').length;
-                                                        return `<td style="padding:12px 15px; color:rgba(255,255,255,0.8); font-size:0.6rem;">${checkedCount} / ${opts.length} ✅</td>`;
+                                                        return `<td><span style="background:rgba(79,70,229,0.08); padding:2px 8px; border-radius:50px; font-size:0.65rem; font-weight:800; color:var(--primary);">${checkedCount}/${opts.length} ✅</span></td>`;
                                                     }
-                                                    return `<td style="padding:12px 15px; color:rgba(255,255,255,0.8);">${val || '-'}</td>`;
+                                                    return `<td>${val || '<span style="opacity:0.3;">—</span>'}</td>`;
                                                 }).join('')}
-                                                <td style="text-align:center; opacity:0.3; font-size:0.6rem;">✏️</td>
+                                                <td style="text-align:center; color:var(--primary); opacity:0.5; font-size:0.75rem;">✏️</td>
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -3504,7 +3544,7 @@
                 </div>
                 <div class="options-container" style="display:${type==='multicheckbox'?'block':'none'}; margin-top:8px; padding-left:10px; border-left:2px solid var(--primary);">
                     <label style="font-size:0.55rem; color:var(--text-dim); display:block; margin-bottom:4px;">LISTE DES CASES (Séparées par des virgules)</label>
-                    <input type="text" class="form-input col-options" placeholder="Ex: Sols, Vitres, Paillasse" value="${options}" style="width:100%; font-size:0.7rem; padding:8px; background:rgba(0,0,0,0.2);">
+                    <input type="text" class="form-input col-options" placeholder="Ex: Sols, Vitres, Paillasse" value="${options}" style="width:100%; font-size:0.7rem; padding:8px; background:#fff;">
                 </div>
             `;
             container.appendChild(div);
@@ -3563,7 +3603,7 @@
                     inputHtml = `
                         <label class="checkbox-container" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                             <input type="checkbox" class="entry-val" data-col="${colName}" ${isChecked ? 'checked' : ''} style="width:25px; height:25px; accent-color:var(--success);">
-                            <span style="font-size:0.8rem; color:white;">Action effectuée / OK</span>
+                            <span style="font-size:0.8rem; color:var(--text-main);">Action effectuée / OK</span>
                         </label>
                     `;
                 } else if (colType === 'multicheckbox') {
@@ -3575,7 +3615,7 @@
                         inputHtml += `
                             <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                                 <input type="checkbox" class="sub-check" data-opt="${cleanOpt}" ${isChecked ? 'checked' : ''} style="width:20px; height:20px; accent-color:var(--secondary);">
-                                <span style="font-size:0.75rem; color:white;">${cleanOpt}</span>
+                                <span style="font-size:0.75rem; color:var(--text-main);">${cleanOpt}</span>
                             </label>
                         `;
                     });
@@ -3920,33 +3960,33 @@
                     <label style="font-size:0.65rem; color:var(--primary);">🦠 Germes à rechercher</label>
                     <div class="germs-dynamic-container" style="display:flex; flex-direction:column; gap:5px; margin-bottom:5px;">
                         ${data && data.germsDetails ? data.germsDetails.map(g => `
-                            <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
+                            <div style="display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
-                                <span style="font-size:0.7rem; flex:1; color:white;">${g.name}</span>
-                                <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                                <input type="text" class="row-germ-remark" value="${g.remark || ''}" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                                <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${g.name}</span>
+                                <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                                <input type="text" class="row-germ-remark" value="${g.remark || ''}" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
                         `).join('') : (data && Array.isArray(data.germs) ? data.germs.map(gname => `
-                            <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;">
+                            <div style="display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
-                                <span style="font-size:0.7rem; flex:1; color:white;">${gname}</span>
-                                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                                <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${gname}</span>
+                                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
                         `).join('') : '')}
                     </div>
                     
                     <div style="display:flex; gap:5px; margin-bottom: 8px;">
-                        <input type="text" class="new-germ-input" placeholder="Ajouter un germe..." style="flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; padding:5px 10px; font-size:0.7rem;">
+                        <input type="text" class="new-germ-input" placeholder="Ajouter un germe..." style="flex:1; background:#fff; border:1px solid var(--glass-border); color:var(--text-main); border-radius:8px; padding:5px 10px; font-size:0.7rem;">
                         <button type="button" onclick="addGermToRow(this)" style="background:var(--primary); border:none; color:white; width:30px; height:30px; border-radius:8px; cursor:pointer; font-weight:800;">+</button>
                     </div>
 
                     <!-- Suggestions Rapides -->
                     <div class="germ-suggestions" style="display:flex; flex-wrap:wrap; gap:5px;">
                         ${["DGAT", "DMLT", "P.a", "E.coli", "Strepto. fécaux", "Coliformes T.", "Clostri. sulfuto", "Salmonelle"].map(sg => `
-                            <button type="button" onclick="quickAddGerm(this, '${sg}')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); padding:4px 8px; border-radius:6px; font-size:0.55rem; cursor:pointer; transition:all 0.2s;">${sg}</button>
+                            <button type="button" onclick="quickAddGerm(this, '${sg}')" style="background:rgba(79, 70, 229, 0.05); border:1px solid var(--glass-border); color:var(--text-dim); padding:4px 8px; border-radius:6px; font-size:0.55rem; cursor:pointer; transition:all 0.2s;">${sg}</button>
                         `).join('')}
                     </div>
                 </div>
@@ -3959,12 +3999,12 @@
             const row = btn.closest('.analysis-row');
             const container = row.querySelector('.germs-dynamic-container');
             const div = document.createElement('div');
-            div.style = "display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;";
+            div.style = "display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;";
             div.innerHTML = `
                 <input type="checkbox" checked class="row-germ-check">
-                <span style="font-size:0.7rem; flex:1; color:white;">${name}</span>
-                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${name}</span>
+                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
             `;
             container.appendChild(div);
@@ -3993,9 +4033,9 @@
                 const remark = (typeof dayData === 'object') ? dayData.remark : '';
 
                 html += `
-                    <div style="display:flex; flex-direction:column; gap:2px; width:70px; background:rgba(255,255,255,0.02); padding:5px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                    <div style="display:flex; flex-direction:column; gap:2px; width:70px; background:rgba(79, 70, 229, 0.05); padding:5px; border-radius:8px; border:1px solid var(--glass-border);">
                         <span style="font-size:0.5rem; text-align:center; color:var(--secondary); font-weight:800;">J${i}</span>
-                        <input type="text" class="daily-input" value="${val}" oninput="autoUpdateDGAT(this)" style="width:100%; height:20px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; text-align:center; font-size:0.65rem;">
+                        <input type="text" class="daily-input" value="${val}" oninput="autoUpdateDGAT(this)" style="width:100%; height:20px; background:#fff; border:1px solid var(--glass-border); border-radius:4px; color:var(--text-main); text-align:center; font-size:0.65rem;">
                         <input type="text" class="daily-remark-input" value="${remark}" placeholder="Note..." readonly onclick="window.zoomNote(this)" title="${remark}" style="width:100%; height:15px; background:transparent; border:none; color:var(--text-dim); font-size:0.5rem; text-align:center; margin-top:2px; cursor:zoom-in;">
                     </div>
                 `;
@@ -4033,12 +4073,12 @@
 
             const container = btn.parentElement.previousElementSibling;
             const div = document.createElement('div');
-            div.style = "display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); padding:5px 10px; border-radius:8px;";
+            div.style = "display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;";
             div.innerHTML = `
                 <input type="checkbox" checked class="row-germ-check">
-                <span style="font-size:0.7rem; flex:1; color:white;">${value}</span>
-                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:rgba(0,0,0,0.2); border:none; color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${value}</span>
+                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
             `;
             container.appendChild(div);

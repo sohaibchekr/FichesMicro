@@ -438,7 +438,13 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-top: 5px;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .prep-section {
+                grid-template-columns: 1fr;
+            }
         }
 
         .prep-box {
@@ -448,7 +454,8 @@
             border: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
+            min-width: 0; /* Important for horizontal scroll inside grid */
         }
 
         .prep-label {
@@ -464,12 +471,12 @@
             display: flex;
             flex-wrap: nowrap;
             overflow-x: auto;
-            gap: 10px;
-            padding: 4px 0 10px 0;
+            gap: 8px;
+            padding: 4px 0 12px 0;
             scrollbar-width: thin;
             -webkit-overflow-scrolling: touch;
-            mask-image: linear-gradient(to right, black 85%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            /* On enlève le mask qui peut masquer le contenu et bloquer l'interaction */
+            scrollbar-color: var(--primary) transparent;
         }
         .prep-tags::-webkit-scrollbar { height: 3px; }
         .prep-tags::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.1); border-radius: 10px; }
@@ -1994,13 +2001,14 @@
         window.currentTab = 'fiches';
         window.switchTab = function (tab) {
             console.log("Switching to " + tab);
-            // DEBUG ALERT (A retirer après test)
-            // alert("CLIC REÇU : Tab " + tab);
-
             window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
-            if (activeTab) activeTab.classList.add('active');
+            if (activeTab) {
+                activeTab.classList.add('active');
+                // S'assurer que l'onglet actif est visible dans la barre de défilement horizontale
+                activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
 
             const addBtn = document.getElementById('addBtn');
             const searchInput = document.getElementById('searchInput');
@@ -2013,14 +2021,52 @@
                     searchInput.placeholder = "Chercher produit, lot, n° de contrôle...";
                 } else if (tab === 'preps') {
                     addBtn.innerText = "+ NOUVELLE PRÉPARATION";
+                    searchInput.placeholder = "Chercher milieu, lot...";
                 } else if (tab === 'photos') {
                     addBtn.innerText = "+ AJOUTER PHOTO";
+                    searchInput.placeholder = "Chercher une photo...";
                 } else if (tab === 'registres') {
                     addBtn.innerText = "+ CONFIG. REGISTRE";
+                    searchInput.placeholder = "Chercher dans les registres...";
                 }
             }
             if (typeof render === 'function') render();
         };
+
+        // --- GESTION DU SWIPE POUR CHANGER D'ONGLET ---
+        let touchstartX = 0;
+        let touchendX = 0;
+        const tabsOrder = ['fiches', 'analyses', 'preps', 'photos', 'registres'];
+
+        function handleGesture() {
+            const threshold = 100; // Seuil de 100px pour déclencher le swipe
+            if (touchendX < touchstartX - threshold) {
+                // Swipe gauche -> Onglet suivant
+                const currentIndex = tabsOrder.indexOf(window.currentTab);
+                if (currentIndex < tabsOrder.length - 1) {
+                    window.switchTab(tabsOrder[currentIndex + 1]);
+                }
+            }
+            if (touchendX > touchstartX + threshold) {
+                // Swipe droite -> Onglet précédent
+                const currentIndex = tabsOrder.indexOf(window.currentTab);
+                if (currentIndex > 0) {
+                    window.switchTab(tabsOrder[currentIndex - 1]);
+                }
+            }
+        }
+
+        document.addEventListener('touchstart', e => {
+            // Ne pas déclencher le swipe si on est dans une zone scrollable horizontalement comme .prep-tags
+            if (e.target.closest('.prep-tags, .main-tabs, .calc-tabs, .modal-content, .reg-table')) return;
+            touchstartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        document.addEventListener('touchend', e => {
+            if (e.target.closest('.prep-tags, .main-tabs, .calc-tabs, .modal-content, .reg-table')) return;
+            touchendX = e.changedTouches[0].screenX;
+            handleGesture();
+        }, {passive: true});
 
         // --- Firebase Configuration ---
         const firebaseConfig = {

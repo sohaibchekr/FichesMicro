@@ -3285,7 +3285,7 @@
                 const map = new Map();
 
                 filtered.forEach(a => {
-                    const key = a.batchId || a.id;
+                    const key = `${a.dateAnalyse}_${a.dateSortie || ''}_${a.classe}`;
                     if (!map.has(key)) {
                         const group = {
                             id: key,
@@ -4237,8 +4237,12 @@
             const container = document.getElementById('analysisRows');
             container.innerHTML = '';
 
-            // Trouver TOUS les produits de la même session (si batchId existe)
-            const sessionItems = a.batchId ? analyses.filter(x => x.batchId === a.batchId) : [a];
+            // Trouver TOUS les produits de la même session (basé sur date et classe)
+            const sessionItems = analyses.filter(x => 
+                x.dateAnalyse === a.dateAnalyse && 
+                x.dateSortie === a.dateSortie && 
+                x.classe === a.classe
+            );
 
             sessionItems.forEach(item => window.addAnalysisRow(item));
 

@@ -460,6 +460,20 @@
             margin-bottom: 4px;
         }
 
+        .prep-tags {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 4px 0 10px 0;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
+        .prep-tags::-webkit-scrollbar { height: 3px; }
+        .prep-tags::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.1); border-radius: 10px; }
+
         .mini-tag {
             background: #fff;
             border: 1px solid var(--glass-border);
@@ -654,6 +668,7 @@
             .modal-content { padding: 24px 20px; margin: auto; max-height: 92vh; border-radius: 28px; width: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
             .stat-chip { padding: 6px 12px; font-size: 0.7rem; }
             .stat-value { font-size: 0.75rem; }
+            .prep-section { grid-template-columns: 1fr; }
         }
 
         .calc-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px; margin-bottom: 24px; scrollbar-width: none; }

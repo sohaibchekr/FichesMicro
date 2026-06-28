@@ -35,7 +35,7 @@
             user-select: text !important;
         }
     </style>
-    <title>MICROBIO v4.4.7 - Labo</title>
+    <title>MICROBIO v4.4.8 - Labo</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1139,7 +1139,81 @@
     </style>
 </head>
 
+<style>
+        /* ===========================
+           TOAST NOTIFICATIONS
+        =========================== */
+        #toast-container {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            pointer-events: none;
+        }
+        .toast {
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: toastIn 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .toast.success { background: linear-gradient(135deg, #059669, #10b981); }
+        .toast.error   { background: linear-gradient(135deg, #dc2626, #ef4444); }
+        .toast.info    { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+        .toast.warning { background: linear-gradient(135deg, #d97706, #f59e0b); }
+        .toast.fadeout { animation: toastOut 0.4s ease forwards; }
+        @keyframes toastIn  { from { opacity: 0; transform: scale(0.8) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes toastOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.8) translateY(10px); } }
+
+        /* Indicateur réseau */
+        #network-indicator {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9998;
+            padding: 5px 16px;
+            border-radius: 50px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+        #network-indicator.online  { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        #network-indicator.offline { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        #network-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+        }
+        #network-indicator.online  #network-dot { background: #059669; animation: pulse-dot 2s infinite; }
+        #network-indicator.offline #network-dot { background: #dc2626; }
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
 <body>
+
+    <div id="toast-container"></div>
+    <div id="network-indicator" class="online">
+        <div id="network-dot"></div>
+        <span id="network-label">EN LIGNE</span>
+    </div>
+
 
     <header class="header">
         <div class="header-top">
@@ -1196,7 +1270,7 @@
     <button id="addBtn" class="fab" onclick="window.openAddModal()">+</button>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.7 • Stockage Local Direct</div>
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.8 • Stockage Local Direct</div>
         <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
@@ -2041,7 +2115,7 @@
             window.db = firebase.firestore();
             console.log("Firebase Init OK");
         } catch (e) {
-            alert("❌ ERREUR CONNEXION : " + e.message);
+            window.showToast("❌ ERREUR CONNEXION : " + e.message, 'error', 5000);
         }
 
         // Safe Persistence
@@ -2051,8 +2125,46 @@
             }
         } catch(e) {}
 
+        // ===========================
+        // TOAST + RÉSEAU
+        // ===========================
+        window.showToast = function(msg, type = 'info', duration = 3000) {
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `${icons[type] || 'ℹ️'} ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('fadeout');
+                setTimeout(() => toast.remove(), 400);
+            }, duration);
+        };
+
+        function updateNetworkIndicator() {
+            const ind = document.getElementById('network-indicator');
+            const dot = document.getElementById('network-dot');
+            const label = document.getElementById('network-label');
+            if (!ind) return;
+            if (navigator.onLine) {
+                ind.className = 'online';
+                label.innerText = 'EN LIGNE';
+                // Masquer après 3s quand en ligne
+                setTimeout(() => { ind.style.opacity = '0'; ind.style.pointerEvents = 'none'; }, 3000);
+            } else {
+                ind.className = 'offline';
+                ind.style.opacity = '1';
+                ind.style.pointerEvents = 'auto';
+                label.innerText = 'HORS LIGNE — Données sauvegardées localement';
+            }
+        }
+        window.addEventListener('online',  () => { updateNetworkIndicator(); window.showToast('Connexion rétablie — Synchronisation en cours', 'success'); });
+        window.addEventListener('offline', () => { updateNetworkIndicator(); window.showToast('Mode hors ligne activé — Travail continu garanti', 'warning', 4000); });
+        setTimeout(updateNetworkIndicator, 500);
+
+
         window.onerror = function(msg, url, line) {
-            alert("⚠️ SYSTEM ERROR: " + msg + " (Ligne " + line + ")");
+            window.showToast("⚠️ SYSTEM ERROR: " + msg + " (Ligne " + line + ", 'error', 5000)");
             return false;
         };
         window.sortOrder = localStorage.getItem('microbio_sort') || 'desc';
@@ -2215,7 +2327,7 @@
                 if (previewImg) previewImg.src = e.target.result;
                 if (container) container.style.display = 'block';
             };
-            reader.onerror = () => alert("Erreur lors de la lecture du fichier.");
+            reader.onerror = () => window.showToast("Erreur lors de la lecture du fichier.", 'error', 4000);
             reader.readAsDataURL(file);
         };
 
@@ -2297,7 +2409,7 @@
         window.setIncubation = function (days) {
             const dateVal = document.getElementById('dateAnalyse').value;
             if (!dateVal) {
-                alert("Veuillez d'abord sélectionner une date d'analyse.");
+                window.showToast("Veuillez d'abord sélectionner une date d'analyse.", 'info');
                 return;
             }
             const date = new Date(dateVal);
@@ -2389,7 +2501,7 @@
         window.setPrepExpiry = function (months) {
             if (!months || months <= 0) return;
             const prepDateVal = document.getElementById('datePrep').value;
-            if (!prepDateVal) return alert("Sélectionnez d'abord la date de préparation.");
+            if (!prepDateVal) return window.showToast("Sélectionnez d'abord la date de préparation.", 'info');
             
             const d = new Date(prepDateVal);
             d.setMonth(d.getMonth() + months);
@@ -2887,7 +2999,7 @@
             if (window.currentTab === 'fiches') render();
         }, err => {
             console.error("Fiches Sync Error:", err);
-            alert("❌ Erreur de synchronisation [Fiches] : " + err.message + "\nVérifiez vos règles Firebase ou votre connexion internet.");
+            window.showToast("Erreur de synchronisation [Fiches] : " + err.message + "\nVérifiez vos règles Firebase ou votre connexion internet.", 'error');
         });
 
         window.db.collection(ANALYSES_COL).orderBy('dateAnalyse', 'desc').onSnapshot(snapshot => {
@@ -2896,7 +3008,7 @@
             if (window.currentTab === 'analyses') render();
         }, err => {
             console.error("Analyses Sync Error:", err);
-            alert("❌ Erreur de synchronisation [Analyses] : " + err.message);
+            window.showToast("❌ Erreur de synchronisation [Analyses] : " + err.message, 'error', 5000);
         });
 
         window.db.collection(PREPS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
@@ -2904,7 +3016,7 @@
             if (window.currentTab === 'preps') render();
         }, err => {
             console.error("Preps Sync Error:", err);
-            alert("❌ Erreur de synchronisation [Préparations] : " + err.message);
+            window.showToast("❌ Erreur de synchronisation [Préparations] : " + err.message, 'error', 5000);
         });
 
         window.db.collection(PHOTOS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
@@ -2912,7 +3024,7 @@
             if (window.currentTab === 'photos') render();
         }, err => {
             console.error("Photos Sync Error:", err);
-            alert("❌ Erreur de synchronisation [Photos] : " + err.message);
+            window.showToast("❌ Erreur de synchronisation [Photos] : " + err.message, 'error', 5000);
         });
 
         window.db.collection(REGISTRES_COL).onSnapshot(s => {
@@ -2920,7 +3032,7 @@
             if (window.currentTab === 'registres') render();
         }, err => {
             console.error("Registres Config Sync Error:", err);
-            alert("❌ Erreur de synchronisation [Registres] : " + err.message);
+            window.showToast("❌ Erreur de synchronisation [Registres] : " + err.message, 'error', 5000);
         });
 
         window.db.collection(R_ENTRIES_COL).onSnapshot(s => {
@@ -2928,7 +3040,7 @@
             if (window.currentTab === 'registres') render();
         }, err => {
             console.error("Entries Sync Error:", err);
-            alert("❌ Erreur de synchronisation [Entrées] : " + err.message);
+            window.showToast("❌ Erreur de synchronisation [Entrées] : " + err.message, 'error', 5000);
         });
 
         window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
@@ -2946,7 +3058,7 @@
             }
         }, err => {
             console.error("Catalog Sync Error:", err);
-            alert("❌ Erreur de synchronisation [Mon Catalogue] : " + err.message);
+            window.showToast("❌ Erreur de synchronisation [Mon Catalogue] : " + err.message, 'error', 5000);
         });
 
         window.addToCatalog = function (type, inputId) {
@@ -2962,7 +3074,7 @@
                 window.db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs)
                     .catch(err => {
                         console.error("Erreur Sync Cloud:", err);
-                        alert("Note: Enregistré localement, mais vérifiez vos règles Firebase pour le Cloud.");
+                        window.showToast("Note: Enregistré localement, mais vérifiez vos règles Firebase pour le Cloud.", 'info');
                     });
             }
         };
@@ -3227,7 +3339,7 @@
                     const isSelected = selectedFiches.has(p.id);
 
                     return `
-                        <div class="fiche-card" onclick="openPrepModal('${p.id}')" style="border-left: 5px solid var(--secondary);">
+                        <div class="${ isSelected ? 'fiche-card selected' : 'fiche-card'}" onclick="${isSelectionMode ? `toggleFicheSelection('${p.id}', event)` : `openPrepModal('${p.id}')`}" style="border-left: 5px solid var(--secondary);">
                             <div class="card-header">
                                 <div class="designation">${p.designation}</div>
                                 <div class="code-badge" style="background:rgba(99,102,241,0.15); color:var(--secondary); border-color:rgba(99,102,241,0.2);">${p.code || 'N/A'}</div>
@@ -3798,7 +3910,7 @@
             const reg = registres.find(r => r.id === regId);
             if (!reg) return;
             const entries = rEntries.filter(e => e.regId === regId);
-            if (entries.length === 0) return alert("Aucune donnée à exporter.");
+            if (entries.length === 0) return window.showToast("Aucune donnée à exporter.", 'info');
 
             // Construction du CSV
             const cols = reg.columns || [];
@@ -3972,16 +4084,16 @@
             if (!idToDel) return;
             if (confirm("⚠️ Supprimer cette fiche définitivement ?")) {
                 window.db.collection(FICHES_COL).doc(idToDel).delete().then(() => {
-                    alert("✅ Fiche supprimée !");
+                    window.showToast("Fiche supprimée !", 'success');
                     window.closeAddModal();
-                }).catch(err => alert("Erreur Firebase: " + err.message));
+                }).catch(err => window.showToast("Erreur Firebase: " + err.message, 'error', 5000));
             }
         };
 
         // Supprimer la sélection
         window.runBatchDelete = function () {
             if (selectedFiches.size === 0) {
-                alert("Sélectionnez au moins un élément.");
+                window.showToast("Sélectionnez au moins un élément.", 'info');
                 return;
             }
 
@@ -4009,10 +4121,10 @@
                 });
 
                 batch.commit().then(() => {
-                    alert("✅ Sélection supprimée !");
+                    window.showToast("Sélection supprimée !", 'success');
                     selectedFiches.clear();
                     window.toggleSelectionMode(false);
-                }).catch(err => alert("Erreur lors de la suppression groupée: " + err.message));
+                }).catch(err => window.showToast("Erreur suppression groupée: " + err.message, 'error', 5000));
             }
         };
 
@@ -4256,7 +4368,7 @@
 
             batch.commit().catch(err => {
                 console.error("Save Error:", err);
-                alert("Erreur d'enregistrement : " + err.message);
+                window.showToast("Erreur d'enregistrement : " + err.message, 'error', 5000);
             });
 
             // Fermeture immédiate pour fluidité mobile
@@ -4302,9 +4414,9 @@
             if (!id) return;
             if (confirm("⚠️ Supprimer cette analyse ?")) {
                 window.db.collection(ANALYSES_COL).doc(id).delete().then(() => {
-                    alert("✅ Analyse supprimée !");
+                    window.showToast("Analyse supprimée !", 'success');
                     window.closeAnalysisModal();
-                }).catch(err => alert("Erreur : " + err.message));
+                }).catch(err => window.showToast("Erreur : " + err.message, 'error', 5000));
             }
         };
 
@@ -4525,10 +4637,10 @@
                     window.db.collection(PHOTOS_COL).add(data);
                 }
                 
-                alert("✅ Photo enregistrée avec succès !");
+                window.showToast("Photo enregistrée avec succès !", 'success');
                 closePhotoModal();
             } catch (err) {
-                alert("❌ ERREUR PHOTO : " + err.message);
+                window.showToast("❌ ERREUR PHOTO : " + err.message, 'error', 5000);
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.innerText = "Enregistrer";

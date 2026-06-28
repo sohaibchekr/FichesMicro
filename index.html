@@ -2885,6 +2885,9 @@
             fiches = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             updateSuggestions();
             if (window.currentTab === 'fiches') render();
+        }, err => {
+            console.error("Fiches Sync Error:", err);
+            alert("❌ Erreur de synchronisation [Fiches] : " + err.message + "\nVérifiez vos règles Firebase ou votre connexion internet.");
         });
 
         window.db.collection(ANALYSES_COL).orderBy('dateAnalyse', 'desc').onSnapshot(snapshot => {
@@ -2893,26 +2896,39 @@
             if (window.currentTab === 'analyses') render();
         }, err => {
             console.error("Analyses Sync Error:", err);
+            alert("❌ Erreur de synchronisation [Analyses] : " + err.message);
         });
 
         window.db.collection(PREPS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
             preps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (window.currentTab === 'preps') render();
+        }, err => {
+            console.error("Preps Sync Error:", err);
+            alert("❌ Erreur de synchronisation [Préparations] : " + err.message);
         });
 
         window.db.collection(PHOTOS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
             photos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (window.currentTab === 'photos') render();
+        }, err => {
+            console.error("Photos Sync Error:", err);
+            alert("❌ Erreur de synchronisation [Photos] : " + err.message);
         });
 
         window.db.collection(REGISTRES_COL).onSnapshot(s => {
             registres = s.docs.map(d => ({ id: d.id, ...d.data() }));
             if (window.currentTab === 'registres') render();
+        }, err => {
+            console.error("Registres Config Sync Error:", err);
+            alert("❌ Erreur de synchronisation [Registres] : " + err.message);
         });
 
         window.db.collection(R_ENTRIES_COL).onSnapshot(s => {
             rEntries = s.docs.map(d => ({ id: d.id, ...d.data() }));
             if (window.currentTab === 'registres') render();
+        }, err => {
+            console.error("Entries Sync Error:", err);
+            alert("❌ Erreur de synchronisation [Entrées] : " + err.message);
         });
 
         window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
@@ -2930,6 +2946,7 @@
             }
         }, err => {
             console.error("Catalog Sync Error:", err);
+            alert("❌ Erreur de synchronisation [Mon Catalogue] : " + err.message);
         });
 
         window.addToCatalog = function (type, inputId) {

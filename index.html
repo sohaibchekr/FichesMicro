@@ -19,7 +19,8 @@
             margin: 0;
             padding: 0;
             background: #f8fafc;
-            overscroll-behavior: none;
+            overscroll-behavior-x: hidden;
+            overscroll-behavior-y: auto;
             overflow-x: hidden;
         }
 
@@ -33,6 +34,10 @@
 
         input, textarea, select {
             user-select: text !important;
+        }
+
+        input[type="text"], textarea {
+            text-transform: uppercase;
         }
     </style>
     <title>MICROBIO v4.4.8 - Labo</title>
@@ -138,6 +143,7 @@
             letter-spacing: -0.5px;
             background: linear-gradient(135deg, var(--text-main), var(--primary));
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             line-height: 1.2;
         }
@@ -1538,7 +1544,7 @@
     <!-- Preparation Modal -->
     <div id="prepModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px;">
-            <button class="close-modal" onclick="closePrepModal()">✕</button>
+            <button type="button" class="close-modal" onclick="window.saveAndCloseModal('prepForm', 'closePrepModal')">✕</button>
             <h2 id="prepModalTitle"
                 style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--secondary);">Nouvelle
                 Préparation</h2>
@@ -1570,6 +1576,11 @@
                     <div class="form-group">
                         <label>Date Péremption</label>
                         <input type="date" id="datePeremption" class="form-input" required>
+                        <div class="quick-pick" style="margin-top: 5px; display: flex; gap: 5px;">
+                            <button type="button" class="pick-btn" onclick="window.setPrepExpiry(1)" style="flex: 1; font-size: 0.6rem; padding: 5px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">1 MOIS</button>
+                            <button type="button" class="pick-btn" onclick="window.setPrepExpiry(6)" style="flex: 1; font-size: 0.6rem; padding: 5px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">6 MOIS</button>
+                            <button type="button" class="pick-btn" onclick="window.setPrepExpiry(12)" style="flex: 1; font-size: 0.6rem; padding: 5px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">12 MOIS</button>
+                        </div>
                     </div>
                 </div>
 
@@ -1619,6 +1630,9 @@
                     <div style="margin-bottom: 15px; background: rgba(79, 70, 229, 0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(79, 70, 229, 0.1);">
                         <label style="font-size:0.6rem; color:var(--text-dim); margin-bottom:5px; display:block;">Mes
                             Additifs (Catalogue)</label>
+                        <div style="margin-bottom: 8px;">
+                            <input type="text" id="prepAdditifsSearch" class="form-input" placeholder="🔍 RECHERCHER UN ADDITIF..." style="font-size:0.65rem; height: 30px; margin-bottom: 0; padding: 5px 10px;" oninput="window.filterPrepAdditifs()">
+                        </div>
                         <div id="additifs-catalog-prep"
                             style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;"></div>
                         <div style="display:flex; gap:5px;">
@@ -1663,8 +1677,8 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button type="submit" class="save-btn" style="background:var(--secondary);">Enregistrer</button>
-                    <button type="button" onclick="closePrepModal()"
-                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
+                    <button type="button" onclick="window.saveAndCloseModal('prepForm', 'closePrepModal')"
+                        style="background: #f1f5f9; border: 1.5px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
                 <button type="button" class="delete-btn" id="deletePrepBtn" style="display: none; margin-top: 10px;"
                     onclick="deletePrep()">Supprimer</button>
@@ -1676,10 +1690,10 @@
     <div id="noteZoomOverlay" class="modal-overlay" style="z-index:10001;">
         <div class="modal-content" style="max-width:400px; padding:20px;">
             <h3 style="color:var(--secondary); margin-bottom:15px; font-size:1rem;">📝 Note / Remarque</h3>
-            <textarea id="noteZoomTextarea" style="width:100%; height:150px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; padding:15px; font-size:0.9rem; resize:none; outline:none; font-family:inherit;"></textarea>
+            <textarea id="noteZoomTextarea" style="width:100%; height:150px; background:#f8fafc; border:1.5px solid var(--glass-border); border-radius:12px; color:var(--text-main); padding:15px; font-size:0.9rem; resize:none; outline:none; font-family:inherit;"></textarea>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px;">
                 <button type="button" onclick="window.saveZoomNote()" style="background:var(--success); color:white; border:none; padding:12px; border-radius:10px; font-weight:800; cursor:pointer;">Enregistrer</button>
-                <button type="button" onclick="window.closeZoomNote()" style="background:rgba(255,255,255,0.05); color:white; border:none; padding:12px; border-radius:10px; font-weight:800; cursor:pointer;">Annuler</button>
+                <button type="button" onclick="window.closeZoomNote()" style="background: #f1f5f9; border: 1.5px solid var(--glass-border); color: var(--text-dim); padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">Annuler</button>
             </div>
         </div>
     </div>
@@ -1694,7 +1708,7 @@
     
     <div id="analysisModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px;">
-            <button class="close-modal" onclick="closeAnalysisModal()">✕</button>
+            <button type="button" class="close-modal" onclick="window.saveAndCloseModal('analysisForm', 'closeAnalysisModal')">✕</button>
             <h2 id="analysisModalTitle"
                 style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">Nouvelle
                 Analyse</h2>
@@ -1752,7 +1766,7 @@
                             style="background:#fff; border:1px solid var(--glass-border); color:var(--accent); padding:10px; border-radius:10px; cursor:pointer; font-size:0.75rem; font-weight:800; transition:0.2s; box-shadow:0 2px 5px rgba(0,0,0,0.02);">+15
                             Jours</button>
                     </div>
-                    <div style="margin-top:12px; font-size:0.65rem; color:var(--text-dim); text-align:center; font-weight: 600;">
+                    <div style="display: none; margin-top:12px; font-size:0.65rem; color:var(--text-dim); text-align:center; font-weight: 600;">
                         Propositions : <span id="out5j" style="color:var(--accent); font-weight:800;">--</span> / <span id="out7j" style="color:var(--accent); font-weight:800;">--</span></div>
                     <input type="hidden" id="out5j_val">
                     <input type="hidden" id="out7j_val">
@@ -1780,8 +1794,8 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button type="submit" class="save-btn">Enregistrer</button>
-                    <button type="button" onclick="window.closeAnalysisModal()"
-                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
+                    <button type="button" onclick="window.saveAndCloseModal('analysisForm', 'closeAnalysisModal')"
+                        style="background: #f1f5f9; border: 1.5px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
                 <button type="button" class="delete-btn" id="deleteAnalysisBtn" style="display: none; margin-top: 10px;"
                     onclick="deleteAnalysis()">Supprimer cette analyse</button>
@@ -1792,7 +1806,7 @@
     <!-- Fiche Modal -->
     <div id="modalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 600px; width: 95%;">
-            <button class="close-modal" onclick="window.closeAddModal()">✕</button>
+            <button type="button" class="close-modal" onclick="window.saveAndCloseModal('ficheForm', 'closeAddModal')">✕</button>
             <h2 id="modalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">Nouvelle Fiche</h2>
 
             <form id="ficheForm">
@@ -1814,6 +1828,11 @@
                     <label>Méthode d'analyse</label>
                     <textarea id="methode" class="form-input" style="height: 60px; resize: none;"
                         placeholder="ex: Méthode par diffusion..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px; background: rgba(79, 70, 229, 0.05); padding: 12px; border-radius: 14px;">
+                    <label>🔍 Filtrer les Catalogues de la Fiche</label>
+                    <input type="text" id="ficheCatalogSearch" class="form-input" placeholder="RECHERCHER GERME, DILUANT, RÉACTIF, CONSOMMABLE..." oninput="window.filterFicheCatalogs()" style="height: 35px; margin-bottom: 0;">
                 </div>
 
                 <div class="section-divider"><span class="section-label">🔬 Normes & Paramètres Micro</span></div>
@@ -1906,7 +1925,7 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <button type="submit" class="save-btn">Enregistrer</button>
-                    <button type="button" onclick="window.closeAddModal()"
+                    <button type="button" onclick="window.saveAndCloseModal('ficheForm', 'closeAddModal')"
                         style="background:#f1f5f9; border: 1px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
                 <button type="button" class="delete-btn" id="deleteBtn"
@@ -1918,7 +1937,7 @@
     <!-- Photo Modal -->
     <div id="photoModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 600px; width: 95%;">
-            <button class="close-modal" onclick="closePhotoModal()">✕</button>
+            <button type="button" class="close-modal" onclick="window.saveAndCloseModal('photoForm', 'closePhotoModal')">✕</button>
             <h2 id="photoModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary); text-align: left;">📷 Ajout Photo</h2>
             
             <form id="photoForm">
@@ -1957,7 +1976,7 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:20px;">
                     <button type="submit" id="savePhotoBtn" class="save-btn">Enregistrer</button>
-                    <button type="button" onclick="closePhotoModal()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
+                    <button type="button" onclick="window.saveAndCloseModal('photoForm', 'closePhotoModal')" style="background: #f1f5f9; border: 1.5px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
                 <button type="button" class="delete-btn" id="deletePhotoBtn" style="display: none; margin-top: 10px;" onclick="deletePhoto()">Supprimer</button>
             </form>
@@ -2029,6 +2048,38 @@
         });
 
         // Global State & Functions
+        window.saveAndCloseModal = function(formId, closeFuncName) {
+            const form = document.getElementById(formId);
+            const closeFunc = window[closeFuncName] || (() => window.closeModal(formId.replace('Form', 'Overlay').replace('ficheForm', 'modalOverlay')));
+            
+            if (form) {
+                if (form.reportValidity()) {
+                    form.requestSubmit();
+                } else {
+                    window.showToast("⚠️ Formulaire incomplet - Correction requise pour sauvegarder.", "warning");
+                }
+            } else {
+                closeFunc();
+            }
+        };
+
+        document.addEventListener('input', (e) => {
+            if ((e.target.tagName === 'INPUT' && (e.target.type === 'text' || !e.target.type)) || e.target.tagName === 'TEXTAREA') {
+                // Do not uppercase dynamic search/suggestions inputs if unwanted, but we do it globally as requested.
+                // Make sure to avoid cursor jumping
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
+                const originalVal = e.target.value;
+                const upperVal = originalVal.toUpperCase();
+                if (originalVal !== upperVal) {
+                    e.target.value = upperVal;
+                    try {
+                        e.target.setSelectionRange(start, end);
+                    } catch(err) {}
+                }
+            }
+        });
+
         window.currentTab = 'fiches';
         window.switchTab = function (tab) {
             console.log("Switching to " + tab);
@@ -2113,6 +2164,9 @@
         try {
             firebase.initializeApp(firebaseConfig);
             window.db = firebase.firestore();
+            window.db.settings({
+                cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
+            });
             console.log("Firebase Init OK");
         } catch (e) {
             window.showToast("❌ ERREUR CONNEXION : " + e.message, 'error', 5000);
@@ -2491,7 +2545,7 @@
                     }
                 }
             }
-            document.getElementById('prepModalOverlay').classList.add('active');
+            window.openModal('prepModalOverlay');
         };
 
         window.closePrepModal = function () {
@@ -3134,6 +3188,30 @@
         }
         renderCatalogs();
 
+        // --- Filtre interne Additifs Préparation ---
+        window.filterPrepAdditifs = function() {
+            const query = (document.getElementById('prepAdditifsSearch')?.value || '').toLowerCase();
+            const catPrep = document.getElementById('additifs-catalog-prep');
+            if (!catPrep) return;
+            catPrep.querySelectorAll('.mini-tag').forEach(tag => {
+                const text = tag.innerText.toLowerCase();
+                tag.style.display = text.includes(query) ? '' : 'none';
+            });
+        };
+
+        // --- Filtre interne Catalogues Fiche ---
+        window.filterFicheCatalogs = function() {
+            const query = (document.getElementById('ficheCatalogSearch')?.value || '').toLowerCase();
+            ['germes-catalog', 'diluants-catalog', 'reactifs-catalog', 'consommables-catalog'].forEach(containerId => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                container.querySelectorAll('.list-item').forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    item.style.display = text.includes(query) ? '' : 'none';
+                });
+            });
+        };
+
         // Chips Logic
         function setupChips() {
             document.querySelectorAll('.chip-group').forEach(group => {
@@ -3191,7 +3269,7 @@
 
         window.selectAllVisible = function() {
             // Cible les fiches, analyses, preps et registres (tr + card header pour tout le carnet)
-            const cards = document.querySelectorAll('.fiche-card, .photo-card, .fiche-card-prep');
+            const cards = document.querySelectorAll('.fiche-card, .photo-card, .fiche-card-prep, .analyse-batch-item');
             const rows = document.querySelectorAll('tr[onclick*="toggleItemSelection"]');
             const regHeaders = document.querySelectorAll('div[onclick*="toggleItemSelection"]'); // Pour les carnets entiers
             
@@ -3221,7 +3299,7 @@
         };
 
         // Render List
-        function render() {
+        window.render = function render() {
             const query = searchInput.value.toLowerCase().trim();
             const container = fichesList;
 
@@ -3469,7 +3547,7 @@
                     const singleId = g.items[0].id;
                     const cardAction = isSelectionMode ?
                         `toggleFicheSelection('${singleId}', event); render();` :
-                        (g.items.length === 1 ? `openAnalysisEdit('${singleId}')` : `openAnalysisEdit('${singleId}')`);
+                        (g.items.length === 1 ? `openAnalysisEdit('${singleId}', true)` : `openAnalysisEdit('${singleId}')`);
 
                     return `
                     <div class="fiche-card ${g.items.some(i => selectedFiches.has(i.id)) ? 'selected' : ''}" 
@@ -3507,11 +3585,11 @@
                             ${g.items.map(i => {
                         const itemAction = isSelectionMode ?
                             `event.stopPropagation(); toggleFicheSelection('${i.id}', event); render();` :
-                            `event.stopPropagation(); openAnalysisEdit('${i.id}')`;
+                            `event.stopPropagation(); openAnalysisEdit('${i.id}', true)`;
 
                         return `
-                                <div onclick="${itemAction}" 
-                                     style="background: rgba(255,255,255,0.02); padding: 14px; border-radius: 14px; border: 1px solid ${selectedFiches.has(i.id) ? 'var(--primary)' : 'var(--glass-border)'}; display: flex; flex-direction: column; gap: 10px; cursor: pointer; transition: 0.3s; opacity: ${i.isLibere ? '0.6' : '1'};">
+                                <div class="analyse-batch-item ${selectedFiches.has(i.id) ? 'selected' : ''}" onclick="${itemAction}" 
+                                     style="background: ${selectedFiches.has(i.id) ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.02)'}; padding: 14px; border-radius: 14px; border: 1px solid ${selectedFiches.has(i.id) ? '#ef4444' : 'var(--glass-border)'}; display: flex; flex-direction: column; gap: 10px; cursor: pointer; transition: 0.3s; opacity: ${i.isLibere ? '0.6' : '1'};">
                                      
                                      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                                          <div style="${i.isLibere ? 'text-decoration: line-through; color: var(--text-dim);' : ''}; flex: 1;">
@@ -4375,7 +4453,7 @@
             window.closeAnalysisModal();
         });
 
-        window.openAnalysisEdit = function (id) {
+        window.openAnalysisEdit = function (id, singleOnly = false) {
             const a = analyses.find(x => x.id === id);
             if (!a) return;
 
@@ -4387,16 +4465,20 @@
             const container = document.getElementById('analysisRows');
             container.innerHTML = '';
 
-            // Trouver TOUS les produits de la même session (basé sur date et classe)
-            const sessionItems = analyses.filter(x => 
-                x.dateAnalyse === a.dateAnalyse && 
-                x.dateSortie === a.dateSortie && 
-                x.classe === a.classe
-            );
+            let sessionItems = [];
+            if (singleOnly) {
+                sessionItems = [a];
+            } else {
+                sessionItems = analyses.filter(x => 
+                    x.dateAnalyse === a.dateAnalyse && 
+                    x.dateSortie === a.dateSortie && 
+                    x.classe === a.classe
+                );
+            }
 
             sessionItems.forEach(item => window.addAnalysisRow(item));
 
-            document.getElementById('addRowBtn').style.display = 'block';
+            document.getElementById('addRowBtn').style.display = singleOnly ? 'none' : 'block';
             // Cacher le libéré global car on utilise les individuels par ligne
             document.getElementById('isLibere').parentElement.style.display = 'none';
             document.getElementById('resultatsAnalyse').value = a.resultats || '';
@@ -4404,7 +4486,7 @@
 
             window.calcIncubation();
 
-            document.getElementById('analysisModalTitle').innerText = a.batchId ? 'Modifier la Session' : 'Modifier l\'Analyse';
+            document.getElementById('analysisModalTitle').innerText = singleOnly ? 'Modifier l\'Analyse' : (a.batchId ? 'Modifier la Session' : 'Modifier l\'Analyse');
             document.getElementById('deleteAnalysisBtn').style.display = 'block';
             window.openModal('analysisModalOverlay');
         };

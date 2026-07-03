@@ -402,7 +402,7 @@
 
         .stat-chip {
             background: rgba(99, 102, 241, 0.08);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+            border: 1.5px solid rgba(99, 102, 241, 0.2);
             padding: 8px 16px;
             border-radius: 14px;
             display: flex;
@@ -412,9 +412,35 @@
         }
 
         .stat-chip:hover {
-            background: rgba(99, 102, 241, 0.15);
-            border-color: var(--primary);
+            transform: translateY(-1px);
         }
+
+        /* DGAT = Teal */
+        .stat-chip--dgat {
+            background: rgba(20, 184, 166, 0.08);
+            border-color: rgba(20, 184, 166, 0.25);
+        }
+        .stat-chip--dgat:hover { background: rgba(20, 184, 166, 0.15); }
+        .stat-chip--dgat .stat-label { color: #0d9488; }
+        .stat-chip--dgat .stat-value { color: #0f766e; }
+
+        /* DMLT = Amber */
+        .stat-chip--dmlt {
+            background: rgba(245, 158, 11, 0.08);
+            border-color: rgba(245, 158, 11, 0.25);
+        }
+        .stat-chip--dmlt:hover { background: rgba(245, 158, 11, 0.15); }
+        .stat-chip--dmlt .stat-label { color: #d97706; }
+        .stat-chip--dmlt .stat-value { color: #b45309; }
+
+        /* Dilution = Purple */
+        .stat-chip--dilution {
+            background: rgba(124, 58, 237, 0.08);
+            border-color: rgba(124, 58, 237, 0.25);
+        }
+        .stat-chip--dilution:hover { background: rgba(124, 58, 237, 0.15); }
+        .stat-chip--dilution .stat-label { color: #7c3aed; }
+        .stat-chip--dilution .stat-value { color: #6d28d9; }
 
         .stat-label {
             color: var(--text-dim);
@@ -796,6 +822,27 @@
             box-shadow: 0 16px 36px var(--primary-glow);
         }
         .save-btn:active { transform: scale(0.97); }
+
+        .cancel-btn {
+            width: 100%;
+            padding: 14px;
+            background: rgba(148, 163, 184, 0.08);
+            color: var(--text-dim);
+            border: 1.5px solid var(--glass-border);
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .cancel-btn:hover {
+            background: rgba(148, 163, 184, 0.15);
+            border-color: var(--text-dim);
+            color: var(--text-main);
+        }
 
         .delete-btn {
             width: 100%;
@@ -1544,7 +1591,7 @@
     <!-- Preparation Modal -->
     <div id="prepModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px;">
-            <button type="button" class="close-modal" onclick="window.saveAndCloseModal('prepForm', 'closePrepModal')">✕</button>
+            <button type="button" class="close-modal" onclick="window.closePrepModal()">✕</button>
             <h2 id="prepModalTitle"
                 style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--secondary);">Nouvelle
                 Préparation</h2>
@@ -1680,6 +1727,7 @@
                     <button type="button" onclick="window.saveAndCloseModal('prepForm', 'closePrepModal')"
                         style="background: #f1f5f9; border: 1.5px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
+                <button type="button" class="cancel-btn" onclick="window.closePrepModal()" style="margin-top: 10px;">Annuler</button>
                 <button type="button" class="delete-btn" id="deletePrepBtn" style="display: none; margin-top: 10px;"
                     onclick="deletePrep()">Supprimer</button>
             </form>
@@ -1708,7 +1756,7 @@
     
     <div id="analysisModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 500px;">
-            <button type="button" class="close-modal" onclick="window.saveAndCloseModal('analysisForm', 'closeAnalysisModal')">✕</button>
+            <button type="button" class="close-modal" onclick="window.closeAnalysisModal()">✕</button>
             <h2 id="analysisModalTitle"
                 style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">Nouvelle
                 Analyse</h2>
@@ -1797,6 +1845,7 @@
                     <button type="button" onclick="window.saveAndCloseModal('analysisForm', 'closeAnalysisModal')"
                         style="background: #f1f5f9; border: 1.5px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
+                <button type="button" class="cancel-btn" onclick="window.closeAnalysisModal()" style="margin-top: 10px;">Annuler</button>
                 <button type="button" class="delete-btn" id="deleteAnalysisBtn" style="display: none; margin-top: 10px;"
                     onclick="deleteAnalysis()">Supprimer cette analyse</button>
                 <datalist id="produit-suggestions"></datalist>
@@ -1806,7 +1855,7 @@
     <!-- Fiche Modal -->
     <div id="modalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 600px; width: 95%;">
-            <button type="button" class="close-modal" onclick="window.saveAndCloseModal('ficheForm', 'closeAddModal')">✕</button>
+            <button type="button" class="close-modal" onclick="window.closeAddModal()">✕</button>
             <h2 id="modalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary);">Nouvelle Fiche</h2>
 
             <form id="ficheForm">
@@ -1928,6 +1977,7 @@
                     <button type="button" onclick="window.saveAndCloseModal('ficheForm', 'closeAddModal')"
                         style="background:#f1f5f9; border: 1px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
+                <button type="button" class="cancel-btn" onclick="window.closeAddModal()" style="margin-top: 10px;">Annuler</button>
                 <button type="button" class="delete-btn" id="deleteBtn"
                     style="display: none; margin-top: 10px;">Supprimer cette fiche</button>
             </form>
@@ -1937,7 +1987,7 @@
     <!-- Photo Modal -->
     <div id="photoModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 600px; width: 95%;">
-            <button type="button" class="close-modal" onclick="window.saveAndCloseModal('photoForm', 'closePhotoModal')">✕</button>
+            <button type="button" class="close-modal" onclick="window.closePhotoModal()">✕</button>
             <h2 id="photoModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--primary); text-align: left;">📷 Ajout Photo</h2>
             
             <form id="photoForm">
@@ -1978,6 +2028,7 @@
                     <button type="submit" id="savePhotoBtn" class="save-btn">Enregistrer</button>
                     <button type="button" onclick="window.saveAndCloseModal('photoForm', 'closePhotoModal')" style="background: #f1f5f9; border: 1.5px solid var(--glass-border); color: var(--text-dim); padding: 15px; border-radius: 12px; cursor: pointer; font-weight: 800;">Fermer</button>
                 </div>
+                <button type="button" class="cancel-btn" onclick="window.closePhotoModal()" style="margin-top: 10px;">Annuler</button>
                 <button type="button" class="delete-btn" id="deletePhotoBtn" style="display: none; margin-top: 10px;" onclick="deletePhoto()">Supprimer</button>
             </form>
         </div>
@@ -2004,6 +2055,7 @@
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button type="submit" class="save-btn" style="flex:2;">Enregistrer</button>
+                    <button type="button" class="cancel-btn" style="flex:2;" onclick="window.closeModal('registreModalOverlay')">Annuler</button>
                     <button type="button" id="deleteRegBtn" class="delete-btn" style="display:none; flex:1;" onclick="window.deleteRegistre()">Supprimer</button>
                 </div>
             </form>
@@ -2023,6 +2075,7 @@
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="save-btn" style="flex:2; background: var(--success);">Sauvegarder</button>
+                    <button type="button" class="cancel-btn" style="flex:2;" onclick="window.closeModal('entryModalOverlay')">Annuler</button>
                     <button type="button" id="deleteEntryBtn" class="delete-btn" style="flex:1; display:none;" onclick="window.deleteEntry()">Supprimer</button>
                 </div>
             </form>
@@ -3341,9 +3394,9 @@
                             </button>
                         </div>
                         <div class="card-stats-row">
-                            ${f.dgat ? `<div class="stat-chip"><span class="stat-label">DGAT</span><span class="stat-value">${f.dgat}</span></div>` : ''}
-                            ${f.dmlt ? `<div class="stat-chip"><span class="stat-label">DMLT</span><span class="stat-value">${f.dmlt}</span></div>` : ''}
-                            ${f.dilution ? `<div class="stat-chip" style="border-color:rgba(79, 70, 229, 0.2);"><span class="stat-label" style="color:var(--primary);">Dilution</span><span class="stat-value">${f.dilution}</span></div>` : ''}
+                            ${f.dgat ? `<div class="stat-chip stat-chip--dgat"><span class="stat-label">DGAT</span><span class="stat-value">${f.dgat}</span></div>` : ''}
+                            ${f.dmlt ? `<div class="stat-chip stat-chip--dmlt"><span class="stat-label">DMLT</span><span class="stat-value">${f.dmlt}</span></div>` : ''}
+                            ${f.dilution ? `<div class="stat-chip stat-chip--dilution"><span class="stat-label">Dilution</span><span class="stat-value">${f.dilution}</span></div>` : ''}
                         </div>
                         <div class="prep-section">
                             <div class="prep-box">
@@ -4033,20 +4086,28 @@
         style.textContent = `
             .fiche-card.selected { border-color: #ef4444 !important; background: rgba(239, 68, 68, 0.05) !important; }
             .category-chip {
-                padding: 8px 12px;
-                border-radius: 8px;
-                border: 1px solid rgba(255,255,255,0.1);
-                background: rgba(255,255,255,0.05);
-                color: white;
+                padding: 10px 18px;
+                border-radius: 12px;
+                border: 1.5px solid var(--glass-border);
+                background: #f8fafc;
+                color: var(--text-dim);
                 cursor: pointer;
-                font-size: 0.7rem;
-                font-weight: 700;
-                transition: all 0.2s;
+                font-size: 0.72rem;
+                font-weight: 800;
+                transition: all 0.25s;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .category-chip:hover {
+                border-color: var(--primary);
+                color: var(--primary);
+                background: rgba(79,70,229,0.04);
             }
             .category-chip.active {
-                background: var(--primary);
-                border-color: var(--primary);
-                color: #0f172a;
+                background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+                color: white !important;
+                border-color: transparent !important;
+                box-shadow: 0 4px 14px var(--primary-glow) !important;
             }
         `;
         document.head.appendChild(style);

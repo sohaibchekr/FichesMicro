@@ -2935,14 +2935,24 @@
                 window.addMilieuRow('Diluant', nb, '1', 'Flacon', false, 'N/A', 'diluant');
                 window.addMilieuRow('TSA', nb, '2', 'Boîte 90mm', true, '30-35');
                 window.addMilieuRow('GS', nb, '2', 'Boîte 90mm', true, '20-25');
-                // Les témoins diluant restent à 1 car fait 1 fois par session
-                window.addMilieuRow('TSA (Témoin Diluant)', 1, '1', 'Boîte 90mm', false, '30-35', 'temoin-tsa');
-                window.addMilieuRow('GS (Témoin Diluant)', 1, '1', 'Boîte 90mm', false, '20-25', 'temoin-gs');
+                // Les témoins diluant = 1 boîte par diluant (nb diluants = nb produits)
+                window.addMilieuRow('TSA (Témoin Diluant)', nb, '1', 'Boîte 90mm', false, '30-35', 'temoin-tsa');
+                window.addMilieuRow('GS (Témoin Diluant)', nb, '1', 'Boîte 90mm', false, '20-25', 'temoin-gs');
+                // En PF/MP : les contrôles du bas sont tous à 0
+                // (le témoin négatif des milieux est géré par la case "Nég" dans la liste)
+                document.getElementById('temoinMat').value = 0;
+                document.getElementById('temoinEnv').value = 0;
+                document.getElementById('temoinNegEnv').value = 0;
+                window.calculateBoites();
             } else if (type === 'eau') {
-                window.addMilieuRow('TSA', nb, '1', 'Boîte 90mm', true, '30-35');
-                window.addMilieuRow('TSA', nb, '1', 'Boîte 90mm', true, '20-25');
-                // R2A toujours en 55mm
-                window.addMilieuRow('R2A', nb, '1', 'Boîte 55mm', true, '20-25');
+                // R2A pour les points d'eau analysés (B 55mm, 30-35°C)
+                // Le contrôle environnement est géré par la section "Témoins Env." en bas
+                window.addMilieuRow('R2A', nb, '1', 'Boîte 55mm', true, '30-35');
+                // Pour Eau : remettre les champs témoins à des valeurs par défaut à remplir
+                document.getElementById('temoinMat').value = 1;
+                document.getElementById('temoinEnv').value = 1;
+                document.getElementById('temoinNegEnv').value = 1;
+                window.calculateBoites();
             }
         };
 

@@ -47,6 +47,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
+    <!-- OCR Library (Tesseract.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
     <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -2012,12 +2015,13 @@
                     </div>
 
                 <div class="form-group">
-                    <label>Prendre / Choisir Photo</label>
+                    <label>Prendre / Choisir Photo(s) - MULTIPLES AUTORISÉES</label>
                     <div style="display:flex; flex-direction:column; gap:10px; align-items:center; background:rgba(255,255,255,0.03); padding:20px; border-radius:16px; border:1px dashed rgba(255,255,255,0.1);">
-                        <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="previewPhoto(this)">
+                        <input type="file" id="photoInput" accept="image/*" multiple style="display:none;" onchange="previewPhoto(this)">
                         <button type="button" onclick="document.getElementById('photoInput').click()" style="background:var(--primary); color:white; border:none; padding:12px 20px; border-radius:12px; cursor:pointer; font-weight:800; display:flex; align-items:center; gap:8px;">
                             <span>📸</span> CAPTURER OU CHOISIR
                         </button>
+                        <div id="photoCountDisplay" style="font-size:0.7rem; color:var(--text-dim); font-weight:700;">Aucune photo sélectionnée</div>
                         <div id="photoPreviewContainer" style="width:100%; max-height:450px; border-radius:12px; overflow:auto; display:none; border:2px solid var(--primary); background: #000;">
                             <img id="photoPreviewImg" style="width:100%; height:auto; display: block; object-fit: contain; cursor: zoom-in;" onclick="window.zoomPhoto(this.src)">
                         </div>
@@ -2412,24 +2416,37 @@
         };
 
         window.previewPhoto = function (input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            // Anti-doublon basique (taille et type)
-            const photoCheck = `${file.size}-${file.name}`;
-            if (window.lastUploadedTag === photoCheck) {
-                if (!confirm("⚠️ Cette photo ressemble à la précédente. Continuer ?")) {
-                    input.value = "";
-                    return;
-                }
+            const files = input.files;
+            const countDisplay = document.getElementById('photoCountDisplay');
+            if (!files || files.length === 0) {
+                if (countDisplay) countDisplay.innerText = "Aucune photo sélectionnée";
+                return;
             }
-            window.lastUploadedTag = photoCheck;
+
+            if (countDisplay) {
+                countDisplay.innerText = files.length === 1 ? "1 photo sélectionnée" : `${files.length} photos sélectionnées`;
+                countDisplay.style.color = "var(--primary)";
+            }
+
+            const file = files[0];
+
+            // Anti-doublon basique (taille et type) sur le premier fichier seul (Désactivé pour l'import multiple pour fluidifier l'UX)
+            if (files.length === 1) {
+                const photoCheck = `${file.size}-${file.name}`;
+                if (window.lastUploadedTag === photoCheck) {
+                    if (!confirm("⚠️ Cette photo ressemble à la précédente. Continuer ?")) {
+                        input.value = "";
+                        if (countDisplay) countDisplay.innerText = "Aucune photo sélectionnée";
+                        return;
+                    }
+                }
+                window.lastUploadedTag = photoCheck;
+            }
 
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const previewImg = document.getElementById('photoPreviewImg');
                 const container = document.getElementById('photoPreviewContainer');
-                const titleInput = document.getElementById('photoTitle');
                 
                 if (previewImg) previewImg.src = e.target.result;
                 if (container) container.style.display = 'block';
@@ -3595,7 +3612,7 @@
                     const d5 = new Date(dateObj); d5.setDate(d5.getDate() + 5);
                     const d7 = new Date(dateObj); d7.setDate(d7.getDate() + 7);
 
-                    const title = g.items.length === 1 ? g.items[0].produit : `SESSION : ${g.items.length} PRODUITS`;
+                    const title = g.items.length === 1 ? g.items[0].produit : `${g.items.length} PRODUIT${g.items.length > 1 ? 'S' : ''}`;
 
                     const singleId = g.items[0].id;
                     const cardAction = isSelectionMode ?
@@ -3621,7 +3638,7 @@
                         <div style="background: #f8fafc; padding: 14px; border-radius: 16px; margin: 12px 0; border: 1px solid var(--glass-border); box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <div class="prep-label" style="font-size:0.6rem; letter-spacing: 1px; color: var(--primary);">📅 SORTIE LABO</div>
+                                    <div class="prep-label" style="font-size:0.6rem; letter-spacing: 1px; color: var(--primary);">📅 RÉSULTATS</div>
                                     <div style="font-size: 1.15rem; font-weight: 900; color: ${isOverdue && !g.items.every(i => i.isLibere) ? '#ef4444' : '#f59e0b'};">
                                         ${g.dateSortie ? new Date(g.dateSortie).toLocaleDateString('fr-FR') : '---'}
                                         ${isOverdue && !g.items.every(i => i.isLibere) ? ' ⚠️' : ''}
@@ -3696,7 +3713,8 @@
             } else if (window.currentTab === 'photos') {
                 let filtered = photos.filter(p => 
                     (p.title && p.title.toLowerCase().includes(query)) ||
-                    (p.category && p.category.toLowerCase().includes(query))
+                    (p.category && p.category.toLowerCase().includes(query)) ||
+                    (p.ocrText && p.ocrText.toLowerCase().includes(query))
                 );
 
                 if (filtered.length === 0) {
@@ -3724,9 +3742,14 @@
                                 <div style="display: flex; flex-direction: column; flex: 1; padding: 10px; ${!isSelectionMode ? 'cursor: pointer;' : ''}" 
                                      ${!isSelectionMode ? `onclick="openPhotoModal('${p.id}')"` : ''}>
                                     <div style="flex: 1; font-size: 0.75rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap; text-align: left;">${p.title} ${!isSelectionMode ? '<span style="opacity:0.5; font-size:0.6rem;">📝</span>' : ''}</div>
+                                    ${p.ocrText ? `<div style="font-size:0.5rem; color:var(--primary); font-weight:700; background:rgba(79,70,229,0.06); padding:2px 6px; border-radius:4px; margin-bottom:5px; display:flex; align-items:center; gap:3px; border:1px solid rgba(79,70,229,0.12);"><span>🔍</span><span>Texte scanné (${p.ocrText.length} car.)</span></div>` : ''}
+
                                     <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--glass-border);">
+
                                         <span>📅 ${p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--'}</span>
+
                                         <span>⏰ ${p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</span>
+
                                     </div>
                                 </div>
                             </div>`;
@@ -4749,39 +4772,76 @@
             const saveBtn = document.getElementById('savePhotoBtn');
             
             saveBtn.disabled = true;
-            saveBtn.innerText = "⏳ TRAITEMENT...";
 
             try {
-                let url = '';
-                if (id) {
+                // S'il ne s'agit QUE d'une édition de texte/titre sur une photo existante (pas de nouvelle photo)
+                if (id && fileInput.files.length === 0) {
                     const existing = photos.find(x => x.id === id);
-                    if (existing) url = existing.url;
-                }
-                
-                if (fileInput.files.length > 0) {
-                    saveBtn.innerText = "⚡ COMPRESSION...";
-                    const compressedDataUrl = await compressImage(fileInput.files[0]);
-                    url = compressedDataUrl;
-                }
+                    if (!existing) throw new Error("Photo introuvable");
+                    
+                    saveBtn.innerText = "💾 SAUVEGARDE...";
+                    await window.db.collection(PHOTOS_COL).doc(id).update({
+                        title: title || "Sans titre",
+                        category: category || "DIVERS",
+                        updatedAt: Date.now()
+                    });
+                    
+                    window.showToast("Mise à jour réussie !", 'success');
+                    closePhotoModal();
+                } 
+                // S'il y a de nouvelles photos sélectionnées
+                else if (fileInput.files.length > 0) {
+                    const totalFiles = fileInput.files.length;
+                    
+                    for (let i = 0; i < totalFiles; i++) {
+                        const file = fileInput.files[i];
+                        const progressPrefix = totalFiles > 1 ? `[${i+1}/${totalFiles}] ` : '';
+                        
+                        saveBtn.innerText = `${progressPrefix}⚡ COMPRESSION...`;
+                        const compressedDataUrl = await compressImage(file);
+                        const url = compressedDataUrl;
 
-                if (!url) throw new Error("Veuillez choisir une photo.");
+                        let ocrText = '';
+                        // OCR : lecture du texte interne de la photo
+                        try {
+                            saveBtn.innerText = `${progressPrefix}🔍 LECTURE TEXTE...`;
+                            const result = await Tesseract.recognize(url, 'fra+eng', {
+                                logger: m => {
+                                    if (m.status === 'recognizing text') {
+                                        saveBtn.innerText = `${progressPrefix}🔍 OCR ${Math.round(m.progress * 100)}%`;
+                                    }
+                                }
+                            });
+                            ocrText = (result.data.text || '').trim();
+                        } catch (ocrErr) {
+                            console.warn('OCR échoué (non bloquant):', ocrErr);
+                            ocrText = '';
+                        }
 
-                const data = {
-                    title: title || "Sans titre",
-                    category: category || "DIVERS",
-                    url: url,
-                    updatedAt: Date.now()
-                };
+                        const data = {
+                            title: title || "Sans titre",
+                            category: category || "DIVERS",
+                            url: url,
+                            ocrText: ocrText,
+                            updatedAt: Date.now()
+                        };
 
-                saveBtn.innerText = "💾 SAUVEGARDE...";
-                if (id) {
-                    window.db.collection(PHOTOS_COL).doc(id).update(data);
+                        saveBtn.innerText = `${progressPrefix}💾 SAUVEGARDE...`;
+                        
+                        // Si c'est une édition d'un ID existant ET qu'on n'upload qu'un seul fichier pour le remplacer
+                        if (id && totalFiles === 1) {
+                            await window.db.collection(PHOTOS_COL).doc(id).update(data);
+                        } else {
+                            await window.db.collection(PHOTOS_COL).add(data);
+                        }
+                    } // Fin for
+
+                    window.showToast(totalFiles > 1 ? `${totalFiles} photos enregistrées avec analyse !` : "Photo enregistrée avec analyse !", 'success');
+                    closePhotoModal();
                 } else {
-                    window.db.collection(PHOTOS_COL).add(data);
+                    throw new Error("Veuillez choisir au moins une photo.");
                 }
-                
-                window.showToast("Photo enregistrée avec succès !", 'success');
-                closePhotoModal();
+
             } catch (err) {
                 window.showToast("❌ ERREUR PHOTO : " + err.message, 'error', 5000);
             } finally {

@@ -1500,11 +1500,12 @@
                     style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label style="font-size: 0.7rem; font-weight: 800; color: var(--primary);">LISTE DES
-                            MILIEUX</label>
-                        <button type="button" onclick="window.addMilieuRow()"
-                            style="background: var(--primary); color: white; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.6rem; font-weight: 800; cursor: pointer;">＋
-                            AJOUTER</button>
+                        <label style="font-size: 0.7rem; font-weight: 800; color: var(--primary);">LISTE DES MILIEUX</label>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <button type="button" onclick="window.applyTestPreset('pf_mp')" class="pick-btn" style="padding: 4px 8px; font-size: 0.55rem; background: rgba(79,70,229,0.1); color: var(--primary); font-weight:bold;">🧪 Lancement PF/MP</button>
+                            <button type="button" onclick="window.applyTestPreset('eau')" class="pick-btn" style="padding: 4px 8px; font-size: 0.55rem; background: rgba(14,165,233,0.1); color: #0ea5e9; font-weight:bold;">💧 Test Eau</button>
+                            <button type="button" onclick="window.addMilieuRow()" style="background: var(--primary); color: white; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.6rem; font-weight: 800; cursor: pointer;">＋ LIGNE VIDE</button>
+                        </div>
                     </div>
                     <div id="milieux-list"></div>
 
@@ -2922,31 +2923,64 @@
             }
         };
 
-        window.addMilieuRow = function (name = '', pts = 0) {
+        window.applyTestPreset = function(type) {
+            const nbRaw = prompt("Saisir le nombre de produits (points) à analyser :", "1");
+            if (!nbRaw) return;
+            const nb = parseInt(nbRaw) || 1;
+            
             const container = document.getElementById('milieux-list');
-            const rowId = 'mil-' + Date.now();
+            container.innerHTML = ''; // Vider la liste actuelle
+            if (type === 'pf_mp') {
+                // Diluant non incubé
+                window.addMilieuRow('Diluant', nb, '1', 'Flacon', false, 'N/A', 'diluant');
+                window.addMilieuRow('TSA', nb, '2', 'Boîte 90mm', true, '30-35');
+                window.addMilieuRow('GS', nb, '2', 'Boîte 90mm', true, '20-25');
+                // Les témoins diluant restent à 1 car fait 1 fois par session
+                window.addMilieuRow('TSA (Témoin Diluant)', 1, '1', 'Boîte 90mm', false, '30-35', 'temoin-tsa');
+                window.addMilieuRow('GS (Témoin Diluant)', 1, '1', 'Boîte 90mm', false, '20-25', 'temoin-gs');
+            } else if (type === 'eau') {
+                window.addMilieuRow('TSA', nb, '1', 'Boîte 90mm', true, '30-35');
+                window.addMilieuRow('TSA', nb, '1', 'Boîte 90mm', true, '20-25');
+                // R2A toujours en 55mm
+                window.addMilieuRow('R2A', nb, '1', 'Boîte 55mm', true, '20-25');
+            }
+        };
+
+        window.addMilieuRow = function (name = '', pts = 0, multVal = '1', formatVal = 'Boîte 90mm', negVal = true, tempVal = '30-35', role = '') {
+            const container = document.getElementById('milieux-list');
+            const rowId = 'mil-' + Date.now() + Math.floor(Math.random()*1000);
             const div = document.createElement('div');
             div.className = 'milieu-row';
             div.id = rowId;
+            if (role) div.dataset.role = role;
+            div.style.display = 'flex';
+            div.style.gap = '4px';
+            div.style.alignItems = 'center';
+            div.style.marginBottom = '6px';
             div.innerHTML = `
-                <input type="text" class="form-input mil-name" placeholder="Milieu" value="${name}" oninput="window.calculateBoites()">
-                <input type="number" class="form-input mil-pts" placeholder="Points" value="${pts}" oninput="window.calculateBoites()">
-                <select class="form-input mil-mult" onchange="window.calculateBoites()">
-                    <option value="1" selected>x1</option>
-                    <option value="2">x2</option>
+                <input type="text" class="form-input mil-name" placeholder="Milieu" value="${name}" oninput="window.calculateBoites()" style="flex:2; padding:6px; font-size:0.7rem;" title="Milieu">
+                <input type="number" class="form-input mil-pts" placeholder="Pts" value="${pts || ''}" oninput="window.calculateBoites()" style="flex:1; padding:6px; font-size:0.7rem;" title="Nombre de points">
+                <select class="form-input mil-mult" onchange="window.calculateBoites()" style="flex:1; padding:6px; font-size:0.7rem;" title="Boites par point">
+                    <option value="1" ${multVal === '1' ? 'selected' : ''}>x1</option>
+                    <option value="2" ${multVal === '2' ? 'selected' : ''}>x2</option>
                 </select>
-                <select class="form-input mil-temp" onchange="window.calculateBoites()">
-                    <option value="20-25">20-25°C</option>
-                    <option value="30-35" selected>30-35°C</option>
-                    <option value="42-44">42-44°C</option>
+                <select class="form-input mil-temp" onchange="window.calculateBoites()" style="flex:1.5; padding:6px; font-size:0.7rem;" title="Température">
+                    <option value="20-25" ${tempVal === '20-25' ? 'selected' : ''}>20-25°C</option>
+                    <option value="30-35" ${tempVal === '30-35' ? 'selected' : ''}>30-35°C</option>
+                    <option value="42-44" ${tempVal === '42-44' ? 'selected' : ''}>42-44°C</option>
+                    <option value="N/A" ${tempVal === 'N/A' ? 'selected' : ''}>- (Non inc)</option>
                 </select>
-                <select class="form-input mil-format" onchange="window.calculateBoites()">
-                    <option value="Boîte 90mm">Boîte 90mm</option>
-                    <option value="Boîte 55mm" selected>Boîte 55mm</option>
-                    <option value="Flacon">Flacon</option>
-                    <option value="Tube">Tube</option>
+                <select class="form-input mil-format" onchange="window.calculateBoites()" style="flex:1.5; padding:6px; font-size:0.7rem;" title="Format">
+                    <option value="Boîte 90mm" ${formatVal === 'Boîte 90mm' ? 'selected' : ''}>B 90mm</option>
+                    <option value="Boîte 55mm" ${formatVal === 'Boîte 55mm' ? 'selected' : ''}>B 55mm</option>
+                    <option value="Flacon" ${formatVal === 'Flacon' ? 'selected' : ''}>Flacon</option>
+                    <option value="Tube" ${formatVal === 'Tube' ? 'selected' : ''}>Tube</option>
                 </select>
-                <button type="button" class="delete-milieu" onclick="document.getElementById('${rowId}').remove(); window.calculateBoites();" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-weight: 800;">✕</button>
+                <div style="flex:1; display:flex; align-items:center; flex-direction:column; justify-content:center;">
+                    <label style="font-size:0.45rem; color:var(--text-dim); text-transform:uppercase;">Nég</label>
+                    <input type="checkbox" class="mil-neg" onchange="window.calculateBoites()" ${negVal ? 'checked' : ''} style="cursor:pointer;" title="Témoin Négatif">
+                </div>
+                <button type="button" class="delete-milieu" onclick="document.getElementById('${rowId}').remove(); window.calculateBoites();" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; width: 25px; height: 25px; border-radius: 6px; cursor: pointer; font-weight: 800; font-size: 0.6rem;">✕</button>
             `;
             container.appendChild(div);
             window.calculateBoites();
@@ -2958,21 +2992,34 @@
             const tempSummary = {};
             const formatSummary = {};
 
-            // Témoins négatifs par milieu (1 par milieu)
+            // Synchroniser le nom du témoin diluant si on est dans le preset PF/MP
+            const dilRow = document.querySelector('.milieu-row[data-role="diluant"] .mil-name');
+            if (dilRow) {
+                const dilName = dilRow.value || 'Diluant';
+                const tTsa = document.querySelector('.milieu-row[data-role="temoin-tsa"] .mil-name');
+                if (tTsa) tTsa.value = `TSA (Témoin ${dilName})`;
+                const tGs = document.querySelector('.milieu-row[data-role="temoin-gs"] .mil-name');
+                if (tGs) tGs.value = `GS (Témoin ${dilName})`;
+            }
+
+            // Parcours des milieux  
             rows.forEach(row => {
                 const pts = parseFloat(row.querySelector('.mil-pts').value) || 0;
                 const mult = parseFloat(row.querySelector('.mil-mult').value) || 1;
                 const temp = row.querySelector('.mil-temp').value;
                 const format = row.querySelector('.mil-format').value;
+                const hasNeg = row.querySelector('.mil-neg').checked;
 
-                const count = (pts * mult) + 1; // +1 pour témoin négatif
-                total += count;
-
+                const count = (pts * mult) + (hasNeg ? 1 : 0); // +1 si témoin négatif coché
+                
                 if (!tempSummary[temp]) tempSummary[temp] = 0;
                 tempSummary[temp] += count;
 
-                if (!formatSummary[format]) formatSummary[format] = 0;
-                formatSummary[format] += count;
+                if (temp !== 'N/A') {
+                    total += count;
+                    if (!formatSummary[format]) formatSummary[format] = 0;
+                    formatSummary[format] += count;
+                }
             });
 
             // Matériel et Environnement
@@ -2996,14 +3043,16 @@
 
             // Affichage Breakdown
             const summaryDiv = document.getElementById('boites-summary-display');
-            if (total > 0) {
+            // Toujours afficher le résumé si on a des éléments (incubés ou non)
+            if (Object.keys(tempSummary).length > 0) {
                 summaryDiv.style.display = 'block';
                 let html = '<div style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; font-size: 0.65rem;">Températures :</div>';
                 for (const temp in tempSummary) {
                     if (tempSummary[temp] > 0) {
+                        let tempLabel = temp === 'N/A' ? '<span class="condition-badge" style="background:#e2e8f0; color:#475569;">Non incubé</span>' : `<span class="condition-badge">${temp}°C</span>`;
                         html += `<div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span class="label-text"><span class="condition-badge">${temp}°C</span></span>
-                            <span class="val-text" style="font-weight: 900; color: var(--primary);">${tempSummary[temp]} boîtes</span>
+                            <span class="label-text">${tempLabel}</span>
+                            <span class="val-text" style="font-weight: 900; color: var(--primary);">${tempSummary[temp]} unités</span>
                         </div>`;
                     }
                 }
@@ -3722,7 +3771,15 @@
                     return;
                 }
 
-                container.innerHTML = `
+                const missingOcrCount = photos.filter(p => !p.ocrText).length;
+                const ocrBtnHtml = missingOcrCount > 0 ? 
+                    `<div style="margin-bottom:15px; display:flex; justify-content:center;">
+                        <button onclick="window.scanMissingOCR()" style="background: rgba(79,70,229,0.1); color: var(--primary); border: 1px solid rgba(79,70,229,0.2); padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <span id="scanMissingIcon">🔍</span> <span id="scanMissingText">SCANNER LES ANCIENNES PHOTOS (${missingOcrCount})</span>
+                        </button>
+                    </div>` : '';
+
+                container.innerHTML = ocrBtnHtml + `
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 5px;">
                         ${filtered.map(p => {
                             const isSelected = selectedFiches.has(p.id);
@@ -4760,6 +4817,34 @@
             if (confirm("Supprimer cette photo ?")) {
                 window.db.collection(PHOTOS_COL).doc(id).delete().then(() => closePhotoModal());
             }
+        };
+
+        window.scanMissingOCR = async function() {
+            const missing = photos.filter(p => !p.ocrText);
+            if (missing.length === 0) return;
+            
+            const btnText = document.getElementById('scanMissingText');
+            if (btnText) btnText.parentElement.disabled = true;
+            if (btnText) btnText.innerText = "INITIALISATION...";
+
+            let count = 0;
+            for (const p of missing) {
+                count++;
+                if (btnText) btnText.innerText = `SCAN EN COURS... (${count}/${missing.length})`;
+                try {
+                    const result = await Tesseract.recognize(p.url, 'fra+eng');
+                    const text = (result.data.text || '').trim();
+                    if (text) {
+                        await window.db.collection(PHOTOS_COL).doc(p.id).update({ ocrText: text });
+                    } else {
+                        await window.db.collection(PHOTOS_COL).doc(p.id).update({ ocrText: ' ' }); // Marqué comme scanné mais sans texte pour éviter de le rescanner
+                    }
+                } catch (err) {
+                    console.error("Erreur OCR sur photo", p.id, err);
+                }
+            }
+            window.showToast("Scan de masse terminé !", "success");
+            if (typeof render === 'function') render();
         };
 
         // Submit photo

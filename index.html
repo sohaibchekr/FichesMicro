@@ -40,7 +40,7 @@
             text-transform: uppercase;
         }
     </style>
-    <title>MICROBIO v4.4.8 - Labo</title>
+    <title>MICROBIO v4.4.9 - Labo</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1326,8 +1326,8 @@
     <button id="addBtn" class="fab" onclick="window.openAddModal()">+</button>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.8 • Stockage Local Direct</div>
-        <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.1.0'); location.reload(true);"
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.9 • Stockage Local Direct</div>
+        <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.4.9'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
     </footer>
@@ -1342,13 +1342,7 @@
                 Assistant Préparation</h2>
 
             <div class="calc-tabs">
-                <button class="calc-tab active" onclick="window.setCalcMode('dose', event)">Dosage</button>
-                <button class="calc-tab" onclick="window.setCalcMode('molar', event)">Molarité</button>
-                <button class="calc-tab" onclick="window.setCalcMode('percent', event)">% Massique</button>
-                <button class="calc-tab" onclick="window.setCalcMode('dilution', event)">Dilution (%)</button>
-                <button class="calc-tab" onclick="window.setCalcMode('ratio', event)">Rapport (1/10)</button>
-                <button class="calc-tab" onclick="window.setCalcMode('boites', event)">Boîtes</button>
-                <button class="calc-tab" onclick="window.setCalcMode('expiry', event)">Péremption</button>
+                <!-- Généré dynamiquement -->
             </div>
 
             <!-- MODE : DOSAGE (Règle de 3) -->
@@ -1498,14 +1492,16 @@
             <div id="section-boites" class="calc-section">
                 <div
                     style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <label style="font-size: 0.7rem; font-weight: 800; color: var(--primary);">LISTE DES MILIEUX</label>
                         <div style="display:flex; gap:5px; align-items:center;">
-                            <button type="button" onclick="window.applyTestPreset('pf_mp')" class="pick-btn" style="padding: 4px 8px; font-size: 0.55rem; background: rgba(79,70,229,0.1); color: var(--primary); font-weight:bold;">🧪 Lancement PF/MP</button>
-                            <button type="button" onclick="window.applyTestPreset('eau')" class="pick-btn" style="padding: 4px 8px; font-size: 0.55rem; background: rgba(14,165,233,0.1); color: #0ea5e9; font-weight:bold;">💧 Test Eau</button>
-                            <button type="button" onclick="window.addMilieuRow()" style="background: var(--primary); color: white; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.6rem; font-weight: 800; cursor: pointer;">＋ LIGNE VIDE</button>
+                            <button type="button" onclick="window.saveCurrentPreset()" style="background: rgba(34,197,94,0.1); color: var(--success); border: 1px solid rgba(34,197,94,0.2); padding: 4px 8px; border-radius: 8px; font-size: 0.55rem; font-weight: 800; cursor: pointer;">💾 SAUVEGARDER</button>
+                            <button type="button" onclick="window.addMilieuRow()" style="background: var(--primary); color: white; border: none; padding: 4px 10px; border-radius: 8px; font-size: 0.6rem; font-weight: 800; cursor: pointer;">＋ LIGNE</button>
                         </div>
+                    </div>
+                    <!-- Zone des presets (fixes + personnalisés) -->
+                    <div id="presets-bar" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.02); border-radius:10px; border:1px dashed var(--glass-border);">
+                        <!-- Rempli par renderPresetsBar() -->
                     </div>
                     <div id="milieux-list"></div>
 
@@ -1568,6 +1564,52 @@
                             <button class="pick-btn" onclick="document.getElementById('calcMonths').value=12; window.calculateExpiry()">12 MOIS</button>
                             <button class="pick-btn" onclick="document.getElementById('calcMonths').value=18; window.calculateExpiry()">18 MOIS</button>
                             <button class="pick-btn" onclick="document.getElementById('calcMonths').value=24; window.calculateExpiry()">24 MOIS</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE : TEMPS / CYCLE DE STERILISATION -->
+            <div id="section-cycle" class="calc-section">
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div class="form-group">
+                        <label>🕒 HEURE DE DÉBUT (Montée / Début cycle)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <div style="flex: 1;">
+                                <span style="font-size: 0.55rem; color: var(--text-dim); display: block; margin-bottom: 2px; font-weight:800;">HEURES</span>
+                                <input type="number" id="startH" class="form-input" min="0" max="99" value="00" oninput="window.calculateTimeDiff()" style="text-align: center;">
+                            </div>
+                            <div style="flex: 1;">
+                                <span style="font-size: 0.55rem; color: var(--text-dim); display: block; margin-bottom: 2px; font-weight:800;">MINUTES</span>
+                                <input type="number" id="startM" class="form-input" min="0" max="59" value="50" oninput="window.calculateTimeDiff()" style="text-align: center;">
+                            </div>
+                            <div style="flex: 1;">
+                                <span style="font-size: 0.55rem; color: var(--text-dim); display: block; margin-bottom: 2px; font-weight:800;">SECONDES</span>
+                                <input type="number" id="startS" class="form-input" min="0" max="59" value="27" oninput="window.calculateTimeDiff()" style="text-align: center;">
+                            </div>
+                        </div>
+                        <div class="quick-pick" style="margin-top: 5px;">
+                            <button type="button" class="pick-btn" onclick="document.getElementById('startH').value='00'; document.getElementById('startM').value='00'; document.getElementById('startS').value='00'; window.calculateTimeDiff()">Remettre à Zéro</button>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 12px 0; color: var(--text-dim); font-weight: 800; font-size: 0.6rem; letter-spacing: 1.5px; opacity:0.8;">🏁 JUSQU'À (FIN CYCLE)</div>
+                    
+                    <div class="form-group">
+                        <label>🕒 HEURE DE FIN (Stérilisation / Fin)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <div style="flex: 1;">
+                                <span style="font-size: 0.55rem; color: var(--text-dim); display: block; margin-bottom: 2px; font-weight:800;">HEURES</span>
+                                <input type="number" id="endH" class="form-input" min="0" max="99" value="01" oninput="window.calculateTimeDiff()" style="text-align: center;">
+                            </div>
+                            <div style="flex: 1;">
+                                <span style="font-size: 0.55rem; color: var(--text-dim); display: block; margin-bottom: 2px; font-weight:800;">MINUTES</span>
+                                <input type="number" id="endM" class="form-input" min="0" max="59" value="05" oninput="window.calculateTimeDiff()" style="text-align: center;">
+                            </div>
+                            <div style="flex: 1;">
+                                <span style="font-size: 0.55rem; color: var(--text-dim); display: block; margin-bottom: 2px; font-weight:800;">SECONDES</span>
+                                <input type="number" id="endS" class="form-input" min="0" max="59" value="27" oninput="window.calculateTimeDiff()" style="text-align: center;">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2094,7 +2136,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW Registered v4.4.6'))
+                    .then(reg => console.log('SW Registered v4.4.9'))
                     .catch(err => console.log('SW Error:', err));
             });
         }
@@ -2813,6 +2855,7 @@
             if (dateInput && !dateInput.value) {
                 dateInput.value = new Date().toISOString().split('T')[0];
             }
+            window.renderCalcTabs();
             calcOverlay.classList.add('active');
         };
 
@@ -2850,15 +2893,134 @@
             calcOverlay.classList.remove('active');
         };
 
+        // Dynamic Calculator Tabs ordering
+        window.renderCalcTabs = function() {
+            const container = document.querySelector('.calc-tabs');
+            if (!container) return;
+            
+            let order = JSON.parse(localStorage.getItem('microbio_calc_tabs_order'));
+            if (!order || order.length === 0) {
+                order = ['dose', 'molar', 'percent', 'dilution', 'ratio', 'boites', 'expiry', 'cycle'];
+                localStorage.setItem('microbio_calc_tabs_order', JSON.stringify(order));
+            }
+            if (!order.includes('cycle')) {
+                order.push('cycle');
+                localStorage.setItem('microbio_calc_tabs_order', JSON.stringify(order));
+            }
+
+            const tabLabels = {
+                dose: 'Dosage',
+                molar: 'Molarité',
+                percent: '% Massique',
+                dilution: 'Dilution (%)',
+                ratio: 'Rapport (1/10)',
+                boites: 'Boîtes',
+                expiry: 'Péremption',
+                cycle: '⏱️ Temps / Cycle'
+            };
+
+            // Find current active mode or default to top
+            let activeMode = 'dose';
+            const activeSection = document.querySelector('.calc-section.active');
+            if (activeSection) {
+                activeMode = activeSection.id.replace('section-', '');
+            }
+
+            container.innerHTML = order.map(id => {
+                return `
+                    <button class="calc-tab ${id === activeMode ? 'active' : ''}" 
+                            id="tab-btn-${id}"
+                            draggable="true"
+                            ondragstart="window.onCalcTabDragStart(event, '${id}')"
+                            ondragover="window.onCalcTabDragOver(event)"
+                            ondrop="window.onCalcTabDrop(event, '${id}')"
+                            ontouchstart="window.onCalcTabTouchStart(event, '${id}')"
+                            ontouchmove="window.onCalcTabTouchMove(event)"
+                            ontouchend="window.onCalcTabTouchEnd(event, '${id}')"
+                            onclick="window.setCalcMode('${id}', event)"
+                            style="cursor: grab; user-select: none;">
+                        ${tabLabels[id]}
+                    </button>
+                `;
+            }).join('');
+        };
+
+        let draggedTabId = null;
+        window.onCalcTabDragStart = function(e, id) {
+            draggedTabId = id;
+            e.dataTransfer.setData('text/plain', id);
+            e.target.style.opacity = '0.5';
+        };
+
+        window.onCalcTabDragOver = function(e) {
+            e.preventDefault();
+        };
+
+        window.onCalcTabDrop = function(e, targetId) {
+            e.preventDefault();
+            if (!draggedTabId || draggedTabId === targetId) return;
+            
+            let order = JSON.parse(localStorage.getItem('microbio_calc_tabs_order'));
+            const draggedIdx = order.indexOf(draggedTabId);
+            const targetIdx = order.indexOf(targetId);
+            
+            if (draggedIdx > -1 && targetIdx > -1) {
+                order.splice(draggedIdx, 1);
+                order.splice(targetIdx, 0, draggedTabId);
+                localStorage.setItem('microbio_calc_tabs_order', JSON.stringify(order));
+                window.renderCalcTabs();
+                window.showToast("Ordre mis à jour !", "success", 1000);
+            }
+            draggedTabId = null;
+        };
+
+        let touchDraggedTabId = null;
+        let activeTouchBtn = null;
+        window.onCalcTabTouchStart = function(e, id) {
+            touchDraggedTabId = id;
+            activeTouchBtn = e.currentTarget;
+            activeTouchBtn.style.opacity = '0.7';
+        };
+
+        window.onCalcTabTouchMove = function(e) {
+            // Touch move tracking can be simple or empty
+        };
+
+        window.onCalcTabTouchEnd = function(e, id) {
+            if (!touchDraggedTabId) return;
+            if (activeTouchBtn) activeTouchBtn.style.opacity = '1';
+            
+            const touch = e.changedTouches[0];
+            const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            const destBtn = targetEl ? targetEl.closest('.calc-tab') : null;
+            
+            if (destBtn && destBtn.id.startsWith('tab-btn-')) {
+                const destId = destBtn.id.replace('tab-btn-', '');
+                if (destId !== touchDraggedTabId) {
+                    let order = JSON.parse(localStorage.getItem('microbio_calc_tabs_order'));
+                    const draggedIdx = order.indexOf(touchDraggedTabId);
+                    const targetIdx = order.indexOf(destId);
+                    if (draggedIdx > -1 && targetIdx > -1) {
+                        order.splice(draggedIdx, 1);
+                        order.splice(targetIdx, 0, touchDraggedTabId);
+                        localStorage.setItem('microbio_calc_tabs_order', JSON.stringify(order));
+                        window.renderCalcTabs();
+                        window.showToast("Ordre mis à jour !", "success", 1000);
+                    }
+                }
+            }
+            touchDraggedTabId = null;
+        };
+
         window.setCalcMode = function (mode, e) {
             document.querySelectorAll('.calc-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.calc-section').forEach(s => s.classList.remove('active'));
 
-            const target = (e && (e.currentTarget || e.target)) || (e ? e.target : null) || event.target;
-            if (target) target.classList.add('active');
-            if (document.getElementById('section-' + mode)) {
-                document.getElementById('section-' + mode).classList.add('active');
-            }
+            const tabBtn = document.getElementById('tab-btn-' + mode);
+            if (tabBtn) tabBtn.classList.add('active');
+            
+            const sect = document.getElementById('section-' + mode);
+            if (sect) sect.classList.add('active');
 
             const label = document.getElementById('resultLabel');
             const unit = document.getElementById('unitDisplay');
@@ -2894,7 +3056,45 @@
                 label.innerText = "Date d'Expiration (-1 jour)";
                 unit.innerText = "Date calculée";
                 window.calculateExpiry();
+            } else if (mode === 'cycle') {
+                label.innerText = "Différence de temps";
+                unit.innerText = "Durée de stérilisation";
+                window.calculateTimeDiff();
             }
+        };
+
+        // Sterilization time-difference calculator logic
+        window.calculateTimeDiff = function() {
+            const sh = parseInt(document.getElementById('startH').value) || 0;
+            const sm = parseInt(document.getElementById('startM').value) || 0;
+            const ss = parseInt(document.getElementById('startS').value) || 0;
+
+            const eh = parseInt(document.getElementById('endH').value) || 0;
+            const em = parseInt(document.getElementById('endM').value) || 0;
+            const es = parseInt(document.getElementById('endS').value) || 0;
+
+            const startSec = (sh * 3600) + (sm * 60) + ss;
+            let endSec = (eh * 3600) + (em * 60) + es;
+
+            if (endSec < startSec) {
+                endSec += 24 * 3600; // Passed midnight / next day
+            }
+
+            const diffSec = endSec - startSec;
+            const dh = Math.floor(diffSec / 3600);
+            const dm = Math.floor((diffSec % 3600) / 60);
+            const ds = diffSec % 60;
+
+            const pad = (n) => String(n).padStart(2, '0');
+            let resultStr = "";
+            if (dh > 0) {
+                resultStr = `${pad(dh)}h ${pad(dm)}m ${pad(ds)}s`;
+            } else {
+                resultStr = `${pad(dm)}m ${pad(ds)}s`;
+            }
+
+            document.getElementById('calcResult').innerText = resultStr;
+            document.getElementById('unitDisplay').innerText = `Durée de stérilisation`;
         };
 
         window.calculateExpiry = function () {
@@ -3781,6 +3981,32 @@
                     return;
                 }
 
+                // Global variables / collapsible tracking initialization
+                window.collapsedPhotoGroups = window.collapsedPhotoGroups || new Set();
+                window.togglePhotoGroup = function(title) {
+                    if (window.collapsedPhotoGroups.has(title)) {
+                        window.collapsedPhotoGroups.delete(title);
+                    } else {
+                        window.collapsedPhotoGroups.add(title);
+                    }
+                    render();
+                };
+
+                window.deletePhotoGroup = function(title) {
+                    if (confirm(`⚠️ Supprimer définitivement toutes les photos du groupe "${title}" ?`)) {
+                        const groupPhotos = photos.filter(p => (p.title || '').trim().toUpperCase() === title);
+                        const batch = window.db.batch();
+                        groupPhotos.forEach(p => {
+                            batch.delete(window.db.collection(PHOTOS_COL).doc(p.id));
+                        });
+                        batch.commit().then(() => {
+                            window.showToast("Groupe de photos supprimé !", 'success');
+                        }).catch(err => {
+                            window.showToast("Erreur lors de la suppression : " + err.message, 'error');
+                        });
+                    }
+                };
+
                 const missingOcrCount = photos.filter(p => !p.ocrText).length;
                 const ocrBtnHtml = missingOcrCount > 0 ? 
                     `<div style="margin-bottom:15px; display:flex; justify-content:center;">
@@ -3789,40 +4015,104 @@
                         </button>
                     </div>` : '';
 
-                container.innerHTML = ocrBtnHtml + `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 5px;">
-                        ${filtered.map(p => {
-                            const isSelected = selectedFiches.has(p.id);
-                            return `
-                            <div class="photo-card ${isSelected ? 'selected' : ''}" 
-                                 onclick="${isSelectionMode ? `toggleItemSelection('${p.id}', 'photos', event); render();` : ''}"
-                                 style="display: flex; flex-direction: column; background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : '#ffffff'}; border-radius: 16px; overflow: hidden; border: 1px solid ${isSelected ? '#ef4444' : 'var(--glass-border)'}; position: relative; transition: all 0.3s; ${isSelectionMode ? 'cursor: pointer;' : ''}; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                                
-                                <div style="width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #000; ${!isSelectionMode ? 'cursor: zoom-in;' : ''}" 
-                                     ${!isSelectionMode ? `onclick="zoomPhoto('${p.url}')"` : ''}>
-                                    <img src="${p.url}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${isSelected ? '0.5' : '1'}">
-                                    <div style="position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 0.5rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px);">
-                                        ${p.category || 'DIVERS'}
-                                    </div>
-                                    ${isSelected ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ef4444; font-size: 2rem; font-weight: 900;">✓</div>' : ''}
+                // Group photos by title
+                const groups = {};
+                filtered.forEach(p => {
+                    const title = (p.title || '').trim().toUpperCase() || 'SANS TITRE';
+                    if (!groups[title]) {
+                        groups[title] = {
+                            title: title,
+                            latestTime: p.updatedAt || 0,
+                            items: []
+                        };
+                    }
+                    groups[title].items.push(p);
+                    if ((p.updatedAt || 0) > groups[title].latestTime) {
+                        groups[title].latestTime = p.updatedAt;
+                    }
+                });
+
+                const groupsArray = Object.values(groups);
+                // Sort groups by latest photo date descending
+                groupsArray.sort((a, b) => b.latestTime - a.latestTime);
+
+                const renderPhotoCard = (p) => {
+                    const isSelected = selectedFiches.has(p.id);
+                    return `
+                        <div class="photo-card ${isSelected ? 'selected' : ''}" 
+                             onclick="${isSelectionMode ? `toggleItemSelection('${p.id}', 'photos', event); render();` : ''}"
+                             style="display: flex; flex-direction: column; background: ${isSelected ? 'rgba(239, 68, 68, 0.1)' : '#ffffff'}; border-radius: 16px; overflow: hidden; border: 1px solid ${isSelected ? '#ef4444' : 'var(--glass-border)'}; position: relative; transition: all 0.3s; ${isSelectionMode ? 'cursor: pointer;' : ''}; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                            
+                            <div style="width: 100%; aspect-ratio: 1/1; position: relative; overflow: hidden; background: #000; ${!isSelectionMode ? 'cursor: zoom-in;' : ''}" 
+                                 ${!isSelectionMode ? `onclick="zoomPhoto('${p.url}')"` : ''}>
+                                <img src="${p.url}" style="width: 100%; height: 100%; object-fit: cover; opacity: ${isSelected ? '0.5' : '1'}">
+                                <div style="position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); color: var(--primary); padding: 4px 8px; border-radius: 6px; font-size: 0.5rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px);">
+                                    ${p.category || 'DIVERS'}
                                 </div>
-                                <div style="display: flex; flex-direction: column; flex: 1; padding: 10px; ${!isSelectionMode ? 'cursor: pointer;' : ''}" 
-                                     ${!isSelectionMode ? `onclick="openPhotoModal('${p.id}')"` : ''}>
-                                    <div style="flex: 1; font-size: 0.75rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap; text-align: left;">${p.title} ${!isSelectionMode ? '<span style="opacity:0.5; font-size:0.6rem;">📝</span>' : ''}</div>
-                                    ${p.ocrText ? `<div style="font-size:0.5rem; color:var(--primary); font-weight:700; background:rgba(79,70,229,0.06); padding:2px 6px; border-radius:4px; margin-bottom:5px; display:flex; align-items:center; gap:3px; border:1px solid rgba(79,70,229,0.12);"><span>🔍</span><span>Texte scanné (${p.ocrText.length} car.)</span></div>` : ''}
+                                ${isSelected ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ef4444; font-size: 2rem; font-weight: 900;">✓</div>' : ''}
+                            </div>
+                            <div style="display: flex; flex-direction: column; flex: 1; padding: 10px; ${!isSelectionMode ? 'cursor: pointer;' : ''}" 
+                                 ${!isSelectionMode ? `onclick="openPhotoModal('${p.id}')"` : ''}>
+                                <div style="flex: 1; font-size: 0.75rem; font-weight: 800; color: var(--text-main); line-height: 1.2; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap; text-align: left;">${p.title} ${!isSelectionMode ? '<span style="opacity:0.5; font-size:0.6rem;">📝</span>' : ''}</div>
+                                ${p.ocrText ? `<div style="font-size:0.5rem; color:var(--primary); font-weight:700; background:rgba(79,70,229,0.06); padding:2px 6px; border-radius:4px; margin-bottom:5px; display:flex; align-items:center; gap:3px; border:1px solid rgba(79,70,229,0.12);"><span>🔍</span><span>Texte scanné (${p.ocrText.length} car.)</span></div>` : ''}
 
-                                    <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--glass-border);">
+                                <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--glass-border);">
+                                    <span>📅 ${p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--'}</span>
+                                    <span>⏰ ${p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</span>
+                                </div>
+                            </div>
+                        </div>`;
+                };
 
-                                        <span>📅 ${p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--'}</span>
+                let htmlOut = ocrBtnHtml + '<div style="display:flex; flex-direction:column; gap:15px; padding:5px;">';
+                let currentSingleCards = [];
 
-                                        <span>⏰ ${p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</span>
+                const flushSingles = () => {
+                    if (currentSingleCards.length > 0) {
+                        htmlOut += `
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px;">
+                                ${currentSingleCards.join('')}
+                            </div>
+                        `;
+                        currentSingleCards = [];
+                    }
+                };
 
+                groupsArray.forEach(g => {
+                    if (g.items.length > 1) {
+                        flushSingles();
+                        const isCollapsed = window.collapsedPhotoGroups.has(g.title);
+                        htmlOut += `
+                            <div class="photo-group-container" style="background: rgba(255,255,255,0.75); border-radius: 20px; border: 1.5px solid var(--glass-border); padding: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; flex-direction: column;">
+                                <div onclick="window.togglePhotoGroup('${g.title.replace(/'/g, "\\'")}')" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; width: 100%;">
+                                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                        <span style="font-size: 1.3rem; line-height: 1;">📁</span>
+                                        <div style="text-align: left;">
+                                            <div style="font-weight: 800; color: var(--text-main); font-size: 0.85rem; line-height: 1.2;">${g.title}</div>
+                                            <div style="font-size: 0.65rem; color: var(--text-dim); font-weight: 700; margin-top: 2px;">${g.items.length} PHOTOS REGROUPÉES</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;" onclick="event.stopPropagation()">
+                                        <button type="button" class="delete-btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;" onclick="window.deletePhotoGroup('${g.title.replace(/'/g, "\\'")}')">
+                                            ✕ SUPPRIMER LE GROUPE
+                                        </button>
+                                        <span onclick="window.togglePhotoGroup('${g.title.replace(/'/g, "\\'")}')" style="font-size: 0.9rem; color: var(--primary); transition: transform 0.3s; transform: ${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'}; padding: 0 5px; cursor: pointer;">▼</span>
                                     </div>
                                 </div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                `;
+                                <div style="display: ${isCollapsed ? 'none' : 'grid'}; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-top: 15px; padding-top: 15px; border-top: 1.5px dashed var(--glass-border);">
+                                    ${g.items.map(p => renderPhotoCard(p)).join('')}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        currentSingleCards.push(renderPhotoCard(g.items[0]));
+                    }
+                });
+                
+                flushSingles();
+                htmlOut += '</div>';
+
+                container.innerHTML = htmlOut;
             } else if (window.currentTab === 'registres') {
                 if (registres.length === 0) {
                     container.innerHTML = `<div class="empty-state"><div class="empty-icon">📓</div><h3>Aucun registre configuré</h3><p style="font-size:0.7rem; opacity:0.6;">Cliquez sur + RÉGLAGES pour créer votre premier carnet.</p></div>`;

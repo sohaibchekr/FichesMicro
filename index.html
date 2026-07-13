@@ -152,7 +152,7 @@
         }
 
         .logo-subtitle {
-            font-size: 0.55rem;
+            font-size: 0.75rem;
             font-weight: 800;
             color: var(--primary);
             letter-spacing: 0.5px;
@@ -1277,7 +1277,7 @@
                 <img src="sohaib.png" class="logo-img" alt="Logo">
                 <div style="display: flex; flex-direction: column; justify-content: center;">
                     <span class="logo-text">SOHAIB CHEKRI</span>
-                    <span class="logo-subtitle">CREATED BY SOHAIB CHEKRI</span>
+                    <span class="logo-subtitle">CRÉÉ PAR SOHAIB CHEKRI</span>
                 </div>
             </div>
             <div style="display: flex; gap: 8px;">
@@ -1501,6 +1501,9 @@
                     </div>
                     <!-- Zone des presets (fixes + personnalisés) -->
                     <div id="presets-bar" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.02); border-radius:10px; border:1px dashed var(--glass-border);">
+                        <!-- Boutons Fixes de Lancement -->
+                        <button type="button" onclick="window.applyTestPreset('pf_mp')" class="pick-btn" style="padding: 4px 8px; font-size: 0.55rem; background: rgba(79,70,229,0.1); color: var(--primary); font-weight:bold;">🧪 Lancement PF/MP</button>
+                        <button type="button" onclick="window.applyTestPreset('eau')" class="pick-btn" style="padding: 4px 8px; font-size: 0.55rem; background: rgba(14,165,233,0.1); color: #0ea5e9; font-weight:bold;">💧 Test Eau</button>
                         <!-- Rempli par renderPresetsBar() -->
                     </div>
                     <div id="milieux-list"></div>
@@ -3145,13 +3148,13 @@
                 document.getElementById('temoinNegEnv').value = 0;
                 window.calculateBoites();
             } else if (type === 'eau') {
-                // R2A pour les points d'eau analysés (B 55mm, 30-35°C)
-                // Le contrôle environnement est géré par la section "Témoins Env." en bas
-                window.addMilieuRow('R2A', nb, '1', 'Boîte 55mm', true, '30-35');
-                // Pour Eau : remettre les champs témoins à des valeurs par défaut à remplir
+                // R2A (30-35°C) 1 boîte pour chaque point d'eau
+                window.addMilieuRow('R2A', nb, '1', 'Boîte 55mm', false, '30-35');
+                
+                // Les contrôles d'environnement, témoin négatif, et témoin matériel
                 document.getElementById('temoinMat').value = 1;
-                document.getElementById('temoinEnv').value = 1;
-                document.getElementById('temoinNegEnv').value = 1;
+                document.getElementById('temoinEnv').value = 1; 
+                document.getElementById('temoinNegEnv').value = 1; 
                 window.calculateBoites();
             }
         };
@@ -3173,6 +3176,8 @@
                 <select class="form-input mil-mult" onchange="window.calculateBoites()" style="flex:1; padding:6px; font-size:0.7rem;" title="Boites par point">
                     <option value="1" ${multVal === '1' ? 'selected' : ''}>x1</option>
                     <option value="2" ${multVal === '2' ? 'selected' : ''}>x2</option>
+                    <option value="3" ${multVal === '3' ? 'selected' : ''}>x3</option>
+                    <option value="4" ${multVal === '4' ? 'selected' : ''}>x4</option>
                 </select>
                 <select class="form-input mil-temp" onchange="window.calculateBoites()" style="flex:1.5; padding:6px; font-size:0.7rem;" title="Température">
                     <option value="20-25" ${tempVal === '20-25' ? 'selected' : ''}>20-25°C</option>
@@ -3212,8 +3217,11 @@
                 if (tGs) tGs.value = `GS (Témoin ${dilName})`;
             }
 
+            const milieuSummary = {}; // Pour le calcul de gélose
+
             // Parcours des milieux  
             rows.forEach(row => {
+                const name = row.querySelector('.mil-name').value.trim() || 'Inconnu';
                 const pts = parseFloat(row.querySelector('.mil-pts').value) || 0;
                 const mult = parseFloat(row.querySelector('.mil-mult').value) || 1;
                 const temp = row.querySelector('.mil-temp').value;
@@ -3229,6 +3237,14 @@
                     total += count;
                     if (!formatSummary[format]) formatSummary[format] = 0;
                     formatSummary[format] += count;
+                    
+                    // Calcul du volume de gélose nécessaire
+                    if (format.includes('Boîte')) {
+                        // On prend le nom du milieu en ignorant la partie "(Témoin...)" pour regrouper (ex: "TSA" ou "R2A")
+                        const baseName = name.split('(')[0].trim().toUpperCase() || 'INCONNU';
+                        if (!milieuSummary[baseName]) milieuSummary[baseName] = 0;
+                        milieuSummary[baseName] += count * (format.includes('90') ? 18 : 10);
+                    }
                 }
             });
 
@@ -3247,6 +3263,12 @@
 
             if (!formatSummary[tFormat]) formatSummary[tFormat] = 0;
             formatSummary[tFormat] += totalControls;
+            
+            // Les contrôles sont par défaut sur du TSA
+            if (totalControls > 0 && tFormat.includes('Boîte')) {
+                if (!milieuSummary['TSA']) milieuSummary['TSA'] = 0;
+                milieuSummary['TSA'] += totalControls * (tFormat.includes('90') ? 18 : 10);
+            }
 
             // Affichage Résultat Principal
             document.getElementById('calcResult').innerText = total;
@@ -3280,6 +3302,24 @@
                         </div>`;
                     }
                 }
+                
+                // AJOUT DU CALCULATEUR DE GÉLOSE (FLACONS)
+                if (Object.keys(milieuSummary).length > 0) {
+                    html += '<div style="font-weight: 800; color: #f59e0b; margin: 12px 0 8px; text-transform: uppercase; font-size: 0.65rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px;">Préparation Gélose (Bain-Marie) :</div>';
+                    for (const m in milieuSummary) {
+                        const vol = milieuSummary[m];
+                        if (vol > 0) {
+                            // On divise par 190ml par flacon, et on arrondit au supérieur
+                            const flacons = Math.ceil(vol / 190);
+                            html += `<div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px; padding: 6px; background: rgba(245, 158, 11, 0.05); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.1);">
+                                <span class="label-text" style="color:#d97706; font-size:0.75rem; font-weight:700;">${m} (~${vol} mL)</span>
+                                <span class="val-text" style="font-weight: 900; color: #b45309; font-size:0.8rem;">${flacons} flacon(s)</span>
+                            </div>`;
+                        }
+                    }
+                    html += `<div style="font-size:0.5rem; color:var(--text-dim); text-align:right; margin-top:4px;">*Estimé env. 18ml/B90 et 10ml/B55 (Flacon utile = 190ml)</div>`;
+                }
+
                 summaryDiv.innerHTML = html;
             } else {
                 summaryDiv.style.display = 'none';

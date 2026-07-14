@@ -1719,6 +1719,12 @@
                     </div>
                 </div>
 
+                <div style="background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: 14px; padding: 12px; margin-bottom: 18px;">
+                    <label style="font-size: 0.65rem; font-weight: 800; color: #d97706; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">📦 Flacon(s) Entamé(s) / À Dé-stocker</label>
+                    <div id="flaconEntameContainer" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
+                    <button type="button" onclick="window.addFlaconEntame()" style="width: 100%; background: rgba(245,158,11,0.1); color: #b45309; border: 1px dashed rgba(245,158,11,0.4); padding: 8px; border-radius: 10px; font-size: 0.65rem; font-weight: 800; cursor: pointer;">+ AJOUTER UN FLACON ENTAMÉ</button>
+                </div>
+
 
                 <div class="form-group">
                     <label style="color:var(--secondary);">🧪 Additifs / Suppléments (Détails de pesée)</label>
@@ -2186,6 +2192,9 @@
         window.currentTab = 'fiches';
         window.switchTab = function (tab) {
             console.log("Switching to " + tab);
+            // Clean up filter bar when leaving analyses
+            const oldBar = document.getElementById('analysis-release-filter-bar');
+            if (oldBar) oldBar.remove();
             window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
@@ -2638,6 +2647,7 @@
             document.getElementById('prepEditId').value = id || '';
             document.getElementById('datePrep').value = id ? '' : new Date().toISOString().split('T')[0]; // Par défaut aujourd'hui si nouveau
             document.getElementById('prepAdditifsContainer').innerHTML = '';
+            document.getElementById('flaconEntameContainer').innerHTML = '';
             document.getElementById('deletePrepBtn').style.display = id ? 'block' : 'none';
             document.getElementById('prepModalTitle').innerText = id ? 'Modifier Préparation' : 'Nouvelle Préparation';
             renderCatalogs();
@@ -2659,6 +2669,10 @@
                     if (p.additifs) {
                         p.additifs.forEach(a => addAdditifToPrep(a));
                     }
+                    if (p.flaconEntames) {
+                        document.getElementById('flaconEntameContainer').innerHTML = '';
+                        p.flaconEntames.forEach(f => window.addFlaconEntame(f.num, f.info));
+                    }
                 }
             }
             window.openModal('prepModalOverlay');
@@ -2666,6 +2680,20 @@
 
         window.closePrepModal = function () {
             window.closeModal('prepModalOverlay');
+        };
+
+        window.addFlaconEntame = function(num = '', info = '') {
+            const container = document.getElementById('flaconEntameContainer');
+            const rowId = 'fe-' + Date.now() + Math.floor(Math.random()*1000);
+            const div = document.createElement('div');
+            div.className = 'flacon-entame-row';
+            div.style.cssText = 'display:flex; gap:6px; align-items:center;';
+            div.innerHTML = `
+                <input type="text" class="form-input fe-num" placeholder="N° Flacon" value="${num}" style="flex:1; padding:6px; font-size:0.75rem; background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3);">
+                <input type="text" class="form-input fe-info" placeholder="Info (ex: TSA, entamé 80%)" value="${info}" style="flex:2; padding:6px; font-size:0.75rem;">
+                <button type="button" onclick="this.parentElement.remove()" style="background: rgba(239,68,68,0.1); color:#ef4444; border:none; width:26px; height:26px; border-radius:6px; cursor:pointer; font-weight:800; font-size:0.7rem; flex-shrink:0;">✕</button>
+            `;
+            container.appendChild(div);
         };
 
         window.setPrepExpiry = function (months) {
@@ -2806,6 +2834,11 @@
                 const id = document.getElementById('prepEditId').value;
                 const additifs = Array.from(document.getElementById('prepAdditifsContainer').querySelectorAll('.additif-entry')).map(div => JSON.parse(div.dataset.info));
 
+                const flaconEntames = Array.from(document.querySelectorAll('.flacon-entame-row')).map(row => ({
+                    num: row.querySelector('.fe-num').value,
+                    info: row.querySelector('.fe-info').value
+                })).filter(f => f.num || f.info);
+
                 const data = {
                     designation: document.getElementById('prepDesignation').value,
                     supplier: document.getElementById('prepSupplier').value,
@@ -2819,6 +2852,7 @@
                     datePeremption: document.getElementById('datePeremption').value,
                     type: document.getElementById('prepType').value || '',
                     additifs: additifs,
+                    flaconEntames: flaconEntames,
                     updatedAt: Date.now()
                 };
 
@@ -3832,6 +3866,14 @@
                                     `).join('')}
                                 </div>
                             ` : ''}
+                            ${p.flaconEntames && p.flaconEntames.length > 0 ? `
+                                <div style="margin-top:8px; border-top:1px solid rgba(245,158,11,0.15); padding-top:8px;">
+                                    <div style="font-size:0.55rem; color:#d97706; font-weight:800; text-transform:uppercase; margin-bottom:4px;">📦 Flacons entamés</div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                        ${p.flaconEntames.map(f => `<span style="background:rgba(245,158,11,0.1); color:#b45309; border:1px solid rgba(245,158,11,0.2); padding:3px 8px; border-radius:6px; font-size:0.6rem; font-weight:700;">📦 ${f.num || '?'} ${f.info ? '— ' + f.info : ''}</span>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 }).join('');
@@ -3839,22 +3881,50 @@
                 // ANALYSES TAB
                 let filtered = analyses.slice(); // Copy
 
+                const todayStr = new Date().toISOString().split('T')[0];
+                const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+                const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+                const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate() + 7);
+                const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+                // Count badges for filters
+                const countToday = analyses.filter(a => a.dateSortie === todayStr && !a.isLibere).length;
+                const countTomorrow = analyses.filter(a => a.dateSortie === tomorrowStr && !a.isLibere).length;
+                const countWeek = analyses.filter(a => a.dateSortie && a.dateSortie >= todayStr && a.dateSortie <= weekEndStr && !a.isLibere).length;
+                const countLibere = analyses.filter(a => a.isLibere).length;
+                const countOverdue = analyses.filter(a => a.dateSortie && a.dateSortie < todayStr && !a.isLibere).length;
+
+                const activeFilter = window.analysisReleaseFilter || 'all';
+
+                // Render filter bar just above the list
+                const filterBarId = 'analysis-release-filter-bar';
+                let filterBarEl = document.getElementById(filterBarId);
+                if (!filterBarEl) {
+                    filterBarEl = document.createElement('div');
+                    filterBarEl.id = filterBarId;
+                    container.parentNode.insertBefore(filterBarEl, container);
+                }
+                filterBarEl.innerHTML = `<div style="display:flex; gap:6px; flex-wrap:wrap; padding: 0 20px 12px;">
+                    ${countOverdue > 0 ? `<button onclick="window.analysisReleaseFilter='overdue'; render();" style="background:${activeFilter==='overdue'?'rgba(239,68,68,0.9)':'rgba(239,68,68,0.1)'}; color:${activeFilter==='overdue'?'white':'#ef4444'}; border:1.5px solid rgba(239,68,68,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">⚠️ En retard (${countOverdue})</button>` : ''}
+                    <button onclick="window.analysisReleaseFilter='today'; render();" style="background:${activeFilter==='today'?'var(--primary)':'rgba(79,70,229,0.08)'}; color:${activeFilter==='today'?'white':'var(--primary)'}; border:1.5px solid rgba(79,70,229,0.2); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📅 Auj. (${countToday})</button>
+                    <button onclick="window.analysisReleaseFilter='tomorrow'; render();" style="background:${activeFilter==='tomorrow'?'#0ea5e9':'rgba(14,165,233,0.08)'}; color:${activeFilter==='tomorrow'?'white':'#0ea5e9'}; border:1.5px solid rgba(14,165,233,0.2); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📆 Dem. (${countTomorrow})</button>
+                    <button onclick="window.analysisReleaseFilter='week'; render();" style="background:${activeFilter==='week'?'var(--secondary)':'rgba(124,58,237,0.08)'}; color:${activeFilter==='week'?'white':'var(--secondary)'}; border:1.5px solid rgba(124,58,237,0.2); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🗓 Semaine (${countWeek})</button>
+                    <button onclick="window.analysisReleaseFilter='all'; render();" style="background:${activeFilter==='all'?'var(--text-main)':'rgba(0,0,0,0.05)'}; color:${activeFilter==='all'?'white':'var(--text-dim)'}; border:1.5px solid rgba(0,0,0,0.1); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 Tous</button>
+                    <button onclick="window.analysisReleaseFilter='libere'; render();" style="background:${activeFilter==='libere'?'var(--success)':'rgba(5,150,105,0.08)'}; color:${activeFilter==='libere'?'white':'var(--success)'}; border:1.5px solid rgba(5,150,105,0.2); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">✅ Libérés (${countLibere})</button>
+                </div>`;
+
                 // Sorting
                 filtered.sort((a, b) => {
-                    // 1. Les libérés vont toujours en bas
-                    if (a.isLibere && !b.isLibere) return 1;
-                    if (!a.isLibere && b.isLibere) return -1;
-
-                    // 2. Selon le critère de tri choisi
-                    if (window.sortBy === 'name') {
-                        const na = (a.produit || '').toLowerCase();
-                        const nb = (b.produit || '').toLowerCase();
-                        return window.sortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
-                    } else {
-                        const da = new Date(a.dateAnalyse).getTime();
-                        const db = new Date(b.dateAnalyse).getTime();
-                        return window.sortOrder === 'desc' ? db - da : da - db;
+                    // 1. Les libérés vont toujours en bas (sauf si le filtre libéré est actif)
+                    if (activeFilter !== 'libere') {
+                        if (a.isLibere && !b.isLibere) return 1;
+                        if (!a.isLibere && b.isLibere) return -1;
                     }
+                    // 2. Trier par date de sortie (date libération) puis par date d'analyse
+                    const sa = a.dateSortie || a.dateAnalyse;
+                    const sb = b.dateSortie || b.dateAnalyse;
+                    if (sa !== sb) return sa < sb ? -1 : 1;
+                    return 0;
                 });
 
                 // Filtering
@@ -3867,7 +3937,16 @@
 
                     const matchesDate = !dateFilter || a.dateAnalyse === dateFilter;
 
-                    return matchesText && matchesDate;
+                    // Release filter
+                    let matchesRelease = true;
+                    if (activeFilter === 'today') matchesRelease = a.dateSortie === todayStr && !a.isLibere;
+                    else if (activeFilter === 'tomorrow') matchesRelease = a.dateSortie === tomorrowStr && !a.isLibere;
+                    else if (activeFilter === 'week') matchesRelease = a.dateSortie && a.dateSortie >= todayStr && a.dateSortie <= weekEndStr && !a.isLibere;
+                    else if (activeFilter === 'libere') matchesRelease = !!a.isLibere;
+                    else if (activeFilter === 'overdue') matchesRelease = a.dateSortie && a.dateSortie < todayStr && !a.isLibere;
+                    // 'all' = no additional filter
+
+                    return matchesText && matchesDate && matchesRelease;
                 });
 
                 // Grouping

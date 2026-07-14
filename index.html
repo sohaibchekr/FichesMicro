@@ -40,7 +40,7 @@
             text-transform: uppercase;
         }
     </style>
-    <title>MICROBIO v4.4.9 - Labo</title>
+    <title>MICROBIO v4.5.0 - Labo</title>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -1297,7 +1297,8 @@
         <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
             <div class="search-container" style="flex: 1; min-width: 150px;">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="searchInput" class="search-input" placeholder="Produit, lot, code...">
+                <input type="text" id="searchInput" class="search-input" placeholder="Produit, lot, code..." autocomplete="off" list="search-history-list">
+                <datalist id="search-history-list"></datalist>
             </div>
             <div class="search-container" style="width: auto; flex: 0 0 auto;">
                 <input type="date" id="dateFilter" class="search-input" style="padding: 10px; width: 120px;" onchange="render()">
@@ -1326,8 +1327,8 @@
     <button id="addBtn" class="fab" onclick="window.openAddModal()">+</button>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.4.9 • Stockage Local Direct</div>
-        <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.4.9'); location.reload(true);"
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.5.0 • Stockage Local Direct</div>
+        <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.5.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
     </footer>
@@ -2139,13 +2140,47 @@
     </div>
 
     <script>
-        // === VERSION 4.4.6 - STABLE ===
+        // === VERSION 4.5.0 - STABLE ===
+
+        // --- DATE UTILS ---
+        window.formatStringToDate = function (dateStr, fallback = '-') {
+            if (!dateStr) return fallback;
+            const matches = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (matches) {
+                return `${matches[3]}/${matches[2]}/${matches[1]}`;
+            }
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
+        };
+
+        window.formatStringToLongDate = function (dateStr, fallback = '-') {
+            if (!dateStr) return fallback;
+            const matches = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (matches) {
+                try {
+                    const d = new Date(matches[1], matches[2] - 1, matches[3]);
+                    return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                } catch(e) {}
+            }
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
+        };
 
         // --- SERVICE WORKER & SAFETY ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW Registered v4.4.9'))
+                    .then(reg => console.log('SW Registered v4.5.0'))
                     .catch(err => console.log('SW Error:', err));
             });
         }
@@ -2192,9 +2227,11 @@
         window.currentTab = 'fiches';
         window.switchTab = function (tab) {
             console.log("Switching to " + tab);
-            // Clean up filter bar when leaving analyses
+            // Clean up filter bars when leaving tabs
             const oldBar = document.getElementById('analysis-release-filter-bar');
             if (oldBar) oldBar.remove();
+            const oldPrepBar = document.getElementById('prep-expiry-filter-bar');
+            if (oldPrepBar) oldPrepBar.remove();
             window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
@@ -2572,16 +2609,17 @@
             const dateVal = document.getElementById('dateAnalyse').value;
             if (!dateVal) return;
 
-            const date = new Date(dateVal);
+            const parts = dateVal.split('-');
+            const date = new Date(parts[0], parts[1] - 1, parts[2]);
 
             const d5 = new Date(date);
             d5.setDate(d5.getDate() + 5);
-            document.getElementById('out5j').innerText = d5.toLocaleDateString('fr-FR');
+            document.getElementById('out5j').innerText = d5.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             document.getElementById('out5j_val').value = d5.toISOString().split('T')[0];
 
             const d7 = new Date(date);
             d7.setDate(d7.getDate() + 7);
-            document.getElementById('out7j').innerText = d7.toLocaleDateString('fr-FR');
+            document.getElementById('out7j').innerText = d7.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             document.getElementById('out7j_val').value = d7.toISOString().split('T')[0];
         };
 
@@ -3447,6 +3485,8 @@
                 const uniqueProd = [...new Set(analyses.map(a => a.produit).filter(Boolean))].sort();
                 prodList.innerHTML = uniqueProd.map(p => `<option value="${p}">`).join('');
             }
+            // Also refresh search suggestions with updated live data
+            if (typeof updateSearchDatalist === 'function') updateSearchDatalist();
         }
 
         // --- Real-time Sync ---
@@ -3779,16 +3819,82 @@
                 `).join('');
             } else if (window.currentTab === 'preps') {
                 const dateFilter = document.getElementById('dateFilter').value;
-                let filtered = preps.filter(p => {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+
+                const getExpStatus = (p) => {
+                    const parts = p.datePeremption ? p.datePeremption.split('-') : null;
+                    const exp = parts ? new Date(parts[0], parts[1]-1, parts[2]) : null;
+                    if (exp) exp.setHours(0,0,0,0);
+                    const daysLeft = exp ? Math.ceil((exp - today) / (1000*3600*24)) : null;
+                    return { exp, daysLeft, isExpired: exp && exp < today, isSoon: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7 };
+                };
+
+                let allFiltered = preps.filter(p => {
                     const matchesText = (p.designation && p.designation.toLowerCase().includes(query)) ||
                         (p.lot && p.lot.toLowerCase().includes(query)) ||
                         (p.code && p.code.toLowerCase().includes(query)) ||
                         (p.supplier && p.supplier.toLowerCase().includes(query)) ||
                         (p.boite && p.boite.toLowerCase().includes(query));
-
                     const matchesDate = !dateFilter || p.datePrep === dateFilter;
-
                     return matchesText && matchesDate;
+                });
+
+                // Compteurs pour la barre de filtres
+                const countExpired  = allFiltered.filter(p => getExpStatus(p).isExpired).length;
+                const countSoon     = allFiltered.filter(p => { const s = getExpStatus(p); return s.isSoon && !s.isExpired; }).length;
+                const countValid    = allFiltered.filter(p => { const s = getExpStatus(p); return !s.isExpired && !s.isSoon; }).length;
+                const activeFilter  = window.prepExpiryFilter || 'all';
+
+                // Barre de filtres
+                const prepFilterBarId = 'prep-expiry-filter-bar';
+                let prepFilterBar = document.getElementById(prepFilterBarId);
+                if (!prepFilterBar) {
+                    prepFilterBar = document.createElement('div');
+                    prepFilterBar.id = prepFilterBarId;
+                    container.parentNode.insertBefore(prepFilterBar, container);
+                }
+
+                // Bannière d'alerte : seulement pour les périmés non encore vus
+                const ACK_KEY = 'microbio_ack_expired_preps';
+                const getAcknowledged = () => { try { return new Set(JSON.parse(localStorage.getItem(ACK_KEY)) || []); } catch(e) { return new Set(); } };
+                const ackExpired = getAcknowledged();
+
+                window.acknowledgeExpiredPreps = function() {
+                    const expiredIds = allFiltered.filter(p => getExpStatus(p).isExpired).map(p => p.id);
+                    const updated = new Set([...getAcknowledged(), ...expiredIds]);
+                    localStorage.setItem(ACK_KEY, JSON.stringify([...updated]));
+                    window.prepExpiryFilter = 'all';
+                    render();
+                    window.showToast('Alertes périmées masquées ✅', 'success', 2000);
+                };
+
+                // Périmés non encore vus
+                const expiredIds = allFiltered.filter(p => getExpStatus(p).isExpired).map(p => p.id);
+                const newExpiredCount = expiredIds.filter(id => !ackExpired.has(id)).length;
+
+                const alertBanner = newExpiredCount > 0 && activeFilter !== 'expired'
+                    ? `<div style="background:rgba(239,68,68,0.08); border:1.5px solid rgba(239,68,68,0.3); border-radius:14px; padding:12px 16px; margin:0 0 10px; display:flex; align-items:center; gap:10px;">
+                           <span style="font-size:1.3rem;">🚨</span>
+                           <span onclick="window.prepExpiryFilter='expired'; render();" style="flex:1; font-size:0.72rem; font-weight:800; color:#dc2626; cursor:pointer;">${newExpiredCount} PRÉPARATION${newExpiredCount>1?'S':''} PÉRIMÉE${newExpiredCount>1?'S':''} — Cliquez pour voir</span>
+                           <button onclick="event.stopPropagation(); window.acknowledgeExpiredPreps();" style="background:#dc2626; color:white; border:none; padding:7px 14px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0;">✅ OK, J'AI VU</button>
+                       </div>` : '';
+
+                prepFilterBar.innerHTML = `
+                    ${alertBanner}
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; padding:0 20px 12px;">
+                        ${countExpired > 0 ? `<button onclick="window.prepExpiryFilter='expired'; render();" style="background:${activeFilter==='expired'?'rgba(239,68,68,0.9)':'rgba(239,68,68,0.1)'}; color:${activeFilter==='expired'?'white':'#ef4444'}; border:1.5px solid rgba(239,68,68,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🔴 Périmés (${countExpired})</button>` : ''}
+                        ${countSoon  > 0 ? `<button onclick="window.prepExpiryFilter='soon';    render();" style="background:${activeFilter==='soon'   ?'rgba(245,158,11,0.9)':'rgba(245,158,11,0.1)'}; color:${activeFilter==='soon'   ?'white':'#d97706'}; border:1.5px solid rgba(245,158,11,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">⚠️ Bientôt (${countSoon})</button>` : ''}
+                        <button onclick="window.prepExpiryFilter='valid'; render();" style="background:${activeFilter==='valid'?'var(--success)':'rgba(34,197,94,0.08)'}; color:${activeFilter==='valid'?'white':'var(--success)'}; border:1.5px solid rgba(34,197,94,0.25); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">✅ Valides (${countValid})</button>
+                        <button onclick="window.prepExpiryFilter='all';   render();" style="background:${activeFilter==='all'  ?'var(--text-main)':'rgba(0,0,0,0.05)'}; color:${activeFilter==='all'  ?'white':'var(--text-dim)'}; border:1.5px solid rgba(0,0,0,0.1); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 Tous (${allFiltered.length})</button>
+                    </div>`;
+
+                // Filtrage selon le filtre actif
+                let filtered = allFiltered.filter(p => {
+                    const s = getExpStatus(p);
+                    if (activeFilter === 'expired') return s.isExpired;
+                    if (activeFilter === 'soon')    return s.isSoon && !s.isExpired;
+                    if (activeFilter === 'valid')   return !s.isExpired && !s.isSoon;
+                    return true;
                 });
 
                 // Tri des préparations
@@ -3798,21 +3904,23 @@
                         const nb = (b.designation || '').toLowerCase();
                         return window.sortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
                     } else {
-                        const da = new Date(a.datePrep || 0).getTime();
-                        const db = new Date(b.datePrep || 0).getTime();
+                        // Tri par date de préparation
+                        const da = a.datePrep ? new Date(a.datePrep).getTime() : 0;
+                        const db = b.datePrep ? new Date(b.datePrep).getTime() : 0;
                         return window.sortOrder === 'desc' ? db - da : da - db;
                     }
                 });
 
                 if (filtered.length === 0) {
-                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚗️</div><h3>Aucune préparation trouvée</h3></div>`;
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚗️</div><h3>Aucune préparation dans ce filtre</h3></div>`;
                     return;
                 }
 
                 container.innerHTML = filtered.map(p => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    const expDate = p.datePeremption ? new Date(p.datePeremption) : null;
+                    const partsPeremp = p.datePeremption ? p.datePeremption.split('-') : null;
+                    const expDate = partsPeremp ? new Date(partsPeremp[0], partsPeremp[1] - 1, partsPeremp[2]) : null;
                     if (expDate) expDate.setHours(0, 0, 0, 0);
                     const isExpired = expDate && expDate < today;
                     const isExpiringSoon = expDate && (expDate - today) / (1000 * 3600 * 24) <= 7;
@@ -3829,11 +3937,11 @@
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                                 <div style="background:rgba(0,0,0,0.02); padding:8px; border-radius:10px; text-align:center;">
                                     <div style="font-size:0.55rem; color:var(--text-dim); text-transform:uppercase;">Préparé le</div>
-                                    <div style="font-size:0.8rem; font-weight:800; color:var(--text-main);">${p.datePrep ? new Date(p.datePrep).toLocaleDateString('fr-FR') : '-'}</div>
+                                    <div style="font-size:0.65rem; font-weight:800; color:var(--text-main);">${window.formatStringToLongDate(p.datePrep)}</div>
                                 </div>
                                 <div style="background:${isExpired ? 'rgba(239,68,68,0.05)' : (isExpiringSoon ? 'rgba(251,191,36,0.05)' : 'rgba(34,197,94,0.05)')}; padding:8px; border-radius:10px; text-align:center; border:1px solid ${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'transparent')}">
                                     <div style="font-size:0.55rem; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#f59e0b' : 'var(--success)')}; text-transform:uppercase;">Péremption</div>
-                                    <div style="font-size:0.8rem; font-weight:800; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#f59e0b' : 'var(--text-main)')}">${p.datePeremption ? new Date(p.datePeremption).toLocaleDateString('fr-FR') : '-'}</div>
+                                    <div style="font-size:0.65rem; font-weight:800; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#f59e0b' : 'var(--text-main)')}">${window.formatStringToLongDate(p.datePeremption)}</div>
                                 </div>
                             </div>
 
@@ -3986,7 +4094,8 @@
                     const isOverdue = exitDate && exitDate <= today;
                     const isToday = exitDate && exitDate.getTime() === today.getTime();
 
-                    const dateObj = new Date(g.dateAnalyse);
+                    const partsAnal = g.dateAnalyse.split('-');
+                    const dateObj = new Date(partsAnal[0], partsAnal[1] - 1, partsAnal[2]);
                     const d5 = new Date(dateObj); d5.setDate(d5.getDate() + 5);
                     const d7 = new Date(dateObj); d7.setDate(d7.getDate() + 7);
 
@@ -4009,7 +4118,7 @@
                                 <div class="designation">${title}</div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-size: 0.8rem; font-weight: 800; color: var(--primary);">${new Date(g.dateAnalyse).toLocaleDateString()}</div>
+                                <div style="font-size: 0.75rem; font-weight: 800; color: var(--primary);">${window.formatStringToLongDate(g.dateAnalyse)}</div>
                             </div>
                         </div>
                         
@@ -4017,14 +4126,14 @@
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <div class="prep-label" style="font-size:0.6rem; letter-spacing: 1px; color: var(--primary);">📅 RÉSULTATS</div>
-                                    <div style="font-size: 1.15rem; font-weight: 900; color: ${isOverdue && !g.items.every(i => i.isLibere) ? '#ef4444' : '#f59e0b'};">
-                                        ${g.dateSortie ? new Date(g.dateSortie).toLocaleDateString('fr-FR') : '---'}
+                                    <div style="font-size: 0.95rem; font-weight: 900; color: ${isOverdue && !g.items.every(i => i.isLibere) ? '#ef4444' : '#f59e0b'};">
+                                        ${window.formatStringToLongDate(g.dateSortie, '---')}
                                         ${isOverdue && !g.items.every(i => i.isLibere) ? ' ⚠️' : ''}
                                     </div>
                                 </div>
                                 <div style="text-align: right; opacity: 0.7;">
                                     <div style="font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase;">Incub: 5j / 7j</div>
-                                    <div style="font-size: 0.65rem; color: var(--text-main); font-weight: 700;">${d5.toLocaleDateString('fr-FR')} / ${d7.toLocaleDateString('fr-FR')}</div>
+                                    <div style="font-size: 0.65rem; color: var(--text-main); font-weight: 700;">${d5.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })} / ${d7.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                                 </div>
                             </div>
                         </div>
@@ -4176,7 +4285,7 @@
                                 ${p.ocrText ? `<div style="font-size:0.5rem; color:var(--primary); font-weight:700; background:rgba(79,70,229,0.06); padding:2px 6px; border-radius:4px; margin-bottom:5px; display:flex; align-items:center; gap:3px; border:1px solid rgba(79,70,229,0.12);"><span>🔍</span><span>Texte scanné (${p.ocrText.length} car.)</span></div>` : ''}
 
                                 <div style="font-size: 0.55rem; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--glass-border);">
-                                    <span>📅 ${p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '--'}</span>
+                                    <span>📅 ${p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '--'}</span>
                                     <span>⏰ ${p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}</span>
                                 </div>
                             </div>
@@ -4311,6 +4420,9 @@
                                                         const opts = (c.options || '').split(',').filter(x => x.trim());
                                                         const checkedCount = Object.values(val || {}).filter(v => v === true || v === 'true').length;
                                                         return `<td><span style="background:rgba(79,70,229,0.08); padding:2px 8px; border-radius:50px; font-size:0.65rem; font-weight:800; color:var(--primary);">${checkedCount}/${opts.length} ✅</span></td>`;
+                                                    }
+                                                    if (typeof c === 'object' && c.type === 'date') {
+                                                        return `<td>${window.formatStringToDate(val, '<span style="opacity:0.3;">—</span>')}</td>`;
                                                     }
                                                     return `<td>${val || '<span style="opacity:0.3;">—</span>'}</td>`;
                                                 }).join('')}
@@ -4611,8 +4723,99 @@
         `;
         document.head.appendChild(style);
 
+        // ==============================
+        // SYSTÈME DE SUGGESTIONS GLOBALES
+        // ==============================
+        const SEARCH_HISTORY_KEY = 'microbio_search_history';
+        const MAX_HISTORY = 80; // max suggestions mémorisées
+
+        function getSearchHistory() {
+            try { return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY)) || []; }
+            catch(e) { return []; }
+        }
+
+        function saveToSearchHistory(term) {
+            if (!term || term.trim().length < 2) return;
+            const t = term.trim().toUpperCase();
+            let history = getSearchHistory();
+            // Dédupliquer - mettre en tête
+            history = history.filter(h => h !== t);
+            history.unshift(t);
+            if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+            localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+        }
+
+        function updateSearchDatalist() {
+            const dl = document.getElementById('search-history-list');
+            if (!dl) return;
+            const query = searchInput.value.toLowerCase().trim();
+            const history = getSearchHistory();
+
+            // Fusionner l'historique avec les données vivantes (produits, lots, désignations...)
+            const liveSuggestions = new Set();
+            fiches.forEach(f => {
+                if (f.designation) liveSuggestions.add(f.designation.toUpperCase());
+                if (f.code) liveSuggestions.add(f.code.toUpperCase());
+            });
+            analyses.forEach(a => {
+                if (a.produit) liveSuggestions.add(a.produit.toUpperCase());
+                if (a.lot) liveSuggestions.add(a.lot.toUpperCase());
+                if (a.codeControl) liveSuggestions.add(a.codeControl.toUpperCase());
+            });
+            preps.forEach(p => {
+                if (p.designation) liveSuggestions.add(p.designation.toUpperCase());
+                if (p.lot) liveSuggestions.add(p.lot.toUpperCase());
+            });
+
+            // Fusionner historique + données live, filtrées par la saisie
+            const combined = [...new Set([...history, ...liveSuggestions])];
+            const filtered = query
+                ? combined.filter(s => s.toLowerCase().includes(query)).slice(0, 20)
+                : history.slice(0, 20);
+
+            dl.innerHTML = filtered.map(s => `<option value="${s}">`).join('');
+        }
+
         // Search events
-        searchInput.addEventListener('input', render);
+        searchInput.addEventListener('input', () => {
+            updateSearchDatalist();
+            render();
+        });
+
+        searchInput.addEventListener('focus', updateSearchDatalist);
+
+        // Quand l'utilisateur appuie sur Entrée ou sélectionne une suggestion -> mémoriser
+        searchInput.addEventListener('change', () => {
+            if (searchInput.value.trim().length >= 2) {
+                saveToSearchHistory(searchInput.value);
+            }
+        });
+
+        // Mémoriser aussi quand on tape suffisamment et qu'on arrête (debounce 1.5s)
+        let searchSaveTimer = null;
+        searchInput.addEventListener('keyup', () => {
+            clearTimeout(searchSaveTimer);
+            const val = searchInput.value.trim();
+            if (val.length >= 3) {
+                searchSaveTimer = setTimeout(() => saveToSearchHistory(val), 1500);
+            }
+        });
+
+        // Mémoriser les termes tapés dans les champs clés des formulaires (designation, produit, lot, etc.)
+        const TRACK_FIELD_IDS = [
+            'designation', 'code', 'produit', 'lot', 'codeControl',
+            'prepDesignation', 'prepLot', 'prepCode', 'prepSupplier', 'prepLotFourn',
+            'newAdditifName', 'newAdditifLot', 'newAdditifCode'
+        ];
+        TRACK_FIELD_IDS.forEach(fieldId => {
+            const el = document.getElementById(fieldId);
+            if (!el) return;
+            el.addEventListener('blur', () => {
+                if (el.value && el.value.trim().length >= 2) {
+                    saveToSearchHistory(el.value.trim());
+                }
+            });
+        });
 
         // Handlers already defined above
 

@@ -1653,11 +1653,11 @@
                     <div class="form-group">
                         <label>Désignation / Milieu</label>
                         <input type="text" id="prepDesignation" class="form-input" placeholder="ex: Gélose PCA"
-                            list="prep-suggestions" required>
+                            list="prep-suggestions" required onchange="window.autoSetFlaconRules()" oninput="window.autoSetFlaconRules()">
                     </div>
                     <div class="form-group">
                         <label>Type</label>
-                        <select id="prepType" class="form-input" onchange="autoSetTypeExpiry()">
+                        <select id="prepType" class="form-input" onchange="autoSetTypeExpiry(); window.autoSetFlaconRules();">
                             <option value="">Sélectionner...</option>
                             <option value="gelose">Gélose (Agar)</option>
                             <option value="bouillon">Bouillon / Sol.</option>
@@ -1692,10 +1692,25 @@
                             <input type="text" id="prepWeight" class="form-input" placeholder="ex: 23.5">
                         </div>
                         <div class="form-group">
-                            <label>Qté Préparée</label>
-                            <input type="text" id="prepQtyFinal" class="form-input" placeholder="ex: 500ml">
+                            <label>Quantité Préparée</label>
+                            <input type="text" id="prepQtyFinal" class="form-input" placeholder="ex: 500ml ou 2L" oninput="window.calcFlacons()">
                         </div>
                     </div>
+                </div>
+
+                <div style="background: rgba(14, 165, 233, 0.05); border: 1px dashed rgba(14, 165, 233, 0.3); border-radius: 12px; padding: 10px; margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                     <div class="form-group" style="margin: 0;">
+                         <label style="font-size:0.6rem; color:var(--primary);">Vol. Cond. (ml)</label>
+                         <input type="number" id="prepVolCond" class="form-input" placeholder="Vol." oninput="window.calcFlacons()">
+                     </div>
+                     <div class="form-group" style="margin: 0;">
+                         <label style="font-size:0.6rem; color:var(--primary);">Capacité (ml)</label>
+                         <input type="number" id="prepCapacite" class="form-input" value="200" readonly>
+                     </div>
+                     <div class="form-group" style="margin: 0;">
+                         <label style="font-size:0.6rem; color:var(--primary);">Nbr Flacons</label>
+                         <input type="text" id="prepTotalFlacons" class="form-input" readonly style="background:#e0f2fe; color:#0369a1; font-weight:800; border-color: rgba(14, 165, 233, 0.4);">
+                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -1721,9 +1736,9 @@
                 </div>
 
                 <div style="background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: 14px; padding: 12px; margin-bottom: 18px;">
-                    <label style="font-size: 0.65rem; font-weight: 800; color: #d97706; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">📦 Flacon(s) Entamé(s) / À Dé-stocker</label>
+                    <label style="font-size: 0.65rem; font-weight: 800; color: #d97706; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">📦 Flacon(s) Dé-stocker</label>
                     <div id="flaconEntameContainer" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
-                    <button type="button" onclick="window.addFlaconEntame()" style="width: 100%; background: rgba(245,158,11,0.1); color: #b45309; border: 1px dashed rgba(245,158,11,0.4); padding: 8px; border-radius: 10px; font-size: 0.65rem; font-weight: 800; cursor: pointer;">+ AJOUTER UN FLACON ENTAMÉ</button>
+                    <button type="button" onclick="window.addFlaconEntame()" style="width: 100%; background: rgba(245,158,11,0.1); color: #b45309; border: 1px dashed rgba(245,158,11,0.4); padding: 8px; border-radius: 10px; font-size: 0.65rem; font-weight: 800; cursor: pointer;">+ AJOUTER UN FLACON DESTOCKER</button>
                 </div>
 
 
@@ -2679,18 +2694,32 @@
         // Constantes déplacées en haut
 
         window.openPrepModal = function (id = null) {
-            const form = document.getElementById('prepForm');
-            if (form) form.reset();
-            window.clearAdditifForm();
             document.getElementById('prepEditId').value = id || '';
-            document.getElementById('datePrep').value = id ? '' : new Date().toISOString().split('T')[0]; // Par défaut aujourd'hui si nouveau
+            const isEdit = !!id;
+            document.getElementById('prepModalTitle').innerText = isEdit ? 'Modifier la Préparation' : 'Nouvelle Préparation';
+
+            // Réinitialisation modale
+            document.getElementById('prepDesignation').value = '';
+            document.getElementById('prepType').value = '';
+            document.getElementById('datePrep').value = new Date().toISOString().split('T')[0];
+            const d = new Date(); d.setMonth(d.getMonth() + 12);
+            document.getElementById('datePeremption').value = d.toISOString().split('T')[0];
+            document.getElementById('prepSupplier').value = '';
+            document.getElementById('prepLot').value = '';
+            document.getElementById('prepLotFourn').value = '';
+            document.getElementById('prepCode').value = '';
+            document.getElementById('prepBoite').value = '';
+            document.getElementById('prepWeight').value = '';
+            document.getElementById('prepQtyFinal').value = '';
+            document.getElementById('prepVolCond').dataset.modifiedManually = '';
+            document.getElementById('prepVolCond').value = '';
+            document.getElementById('prepTotalFlacons').value = '';
             document.getElementById('prepAdditifsContainer').innerHTML = '';
             document.getElementById('flaconEntameContainer').innerHTML = '';
-            document.getElementById('deletePrepBtn').style.display = id ? 'block' : 'none';
-            document.getElementById('prepModalTitle').innerText = id ? 'Modifier Préparation' : 'Nouvelle Préparation';
+            document.getElementById('deletePrepBtn').style.display = isEdit ? 'block' : 'none';
             renderCatalogs();
 
-            if (id) {
+            if (isEdit) {
                 const p = preps.find(x => x.id === id);
                 if (p) {
                     document.getElementById('prepDesignation').value = p.designation || '';
@@ -2704,14 +2733,19 @@
                     document.getElementById('datePrep').value = p.datePrep || '';
                     document.getElementById('datePeremption').value = p.datePeremption || '';
                     document.getElementById('prepType').value = p.type || '';
+                    document.getElementById('prepVolCond').value = p.volCond || '';
+                    document.getElementById('prepTotalFlacons').value = p.totalFlacons || '';
+                    if (p.volCond) document.getElementById('prepVolCond').dataset.modifiedManually = 'true';
                     if (p.additifs) {
                         p.additifs.forEach(a => addAdditifToPrep(a));
                     }
-                    if (p.flaconEntames) {
-                        document.getElementById('flaconEntameContainer').innerHTML = '';
+                    if (p.flaconEntames && Array.isArray(p.flaconEntames)) {
                         p.flaconEntames.forEach(f => window.addFlaconEntame(f.num, f.info));
                     }
+                    window.calcFlacons();
                 }
+            } else {
+                window.addFlaconEntame(); // Vide par défaut
             }
             window.openModal('prepModalOverlay');
         };
@@ -2756,6 +2790,54 @@
                 window.setPrepExpiry(6);  // 6 mois
             }
         };
+
+        window.calcFlacons = function() {
+            let qtyRaw = document.getElementById('prepQtyFinal').value.toLowerCase().trim();
+            // extraction du nombre (gère la virgule ou point)
+            let totalQty = parseFloat(qtyRaw.replace(/[^0-9.,]/g, '').replace(',', '.'));
+            // conversion L en ml si 'l' est présent mais pas 'ml'
+            if (!isNaN(totalQty) && qtyRaw.includes('l') && !qtyRaw.includes('ml')) {
+                totalQty *= 1000;
+            }
+            const volCond = parseFloat(document.getElementById('prepVolCond').value);
+            if(!isNaN(totalQty) && !isNaN(volCond) && volCond > 0) {
+                const nbr = Math.floor(totalQty / volCond);
+                const reste = totalQty % volCond;
+                let text = nbr + ' flacons';
+                if(reste > 0) text += ` (+ ${reste.toFixed(1)}ml)`;
+                document.getElementById('prepTotalFlacons').value = text;
+            } else {
+                document.getElementById('prepTotalFlacons').value = '';
+            }
+        };
+
+        window.autoSetFlaconRules = function() {
+            const type = document.getElementById('prepType').value;
+            const desig = (document.getElementById('prepDesignation').value || '').toLowerCase();
+            let vol = '';
+            
+            if (type === 'gelose') {
+                vol = 180;
+            } else if (type === 'bouillon') {
+                if (desig.includes('mac') && desig.includes('conkey') || desig.includes('macconkey') || desig.includes('bmc')) {
+                    vol = 100;
+                } else {
+                    vol = 90;
+                }
+            }
+            
+            if (vol !== '') {
+                const volCondInput = document.getElementById('prepVolCond');
+                if (!volCondInput.dataset.modifiedManually) {
+                    volCondInput.value = vol;
+                }
+            }
+            window.calcFlacons();
+        };
+
+        document.getElementById('prepVolCond').addEventListener('input', function() {
+            this.dataset.modifiedManually = 'true';
+        });
 
         window.addAdditifToPrep = function (obj = null) {
             const container = document.getElementById('prepAdditifsContainer');
@@ -2813,6 +2895,7 @@
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.65rem; color:var(--text-dim);">
                     <div>Lot: <span style="color:white;">${data.lot || '-'}</span></div>
                     <div>Code: <span style="color:white;">${data.code || '-'}</span></div>
+                    <div>Fourn: <span style="color:white;">${data.fourn || '-'}</span></div>
                     <div>Boîte: <span style="color:var(--secondary); font-weight:800;">${data.boite || '-'}</span></div>
                     <div>Qté: <span style="color:white; font-weight:800;">${data.qty || '-'}</span></div>
                 </div>
@@ -2882,6 +2965,8 @@
                     supplier: document.getElementById('prepSupplier').value,
                     weight: document.getElementById('prepWeight').value,
                     qtyFinal: document.getElementById('prepQtyFinal').value || '',
+                    volCond: document.getElementById('prepVolCond').value || '',
+                    totalFlacons: document.getElementById('prepTotalFlacons').value || '',
                     lot: document.getElementById('prepLot').value,
                     lotFourn: document.getElementById('prepLotFourn').value,
                     code: document.getElementById('prepCode').value,
@@ -3057,7 +3142,7 @@
             activeTouchBtn.style.opacity = '0.7';
         };
 
-        window.onCalcTabTouchMove = function(e) {
+        window.onCalcTabMove = function(e) {
             // Touch move tracking can be simple or empty
         };
 
@@ -3381,15 +3466,21 @@
                     for (const m in milieuSummary) {
                         const vol = milieuSummary[m];
                         if (vol > 0) {
-                            // On divise par 190ml par flacon, et on arrondit au supérieur
-                            const flacons = Math.ceil(vol / 190);
+                            // Calcul automatique du volume par flacon selon le type
+                            let volParFlacon = 190; // Défaut
+                            if (m.includes('GELOSE')) volParFlacon = 180;
+                            else if (m.includes('BOUILLON')) {
+                                if (m.includes('MAC')) volParFlacon = 100;
+                                else volParFlacon = 90;
+                            }
+                            const flacons = Math.ceil(vol / volParFlacon);
                             html += `<div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px; padding: 6px; background: rgba(245, 158, 11, 0.05); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.1);">
                                 <span class="label-text" style="color:#d97706; font-size:0.75rem; font-weight:700;">${m} (~${vol} mL)</span>
                                 <span class="val-text" style="font-weight: 900; color: #b45309; font-size:0.8rem;">${flacons} flacon(s)</span>
                             </div>`;
                         }
                     }
-                    html += `<div style="font-size:0.5rem; color:var(--text-dim); text-align:right; margin-top:4px;">*Estimé env. 18ml/B90 et 10ml/B55 (Flacon utile = 190ml)</div>`;
+                    html += `<div style="font-size:0.5rem; color:var(--text-dim); text-align:right; margin-top:4px;">*Estimé env. 18ml/B90 et 10ml/B55</div>`;
                 }
 
                 summaryDiv.innerHTML = html;
@@ -3953,6 +4044,7 @@
                                 <div style="text-align:right; display:flex; flex-direction:column; gap:2px;">
                                     <div style="font-size:0.65rem; color:var(--secondary); font-weight:800;">📦 B-${p.boite || '?'} | ⚖️ ${p.weight || '0'}g</div>
                                     ${p.qtyFinal ? `<div style="font-size: 0.55rem; color: var(--primary); font-weight: 700;">💧 VOL : ${p.qtyFinal}</div>` : ''}
+                                    ${p.totalFlacons ? `<div style="font-size: 0.55rem; color: #0369a1; font-weight: 800; background: #e0f2fe; padding: 2px 4px; border-radius: 4px; display: inline-block; align-self: flex-end;">🧪 ${p.totalFlacons}</div>` : ''}
                                     ${isExpired ? '<span style="color:#ef4444; font-size:0.6rem; font-weight:800;">⚠️ EXPIRÉ</span>' : ''}
                                 </div>
                             </div>
@@ -3965,9 +4057,10 @@
                                                 <span style="color:var(--secondary); font-weight:800; font-size:0.65rem;">${a.name}</span>
                                                 <span style="color:var(--text-main); font-weight:800; font-size:0.6rem;">⚖️ ${a.qty || '0'}</span>
                                             </div>
-                                            <div style="display:flex; gap:10px; font-size:0.55rem; color:var(--text-dim);">
+                                            <div style="display:flex; flex-wrap:wrap; gap:10px; font-size:0.55rem; color:var(--text-dim);">
                                                 <span>L: <span style="color:var(--text-main);">${a.lot || '-'}</span></span>
                                                 <span>C: <span style="color:var(--text-main);">${a.code || '-'}</span></span>
+                                                <span>F: <span style="color:var(--text-main);">${a.fourn || '-'}</span></span>
                                                 <span>B: <span style="color:var(--secondary); font-weight:700;">${a.boite || '-'}</span></span>
                                             </div>
                                         </div>
@@ -4151,6 +4244,7 @@
                                      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                                          <div style="${i.isLibere ? 'text-decoration: line-through; color: var(--text-dim);' : ''}; flex: 1;">
                                              <div style="font-size: 0.9rem; font-weight: 700; color: ${i.isLibere ? 'var(--text-dim)' : 'var(--text-main)'};">${i.produit}</div>
+                                             ${i.bulletin || i.page ? `<div style="font-size: 0.65rem; color: var(--primary); font-weight: 800; margin-bottom: 2px;">📄 Bulletin: ${i.bulletin || '-'} | Page: ${i.page || '-'}</div>` : ''}
                                              <div style="font-size: 0.65rem; color: var(--text-dim);">Lot: ${i.lot || '-'} | Code: ${i.codeControl || '-'}</div>
                                          </div>
                                          <div style="text-align: right;">
@@ -4994,6 +5088,17 @@
                         <input type="text" class="form-input row-code" value="${data ? (data.codeControl || '') : ''}" placeholder="ex: CTRL-001">
                     </div>
                 </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                    <div class="form-group">
+                        <label>Numéro de Bulletin</label>
+                        <input type="text" class="form-input row-bulletin" value="${data ? (data.bulletin || '') : ''}" placeholder="ex: BULL-001">
+                    </div>
+                    <div class="form-group">
+                        <label>Page</label>
+                        <input type="text" class="form-input row-page" value="${data ? (data.page || '') : ''}" placeholder="ex: Page 1">
+                    </div>
+                </div>
                 
                 <!-- Lectures Journalières -->
                 <div class="form-group" style="margin-top:10px;">
@@ -5185,6 +5290,8 @@
                 const elProd = row.querySelector('.row-prod');
                 const elLot = row.querySelector('.row-lot');
                 const elCode = row.querySelector('.row-code');
+                const elBulletin = row.querySelector('.row-bulletin');
+                const elPage = row.querySelector('.row-page');
                 const elLibere = row.querySelector('.row-libere');
 
                 const data = {
@@ -5192,6 +5299,8 @@
                     produit: elProd ? elProd.value : '',
                     lot: elLot ? elLot.value : '',
                     codeControl: elCode ? elCode.value : '',
+                    bulletin: elBulletin ? elBulletin.value : '',
+                    page: elPage ? elPage.value : '',
                     isLibere: elLibere ? elLibere.checked : false,
                     germsDetails: germsDetails,
                     dailyReadings: dailyReadings,

@@ -3921,11 +3921,19 @@
                 };
 
                 let allFiltered = preps.filter(p => {
+                    const hasFlacons = p.flaconEntames && p.flaconEntames.length > 0;
+                    const matchesDestockKeyword = (query.includes('destock') || query.includes('entam')) && hasFlacons;
+                    const matchesFlaconData = hasFlacons && p.flaconEntames.some(f => 
+                        (f.num && f.num.toLowerCase().includes(query)) ||
+                        (f.info && f.info.toLowerCase().includes(query))
+                    );
+
                     const matchesText = (p.designation && p.designation.toLowerCase().includes(query)) ||
                         (p.lot && p.lot.toLowerCase().includes(query)) ||
                         (p.code && p.code.toLowerCase().includes(query)) ||
                         (p.supplier && p.supplier.toLowerCase().includes(query)) ||
-                        (p.boite && p.boite.toLowerCase().includes(query));
+                        (p.boite && p.boite.toLowerCase().includes(query)) ||
+                        matchesDestockKeyword || matchesFlaconData;
                     const matchesDate = !dateFilter || p.datePrep === dateFilter;
                     return matchesText && matchesDate;
                 });

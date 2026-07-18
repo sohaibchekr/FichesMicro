@@ -218,13 +218,8 @@
         }
 
         /* Tabs for Calculator */
-        .calc-tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 20px;
-            background: rgba(0, 0, 0, 0.05);
-            padding: 5px;
-            border-radius: 12px;
+.calc-tabs {
+            display: none !important;
         }
 
         .calc-tab {
@@ -247,11 +242,16 @@
         }
 
         .calc-section {
-            display: none;
+            display: block; /* mode vertical: on affiche tout */
         }
 
         .calc-section.active {
             display: block;
+        }
+
+        /* Mode calculatrice vertical (mobile + global): cacher la barre d'onglets */
+        .calc-tabs {
+            display: none;
         }
 
         .quick-pick {
@@ -713,12 +713,25 @@
             .prep-section { grid-template-columns: 1fr; }
         }
 
-        .calc-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px; margin-bottom: 24px; scrollbar-width: none; }
+.calc-tabs { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            overflow-x: visible; 
+            overflow-y: auto; 
+            padding: 4px; 
+            margin-bottom: 20px; 
+            scrollbar-width: none; 
+            max-height: 55vh;
+        }
         .calc-tabs::-webkit-scrollbar { display: none; }
         .calc-tab {
-            padding: 10px 18px; background: #fff; border: 1px solid var(--glass-border);
-            border-radius: 12px; font-size: 0.7rem; font-weight: 700; color: var(--text-dim); transition: 0.3s;
+            width: 100%;
+            padding: 10px 14px; background: #fff; border: 1px solid var(--glass-border);
+            border-radius: 12px; font-size: 0.75rem; font-weight: 800; color: var(--text-dim); transition: 0.3s;
             box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            text-align: left;
+            white-space: nowrap;
         }
         .calc-tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 8px 20px var(--primary-glow); }
         .active-label { color: var(--success); font-weight: 800; }
@@ -1283,12 +1296,12 @@
             </div>
         </div>
 
-        <div class="main-tabs">
-            <button onclick="window.switchTab('fiches')" id="tab-fiches" class="main-tab active">📋 Fiches</button>
-            <button onclick="window.switchTab('analyses')" id="tab-analyses" class="main-tab">🧪 Analyses</button>
-            <button onclick="window.switchTab('preps')" id="tab-preps" class="main-tab">⚗️ Preps</button>
-            <button onclick="window.switchTab('photos')" id="tab-photos" class="main-tab">📸 Photos</button>
-            <button onclick="window.switchTab('registres')" id="tab-registres" class="main-tab">📓 Registres</button>
+        <div class="main-tabs" id="mainTabs">
+            <button onclick="window.switchTab('fiches')" id="tab-fiches" class="main-tab active" draggable="true" data-tab-id="fiches">📋 Fiches</button>
+            <button onclick="window.switchTab('analyses')" id="tab-analyses" class="main-tab" draggable="true" data-tab-id="analyses">🧪 Analyses</button>
+            <button onclick="window.switchTab('preps')" id="tab-preps" class="main-tab" draggable="true" data-tab-id="preps">⚗️ Preps</button>
+            <button onclick="window.switchTab('photos')" id="tab-photos" class="main-tab" draggable="true" data-tab-id="photos">📸 Photos</button>
+            <button onclick="window.switchTab('registres')" id="tab-registres" class="main-tab" draggable="true" data-tab-id="registres">📓 Registres</button>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
@@ -1344,7 +1357,8 @@
             </div>
 
             <!-- MODE : DOSAGE (Règle de 3) -->
-            <div id="section-dose" class="calc-section active">
+            <div id="section-dose" class="calc-section" style="display:none;">
+                <button type="button" class="boite-toggle" data-toggle-target="section-dose" style="width:100%; margin:10px 0 12px; padding:12px 14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:rgba(255,255,255,0.95); border-radius:14px; font-weight:900; cursor:pointer; text-transform:uppercase; letter-spacing:0.5px;">📌 Dosage</button>
                 <div
                     style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
                     <div class="form-group">
@@ -1650,16 +1664,92 @@
                 </div>
             </div>
 
-            <!-- RESULTAT -->
+            <!-- RESULTATS (1 écran par mode de calcul) -->
             <div
                 style="margin-top: 20px; padding: 25px; background: #4f46e5; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 28px; text-align: center; box-shadow: 0 15px 35px rgba(79, 70, 229, 0.25); border: 1px solid rgba(255,255,255,0.1);">
-                <div id="resultLabel"
-                    style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">
-                    Masse à prélever</div>
-                <div id="calcResult" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">0.00</div>
-                <div id="unitDisplay"
-                    style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">grammes
-                    (g)</div>
+
+                <div id="calcResultsScreens" style="display:flex; flex-direction:column; gap:0;">
+                    <!-- dose -->
+                    <div class="calc-screen" data-mode="dose" style="display:none;">
+                        <div id="resultLabel-dose"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Quantité à prélever</div>
+                        <div id="calcResult-dose" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">0.00</div>
+                        <div id="unitDisplay-dose"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">grammes ou ml</div>
+                    </div>
+
+                    <!-- molar -->
+                    <div class="calc-screen" data-mode="molar" style="display:none;">
+                        <div id="resultLabel-molar"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Masse à peser</div>
+                        <div id="calcResult-molar" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">0.00</div>
+                        <div id="unitDisplay-molar"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">grammes (g)</div>
+                    </div>
+
+                    <!-- percent -->
+                    <div class="calc-screen" data-mode="percent" style="display:none;">
+                        <div id="resultLabel-percent"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Masse de produit à peser</div>
+                        <div id="calcResult-percent" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">0.00</div>
+                        <div id="unitDisplay-percent"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">grammes (g)</div>
+                    </div>
+
+                    <!-- dilution -->
+                    <div class="calc-screen" data-mode="dilution" style="display:none;">
+                        <div id="resultLabel-dilution"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Volume de Stock à prélever (V1)</div>
+                        <div id="calcResult-dilution" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">0.00</div>
+                        <div id="unitDisplay-dilution"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">millilitres (ml)</div>
+                    </div>
+
+                    <!-- ratio -->
+                    <div class="calc-screen" data-mode="ratio" style="display:none;">
+                        <div id="resultLabel-ratio"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Dilution par Rapport (ex: 1/10)</div>
+                        <div id="calcResult-ratio" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">0.00</div>
+                        <div id="unitDisplay-ratio"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">ml de produit + ml de diluant</div>
+                    </div>
+
+                    <!-- colonies -->
+                    <div class="calc-screen" data-mode="colonies" style="display:none;">
+                        <div id="resultLabel-colonies"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Resultat bulletin</div>
+                        <div id="calcResult-colonies" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">0.00</div>
+                        <div id="unitDisplay-colonies"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">UFC / 1 ml</div>
+                    </div>
+
+                    <!-- boites -->
+                    <div class="calc-screen" data-mode="boites" style="display:none;">
+                        <div id="resultLabel-boites"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Nb de Boîtes Total</div>
+                        <div id="calcResult-boites" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">0</div>
+                        <div id="unitDisplay-boites"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">unités</div>
+                    </div>
+
+                    <!-- expiry -->
+                    <div class="calc-screen" data-mode="expiry" style="display:none;">
+                        <div id="resultLabel-expiry"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Date d'Expiration (-1 jour)</div>
+                        <div id="calcResult-expiry" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">---</div>
+                        <div id="unitDisplay-expiry"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">Date calculée</div>
+                    </div>
+
+                    <!-- cycle -->
+                    <div class="calc-screen" data-mode="cycle" style="display:none;">
+                        <div id="resultLabel-cycle"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.85); font-weight: 800; margin-bottom: 10px; letter-spacing: 1.5px;">Différence de temps</div>
+                        <div id="calcResult-cycle" style="font-size: 2.5rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">00h 00m 00s</div>
+                        <div id="unitDisplay-cycle"
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 5px;">Durée de stérilisation</div>
+                    </div>
+                </div>
 
                 <button onclick="window.addCalcToFiche()"
                     style="margin-top: 22px; width: 100%; border: none; padding: 15px; border-radius: 18px; background: #ffffff; color: var(--primary); font-weight: 900; font-size: 0.75rem; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.1); transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1); text-transform: uppercase; letter-spacing: 0.5px;">
@@ -2315,6 +2405,178 @@
         let touchendX = 0;
         const tabsOrder = ['fiches', 'analyses', 'preps', 'photos', 'registres'];
 
+        // ===========================
+        // REORDER DES ONGLETs PRINCIPAUX (drag&drop manuel)
+        // ===========================
+        window.mainTabsOrderStorageKey = 'microbio_main_tabs_order';
+
+        function getMainTabsDefaultOrder() {
+            // Ordre demandé (visuel / HTML): Fiches -> Analyses -> Preps -> Photos -> Registres
+            return ['fiches', 'analyses', 'preps', 'photos', 'registres'];
+        }
+
+        // Appliquer l'ordre & activer le drag&drop une seule fois
+        window.__mainTabsInitDone = false;
+        function initMainTabsOnce() {
+            if (window.__mainTabsInitDone) return;
+            window.__mainTabsInitDone = true;
+            reorderMainTabsInDOM();
+            wireMainTabsDragAndDrop();
+        }
+
+
+        function getCurrentMainTabOrderFromDOM() {
+            const container = document.getElementById('mainTabs');
+            if (!container) return [];
+            return Array.from(container.querySelectorAll('.main-tab'))
+                .map(btn => btn.getAttribute('data-tab-id'))
+                .filter(Boolean);
+        }
+
+        function persistMainTabsOrder(order) {
+            if (!Array.isArray(order) || order.length === 0) return;
+            localStorage.setItem(window.mainTabsOrderStorageKey, JSON.stringify(order));
+        }
+
+        function loadMainTabsOrder() {
+            try {
+                const raw = localStorage.getItem(window.mainTabsOrderStorageKey);
+                if (!raw) return getMainTabsDefaultOrder();
+                const parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed) || parsed.length === 0) return getMainTabsDefaultOrder();
+
+                // Forcer la nouvelle séquence si des anciens ordres sont présents.
+                const wanted = getMainTabsDefaultOrder();
+                const wantedSet = new Set(wanted);
+                const filtered = parsed.filter(id => wantedSet.has(id));
+                // Re-composer l'ordre exact: même si localStorage a une vieille valeur.
+                return wanted.map(id => (filtered.includes(id) ? id : id));
+            } catch (e) {
+                return getMainTabsDefaultOrder();
+            }
+        }
+
+
+        function reorderMainTabsInDOM() {
+            const container = document.getElementById('mainTabs');
+            if (!container) return;
+
+            const currentTabs = Array.from(container.querySelectorAll('.main-tab'));
+            const tabById = new Map(currentTabs.map(btn => [btn.getAttribute('data-tab-id'), btn]));
+
+            const activeEl = container.querySelector('.main-tab.active');
+            const activeTabId = activeEl ? activeEl.getAttribute('data-tab-id') : null;
+
+            let order = loadMainTabsOrder();
+            const defaultOrder = getMainTabsDefaultOrder();
+
+            // Fallback + cleanup: garder seulement les ids existants
+            const existingIds = currentTabs.map(b => b.getAttribute('data-tab-id'));
+            order = (order && order.length ? order : defaultOrder).filter(id => existingIds.includes(id));
+
+            // Ajouter les tabs manquantes (si jamais)
+            defaultOrder.forEach(id => {
+                if (existingIds.includes(id) && !order.includes(id)) order.push(id);
+            });
+
+            // Si aucun ordre n'est valide, sortir
+            if (!order.length) return;
+
+            // Réordonner
+            const frag = document.createDocumentFragment();
+            order.forEach(id => {
+                const btn = tabById.get(id);
+                if (btn) frag.appendChild(btn);
+            });
+            container.innerHTML = '';
+            container.appendChild(frag);
+
+            // Remettre active
+            if (activeTabId) {
+                const activeBtn = container.querySelector(`.main-tab[data-tab-id="${activeTabId}"]`);
+                if (activeBtn) activeBtn.classList.add('active');
+            }
+        }
+
+        function wireMainTabsDragAndDrop() {
+            const container = document.getElementById('mainTabs');
+            if (!container) return;
+
+            container.querySelectorAll('.main-tab').forEach(btn => {
+                btn.setAttribute('draggable', 'true');
+            });
+
+            let draggedTabId = null;
+            let isDraggingMainTabs = false;
+
+            window.onMainTabsDragStart = function (e, tabId) {
+                draggedTabId = tabId;
+                isDraggingMainTabs = true;
+                e.dataTransfer.setData('text/plain', tabId);
+                e.target.style.opacity = '0.6';
+            };
+
+            window.onMainTabsDragOver = function (e) {
+                if (!isDraggingMainTabs) return;
+                e.preventDefault();
+            };
+
+            window.onMainTabsDrop = function (e, targetTabId) {
+                e.preventDefault();
+                if (!draggedTabId || draggedTabId === targetTabId) return;
+
+                const btnById = new Map(
+                    Array.from(container.querySelectorAll('.main-tab'))
+                        .map(b => [b.getAttribute('data-tab-id'), b])
+                );
+
+                let order = loadMainTabsOrder();
+                if (!Array.isArray(order) || order.length === 0) order = getCurrentMainTabOrderFromDOM();
+
+                // Si l'ordre stocké ne contient pas les ids, partir du DOM
+                const existingIds = Array.from(btnById.keys());
+                order = order.filter(id => existingIds.includes(id));
+
+                // Garantir tous les ids
+                getMainTabsDefaultOrder().forEach(id => {
+                    if (existingIds.includes(id) && !order.includes(id)) order.push(id);
+                });
+
+                const fromIdx = order.indexOf(draggedTabId);
+                const toIdx = order.indexOf(targetTabId);
+                if (fromIdx === -1 || toIdx === -1) return;
+
+                order.splice(fromIdx, 1);
+                order.splice(toIdx, 0, draggedTabId);
+
+                persistMainTabsOrder(order);
+                reorderMainTabsInDOM();
+
+                // Garder l'onglet actif
+                // (la réordonnance ci-dessus le remet si possible)
+                window.showToast && window.showToast('Ordre onglets enregistré !', 'success', 1000);
+
+                draggedTabId = null;
+                isDraggingMainTabs = false;
+            };
+
+            // Re-wire les handlers inline existants (car l'HTML a déjà draggable, mais pas nos events)
+            container.querySelectorAll('.main-tab').forEach(btn => {
+                const tabId = btn.getAttribute('data-tab-id');
+                btn.addEventListener('dragstart', (e) => window.onMainTabsDragStart(e, tabId));
+                btn.addEventListener('dragover', (e) => window.onMainTabsDragOver(e));
+                btn.addEventListener('drop', (e) => window.onMainTabsDrop(e, tabId));
+                btn.addEventListener('dragend', () => {
+                    isDraggingMainTabs = false;
+                    draggedTabId = null;
+                });
+            });
+
+            // Flag global pour bloquer le swipe pendant drag
+            window.__mainTabsDragging = () => isDraggingMainTabs;
+        }
+
+
         function handleGesture() {
             const threshold = 100; // Seuil de 100px pour déclencher le swipe
             if (touchendX < touchstartX - threshold) {
@@ -2334,13 +2596,13 @@
         }
 
         document.addEventListener('touchstart', e => {
-            // Ne pas déclencher le swipe si on est dans une zone scrollable horizontalement comme .prep-tags
-            if (e.target.closest('.prep-tags, .main-tabs, .calc-tabs, .modal-content, .reg-table')) return;
+            // Ne pas déclencher le swipe si on est dans une zone scrollable horizontalement ou en calculatrice
+            if (e.target.closest('.prep-tags, .main-tabs, .calc-tabs, #calcOverlay, #calcOverlay * , .modal-content, .reg-table')) return;
             touchstartX = e.changedTouches[0].screenX;
         }, {passive: true});
 
         document.addEventListener('touchend', e => {
-            if (e.target.closest('.prep-tags, .main-tabs, .calc-tabs, .modal-content, .reg-table')) return;
+            if (e.target.closest('.prep-tags, .main-tabs, .calc-tabs, #calcOverlay, #calcOverlay * , .modal-content, .reg-table')) return;
             touchendX = e.changedTouches[0].screenX;
             handleGesture();
         }, {passive: true});
@@ -3048,9 +3310,11 @@
         };
 
         window.addCalcToFiche = function () {
-            const res = document.getElementById('calcResult').innerText;
-            const unit = document.getElementById('unitDisplay').innerText;
-            const label = document.getElementById('resultLabel').innerText;
+            const mode = window.currentCalcMode || 'dose';
+            const res = document.getElementById(`calcResult-${mode}`)?.innerText ?? '';
+            const unit = document.getElementById(`unitDisplay-${mode}`)?.innerText ?? '';
+            const label = document.getElementById(`resultLabel-${mode}`)?.innerText ?? '';
+
             const summaryDiv = document.getElementById('boites-summary-display');
             let summaryText = "";
 
@@ -3083,9 +3347,12 @@
 
         // Dynamic Calculator Tabs ordering
         window.renderCalcTabs = function() {
+            // Onglets de calcul : générer/réordonner selon l'ordre stocké
             const container = document.querySelector('.calc-tabs');
+
             if (!container) return;
-            
+
+             
             let order = JSON.parse(localStorage.getItem('microbio_calc_tabs_order'));
             if (!order || order.length === 0) {
                 order = ['dose', 'molar', 'percent', 'dilution', 'ratio', 'colonies', 'boites', 'expiry', 'cycle'];
@@ -3208,64 +3475,50 @@
         };
 
         window.setCalcMode = function (mode, e) {
-            document.querySelectorAll('.calc-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.calc-section').forEach(s => s.classList.remove('active'));
+            // En mode vertical, on calcule seulement selon le mode (l'affichage des sections est déjà en vertical via CSS)
+            window.currentCalcMode = mode;
 
-            const tabBtn = document.getElementById('tab-btn-' + mode);
-            if (tabBtn) tabBtn.classList.add('active');
-            
-            const sect = document.getElementById('section-' + mode);
-            if (sect) sect.classList.add('active');
-
-            const label = document.getElementById('resultLabel');
-            const unit = document.getElementById('unitDisplay');
             const boitesSummary = document.getElementById('boites-summary-display');
             if (boitesSummary && mode !== 'boites') boitesSummary.style.display = 'none';
 
+            // Affiche uniquement l'écran résultat du mode sélectionné
+            document.querySelectorAll('#calcResultsScreens .calc-screen').forEach(screen => {
+                const sm = screen.getAttribute('data-mode');
+                screen.style.display = (sm === mode) ? 'block' : 'none';
+            });
+
+            // IMPORTANT : force l'affichage immédiat en bas quand on change de mode
+            const activeScreen = document.querySelector(`#calcResultsScreens .calc-screen[data-mode="${mode}"]`);
+            if (activeScreen) activeScreen.style.display = 'block';
+
             if (mode === 'dose') {
-                label.innerText = "Quantité à prélever";
-                unit.innerText = "grammes ou ml";
                 window.calculateThree();
             } else if (mode === 'molar') {
-                label.innerText = "Masse à peser";
-                unit.innerText = "grammes (g)";
                 window.calculateMolar();
             } else if (mode === 'percent') {
-                label.innerText = "Masse de produit à peser";
-                unit.innerText = "grammes (g)";
                 window.calculatePercent();
             } else if (mode === 'dilution') {
-                label.innerText = "Volume de Stock à prélever (V1)";
-                unit.innerText = "millilitres (ml)";
                 window.calculateDilution();
             } else if (mode === 'ratio') {
-                label.innerText = "Dilution par Rapport (ex: 1/10)";
-                unit.innerText = "ml de produit + ml de diluant";
                 window.calculateRatio();
             } else if (mode === 'colonies') {
-                label.innerText = "Resultat bulletin";
-                unit.innerText = "UFC / 1 ml";
                 window.calculateColonies();
             } else if (mode === 'boites') {
-                label.innerText = "Nb de Boîtes Total";
-                unit.innerText = "unités";
                 if (document.getElementById('milieux-list').children.length === 0) {
                     window.addMilieuRow();
                 }
                 window.calculateBoites();
             } else if (mode === 'expiry') {
-                label.innerText = "Date d'Expiration (-1 jour)";
-                unit.innerText = "Date calculée";
                 window.calculateExpiry();
             } else if (mode === 'cycle') {
-                label.innerText = "Différence de temps";
-                unit.innerText = "Durée de stérilisation";
                 window.calculateTimeDiff();
             }
         };
 
         // Sterilization time-difference calculator logic
-        window.calculateTimeDiff = function() {
+        // (moved to cycle/cycle.js)
+        window.calculateTimeDiff = window.calculateTimeDiff || function() {
+
             const sh = parseInt(document.getElementById('startH').value) || 0;
             const sm = parseInt(document.getElementById('startM').value) || 0;
             const ss = parseInt(document.getElementById('startS').value) || 0;
@@ -3294,25 +3547,35 @@
                 resultStr = `${pad(dm)}m ${pad(ds)}s`;
             }
 
-            document.getElementById('calcResult').innerText = resultStr;
-            document.getElementById('unitDisplay').innerText = `Durée de stérilisation`;
+            document.getElementById('calcResult-cycle').innerText = resultStr;
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="cycle"]');
+            if (screen) screen.style.display = 'block';
         };
 
-        window.calculateExpiry = function () {
+
+        // (moved to expiry/expiry.js)
+        window.calculateExpiry = window.calculateExpiry || function () {
+
             const dateVal = document.getElementById('calcPrepDate').value;
             const months = parseInt(document.getElementById('calcMonths').value) || 0;
-            
+
             if (!dateVal || months <= 0) {
-                document.getElementById('calcResult').innerText = "---";
+                document.getElementById('calcResult-expiry').innerText = "---";
+                const screen0 = document.querySelector('#calcResultsScreens .calc-screen[data-mode="expiry"]');
+                if (screen0) screen0.style.display = 'block';
                 return;
             }
-            
+
             const d = new Date(dateVal);
             d.setMonth(d.getMonth() + months);
             d.setDate(d.getDate() - 1);
-            
+
             const resultStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            document.getElementById('calcResult').innerText = resultStr;
+            document.getElementById('calcResult-expiry').innerText = resultStr;
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="expiry"]');
+            if (screen) screen.style.display = 'block';
 
             // Si le modal prep est ouvert, on peut mettre à jour directement
             const prepModal = document.getElementById('prepModalOverlay');
@@ -3325,6 +3588,7 @@
         };
 
         window.applyTestPreset = function(type) {
+
             const nbRaw = prompt("Saisir le nombre de produits (points) à analyser :", "1");
             if (!nbRaw) return;
             const nb = parseInt(nbRaw) || 1;
@@ -3469,7 +3733,11 @@
             }
 
             // Affichage Résultat Principal
-            document.getElementById('calcResult').innerText = total;
+            const out = document.getElementById('calcResult-boites');
+            if (out) out.innerText = total;
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="boites"]');
+            if (screen) screen.style.display = 'block';
 
             // Affichage Breakdown
             const summaryDiv = document.getElementById('boites-summary-display');
@@ -3534,17 +3802,26 @@
             const fact = parseFloat(document.getElementById('ratioFact').value) || 1;
             const vol = parseFloat(document.getElementById('ratioVol').value) || 0;
 
+            const out = document.getElementById('calcResult-ratio');
+            const unit = document.getElementById('unitDisplay-ratio');
+            if (!out) return;
+
             if (fact <= 1) {
-                document.getElementById('calcResult').innerText = "1:1";
-                document.getElementById('unitDisplay').innerText = "Pas de dilution";
+                out.innerText = "1:1";
+                if (unit) unit.innerText = "Pas de dilution";
+                const screen0 = document.querySelector('#calcResultsScreens .calc-screen[data-mode="ratio"]');
+                if (screen0) screen0.style.display = 'block';
                 return;
             }
 
             const sample = vol / fact;
             const diluent = vol - sample;
 
-            document.getElementById('calcResult').innerText = `${sample.toFixed(2)}`;
-            document.getElementById('unitDisplay').innerText = `ml de produit + ${diluent.toFixed(2)} ml de diluant`;
+            out.innerText = `${sample.toFixed(2)}`;
+            if (unit) unit.innerText = `ml de produit + ${diluent.toFixed(2)} ml de diluant`;
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="ratio"]');
+            if (screen) screen.style.display = 'block';
         };
 
         window.calculateColonies = function () {
@@ -3553,25 +3830,31 @@
             const bulletinVol = parseFloat(document.getElementById('colonyBulletinVol').value) || 1;
             const dilutionFactor = parseFloat(document.getElementById('colonyDilutionFactor').value) || 1;
 
+            const out = document.getElementById('calcResult-colonies');
+            const unit = document.getElementById('unitDisplay-colonies');
+            if (!out) return;
+
             if (analyzedVol <= 0) {
-                document.getElementById('calcResult').innerText = "0.00";
-                document.getElementById('unitDisplay').innerText = `UFC / ${bulletinVol} ml`;
+                out.innerText = "0.00";
+                if (unit) unit.innerText = `UFC / ${bulletinVol} ml`;
+                const screen0 = document.querySelector('#calcResultsScreens .calc-screen[data-mode="colonies"]');
+                if (screen0) screen0.style.display = 'block';
                 return;
             }
 
             const result = (colonies * dilutionFactor * bulletinVol) / analyzedVol;
 
-            // Règle demandée : 
-            // - si < 1 UFC/ml (ex: 0.9) => afficher "< 1"
-            // - sinon => afficher l'entier arrondi
             if (result < 1) {
-                document.getElementById('calcResult').innerText = "< 1";
+                out.innerText = "< 1";
             } else {
                 const rounded = Math.round(result);
-                document.getElementById('calcResult').innerText = String(rounded);
+                out.innerText = String(rounded);
             }
 
-            document.getElementById('unitDisplay').innerText = `UFC / ${bulletinVol} ml`;
+            if (unit) unit.innerText = `UFC / ${bulletinVol} ml`;
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="colonies"]');
+            if (screen) screen.style.display = 'block';
         };
 
         window.calculateThree = function () {
@@ -3580,10 +3863,17 @@
             const target = parseFloat(document.getElementById('targetVol').value) || 0;
 
             const result = (qty / ref) * target;
-            document.getElementById('calcResult').innerText = result.toLocaleString('fr-FR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 3
-            });
+            const out = document.getElementById('calcResult-dose');
+            if (out) {
+                out.innerText = result.toLocaleString('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 3
+                });
+            }
+
+            // Forcer l'affichage de l'écran Résultat correspondant
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="dose"]');
+            if (screen) screen.style.display = 'block';
         };
 
         window.calculateMolar = function () {
@@ -3593,10 +3883,16 @@
 
             // Formule : m = M * V(L) * PM
             const result = M * (Vml / 1000) * PM;
-            document.getElementById('calcResult').innerText = result.toLocaleString('fr-FR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 3
-            });
+            const out = document.getElementById('calcResult-molar');
+            if (out) {
+                out.innerText = result.toLocaleString('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 3
+                });
+            }
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="molar"]');
+            if (screen) screen.style.display = 'block';
         };
 
         window.calculatePercent = function () {
@@ -3605,10 +3901,16 @@
 
             // Formule : Masse = (% / 100) * Volume
             const result = (rate / 100) * vol;
-            document.getElementById('calcResult').innerText = result.toLocaleString('fr-FR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 3
-            });
+            const out = document.getElementById('calcResult-percent');
+            if (out) {
+                out.innerText = result.toLocaleString('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 3
+                });
+            }
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="percent"]');
+            if (screen) screen.style.display = 'block';
         };
 
         window.calculateDilution = function () {
@@ -3616,17 +3918,25 @@
             const C2 = parseFloat(document.getElementById('dilC2').value) || 0;
             const V2 = parseFloat(document.getElementById('dilV2').value) || 0;
 
+            const out = document.getElementById('calcResult-dilution');
+            if (!out) return;
+
             if (C1 === 0) {
-                document.getElementById('calcResult').innerText = "0.00";
+                out.innerText = "0.00";
+                const screen0 = document.querySelector('#calcResultsScreens .calc-screen[data-mode="dilution"]');
+                if (screen0) screen0.style.display = 'block';
                 return;
             }
 
             // Formule : V1 = (C2 * V2) / C1
             const result = (C2 * V2) / C1;
-            document.getElementById('calcResult').innerText = result.toLocaleString('fr-FR', {
+            out.innerText = result.toLocaleString('fr-FR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 3
             });
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="dilution"]');
+            if (screen) screen.style.display = 'block';
         };
 
         let isSelectionMode = false;

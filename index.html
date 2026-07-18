@@ -1234,42 +1234,39 @@
         @keyframes toastIn  { from { opacity: 0; transform: scale(0.8) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes toastOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.8) translateY(10px); } }
 
-        /* Indicateur réseau */
+        /* Indicateur reseau */
         #network-indicator {
             position: fixed;
-            top: 8px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 14px;
+            right: 14px;
             z-index: 9998;
-            padding: 5px 16px;
-            border-radius: 50px;
-            font-size: 0.65rem;
-            font-weight: 800;
-            font-family: 'Outfit', sans-serif;
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
             transition: all 0.4s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.16);
         }
-        #network-indicator.online  { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-        #network-indicator.offline { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        #network-indicator.online  { background: #059669; border: 3px solid #d1fae5; animation: pulse-dot 2s infinite; }
+        #network-indicator.offline { background: #dc2626; border: 3px solid #fee2e2; animation: none; }
         #network-dot {
-            width: 7px; height: 7px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
+            background: #fff;
+            opacity: 0.85;
         }
-        #network-indicator.online  #network-dot { background: #059669; animation: pulse-dot 2s infinite; }
-        #network-indicator.offline #network-dot { background: #dc2626; }
-        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
 </style>
 <body>
 
     <div id="toast-container"></div>
-    <div id="network-indicator" class="online">
+    <div id="network-indicator" class="online" role="status" aria-label="En ligne" title="En ligne">
         <div id="network-dot"></div>
-        <span id="network-label">EN LIGNE</span>
     </div>
-
 
     <header class="header">
         <div class="header-top">
@@ -1485,6 +1482,40 @@
                         <label>Volume Total Souhaité (ml)</label>
                         <input type="number" id="ratioVol" class="form-input" placeholder="ex: 100"
                             oninput="window.calculateRatio()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE : COLONIES -->
+            <div id="section-colonies" class="calc-section">
+                <div
+                    style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div class="form-group">
+                        <label>Colonies comptees</label>
+                        <input type="number" id="colonyCount" class="form-input" placeholder="ex: 12"
+                            oninput="window.calculateColonies()">
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div class="form-group">
+                            <label>Volume analyse (ml)</label>
+                            <input type="number" id="colonyAnalyzedVol" class="form-input" value="100"
+                                oninput="window.calculateColonies()">
+                        </div>
+                        <div class="form-group">
+                            <label>Volume bulletin (ml)</label>
+                            <input type="number" id="colonyBulletinVol" class="form-input" value="1"
+                                oninput="window.calculateColonies()">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Facteur de dilution</label>
+                        <input type="number" id="colonyDilutionFactor" class="form-input" value="1"
+                            oninput="window.calculateColonies()">
+                        <div class="quick-pick">
+                            <button class="pick-btn" onclick="document.getElementById('colonyAnalyzedVol').value=100; document.getElementById('colonyBulletinVol').value=1; document.getElementById('colonyDilutionFactor').value=1; window.calculateColonies()">EAU 100ML -> 1ML</button>
+                            <button class="pick-btn" onclick="document.getElementById('colonyAnalyzedVol').value=1; document.getElementById('colonyBulletinVol').value=1; document.getElementById('colonyDilutionFactor').value=1; window.calculateColonies()">1ML -> 1ML</button>
+                            <button class="pick-btn" onclick="document.getElementById('colonyDilutionFactor').value=10; window.calculateColonies()">DIL. x10</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2361,20 +2392,13 @@
 
         function updateNetworkIndicator() {
             const ind = document.getElementById('network-indicator');
-            const dot = document.getElementById('network-dot');
-            const label = document.getElementById('network-label');
             if (!ind) return;
-            if (navigator.onLine) {
-                ind.className = 'online';
-                label.innerText = 'EN LIGNE';
-                // Masquer après 3s quand en ligne
-                setTimeout(() => { ind.style.opacity = '0'; ind.style.pointerEvents = 'none'; }, 3000);
-            } else {
-                ind.className = 'offline';
-                ind.style.opacity = '1';
-                ind.style.pointerEvents = 'auto';
-                label.innerText = 'HORS LIGNE — Données sauvegardées localement';
-            }
+            const isOnline = navigator.onLine;
+            ind.className = isOnline ? 'online' : 'offline';
+            ind.style.opacity = '1';
+            ind.style.pointerEvents = 'auto';
+            ind.setAttribute('aria-label', isOnline ? 'En ligne' : 'Hors ligne');
+            ind.title = isOnline ? 'En ligne' : 'Hors ligne - donnees sauvegardees localement';
         }
         window.addEventListener('online',  () => { updateNetworkIndicator(); window.showToast('Connexion rétablie — Synchronisation en cours', 'success'); });
         window.addEventListener('offline', () => { updateNetworkIndicator(); window.showToast('Mode hors ligne activé — Travail continu garanti', 'warning', 4000); });
@@ -2437,7 +2461,8 @@
             germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
             consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
             diluants: ['SNT 90ML', 'PH7', 'Eau Peptonée'],
-            reactifs: ['TWEEN 80', 'IPA 70%']
+            reactifs: ['TWEEN 80', 'IPA 70%'],
+            additifs: []
         };
         
         const FICHES_COL = "fiches";
@@ -2857,6 +2882,8 @@
                     qty: document.getElementById('newAdditifQty').value.trim()
                 };
 
+                window.saveAdditifNameToCatalog(data.name);
+
                 if (editIdx !== "") {
                     // Modification
                     const entries = container.querySelectorAll('.additif-entry');
@@ -2954,6 +2981,7 @@
                 e.preventDefault();
                 const id = document.getElementById('prepEditId').value;
                 const additifs = Array.from(document.getElementById('prepAdditifsContainer').querySelectorAll('.additif-entry')).map(div => JSON.parse(div.dataset.info));
+                additifs.forEach(a => window.saveAdditifNameToCatalog(a.name));
 
                 const flaconEntames = Array.from(document.querySelectorAll('.flacon-entame-row')).map(row => ({
                     num: row.querySelector('.fe-num').value,
@@ -3060,7 +3088,13 @@
             
             let order = JSON.parse(localStorage.getItem('microbio_calc_tabs_order'));
             if (!order || order.length === 0) {
-                order = ['dose', 'molar', 'percent', 'dilution', 'ratio', 'boites', 'expiry', 'cycle'];
+                order = ['dose', 'molar', 'percent', 'dilution', 'ratio', 'colonies', 'boites', 'expiry', 'cycle'];
+                localStorage.setItem('microbio_calc_tabs_order', JSON.stringify(order));
+            }
+            if (!order.includes('colonies')) {
+                const boitesIndex = order.indexOf('boites');
+                if (boitesIndex > -1) order.splice(boitesIndex, 0, 'colonies');
+                else order.push('colonies');
                 localStorage.setItem('microbio_calc_tabs_order', JSON.stringify(order));
             }
             if (!order.includes('cycle')) {
@@ -3074,6 +3108,7 @@
                 percent: '% Massique',
                 dilution: 'Dilution (%)',
                 ratio: 'Rapport (1/10)',
+                colonies: 'Colonies',
                 boites: 'Boîtes',
                 expiry: 'Péremption',
                 cycle: '⏱️ Temps / Cycle'
@@ -3184,6 +3219,8 @@
 
             const label = document.getElementById('resultLabel');
             const unit = document.getElementById('unitDisplay');
+            const boitesSummary = document.getElementById('boites-summary-display');
+            if (boitesSummary && mode !== 'boites') boitesSummary.style.display = 'none';
 
             if (mode === 'dose') {
                 label.innerText = "Quantité à prélever";
@@ -3205,6 +3242,10 @@
                 label.innerText = "Dilution par Rapport (ex: 1/10)";
                 unit.innerText = "ml de produit + ml de diluant";
                 window.calculateRatio();
+            } else if (mode === 'colonies') {
+                label.innerText = "Resultat bulletin";
+                unit.innerText = "UFC / 1 ml";
+                window.calculateColonies();
             } else if (mode === 'boites') {
                 label.innerText = "Nb de Boîtes Total";
                 unit.innerText = "unités";
@@ -3506,6 +3547,33 @@
             document.getElementById('unitDisplay').innerText = `ml de produit + ${diluent.toFixed(2)} ml de diluant`;
         };
 
+        window.calculateColonies = function () {
+            const colonies = parseFloat(document.getElementById('colonyCount').value) || 0;
+            const analyzedVol = parseFloat(document.getElementById('colonyAnalyzedVol').value) || 0;
+            const bulletinVol = parseFloat(document.getElementById('colonyBulletinVol').value) || 1;
+            const dilutionFactor = parseFloat(document.getElementById('colonyDilutionFactor').value) || 1;
+
+            if (analyzedVol <= 0) {
+                document.getElementById('calcResult').innerText = "0.00";
+                document.getElementById('unitDisplay').innerText = `UFC / ${bulletinVol} ml`;
+                return;
+            }
+
+            const result = (colonies * dilutionFactor * bulletinVol) / analyzedVol;
+
+            // Règle demandée : 
+            // - si < 1 UFC/ml (ex: 0.9) => afficher "< 1"
+            // - sinon => afficher l'entier arrondi
+            if (result < 1) {
+                document.getElementById('calcResult').innerText = "< 1";
+            } else {
+                const rounded = Math.round(result);
+                document.getElementById('calcResult').innerText = String(rounded);
+            }
+
+            document.getElementById('unitDisplay').innerText = `UFC / ${bulletinVol} ml`;
+        };
+
         window.calculateThree = function () {
             const qty = parseFloat(document.getElementById('refQty').value) || 0;
             const ref = parseFloat(document.getElementById('refVol').value) || 1;
@@ -3649,10 +3717,34 @@
             window.showToast("❌ Erreur de synchronisation [Mon Catalogue] : " + err.message, 'error', 5000);
         });
 
+        window.saveAdditifNameToCatalog = function(name) {
+            const val = (name || '').trim();
+            if (!val) return;
+            if (!catalogs.additifs) catalogs.additifs = [];
+            const exists = catalogs.additifs.some(item => item.toLowerCase() === val.toLowerCase());
+            if (exists) return;
+
+            catalogs.additifs.push(val);
+            renderCatalogs();
+
+            const newCatalogs = JSON.parse(JSON.stringify(catalogs));
+            window.db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs)
+                .catch(err => {
+                    console.error("Erreur Sync Additif:", err);
+                    window.showToast("Note: additif conserve localement, sync cloud a verifier.", 'info');
+                });
+        };
         window.addToCatalog = function (type, inputId) {
             const input = document.getElementById(inputId);
             if (!input) return;
             const val = input.value.trim();
+
+            
+            if (type === 'additifs') {
+                window.saveAdditifNameToCatalog(val);
+                input.value = '';
+                return;
+            }
 
             if (val && catalogs[type] && !catalogs[type].includes(val)) {
                 catalogs[type].push(val);
@@ -3665,6 +3757,25 @@
                         window.showToast("Note: Enregistré localement, mais vérifiez vos règles Firebase pour le Cloud.", 'info');
                     });
             }
+        };
+
+        window.compareAnalysisItems = function(a, b) {
+            const lotCompare = String(a.lot || '').localeCompare(String(b.lot || ''), 'fr', {
+                numeric: true,
+                sensitivity: 'base'
+            });
+            if (lotCompare !== 0) return lotCompare;
+
+            const bulletinCompare = String(a.bulletin || '').localeCompare(String(b.bulletin || ''), 'fr', {
+                numeric: true,
+                sensitivity: 'base'
+            });
+            if (bulletinCompare !== 0) return bulletinCompare;
+
+            return String(a.produit || '').localeCompare(String(b.produit || ''), 'fr', {
+                numeric: true,
+                sensitivity: 'base'
+            });
         };
 
         window.deleteFromCatalog = function (type, val) {
@@ -4180,6 +4291,8 @@
                     }
                     map.get(key).items.push(a);
                 });
+
+                groups.forEach(g => g.items.sort(window.compareAnalysisItems));
 
                 if (groups.length === 0) {
                     container.innerHTML = `<div class="empty-state"><div class="empty-icon">🧪</div><h3>Aucune analyse trouvée</h3></div>`;

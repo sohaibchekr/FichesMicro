@@ -54,6 +54,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
+    <!-- SortableJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
     <!-- SEO & Icons -->
     <meta name="description" content="Application de consultation des résumés de laboratoire microbiologique.">
     <meta name="theme-color" content="#f8fafc">
@@ -218,8 +221,14 @@
         }
 
         /* Tabs for Calculator */
-.calc-tabs {
-            display: none !important;
+        .calc-tabs {
+            display: flex !important;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 5px;
+            border-radius: 12px;
         }
 
         .calc-tab {
@@ -234,6 +243,7 @@
             cursor: pointer;
             border-radius: 8px;
             transition: all 0.2s;
+            text-align: left;
         }
 
         .calc-tab.active {
@@ -242,17 +252,14 @@
         }
 
         .calc-section {
-            display: block; /* mode vertical: on affiche tout */
+            display: none;
         }
 
         .calc-section.active {
             display: block;
         }
-
-        /* Mode calculatrice vertical (mobile + global): cacher la barre d'onglets */
-        .calc-tabs {
-            display: none;
-        }
+        
+        .boite-toggle { display: none !important; }
 
         .quick-pick {
             display: flex;
@@ -2325,6 +2332,7 @@
                 m.style.display = 'none';
                 m.classList.remove('active');
             });
+            initMainTabsOnce();
         });
 
         // Global State & Functions
@@ -2406,174 +2414,72 @@
         const tabsOrder = ['fiches', 'analyses', 'preps', 'photos', 'registres'];
 
         // ===========================
-        // REORDER DES ONGLETs PRINCIPAUX (drag&drop manuel)
+        // REORDER DES ONGLETs PRINCIPAUX (SortableJS)
         // ===========================
         window.mainTabsOrderStorageKey = 'microbio_main_tabs_order';
 
         function getMainTabsDefaultOrder() {
-            // Ordre demandé (visuel / HTML): Fiches -> Analyses -> Preps -> Photos -> Registres
             return ['fiches', 'analyses', 'preps', 'photos', 'registres'];
         }
 
-        // Appliquer l'ordre & activer le drag&drop une seule fois
         window.__mainTabsInitDone = false;
         function initMainTabsOnce() {
             if (window.__mainTabsInitDone) return;
             window.__mainTabsInitDone = true;
-            reorderMainTabsInDOM();
-            wireMainTabsDragAndDrop();
-        }
-
-
-        function getCurrentMainTabOrderFromDOM() {
+            
             const container = document.getElementById('mainTabs');
-            if (!container) return [];
-            return Array.from(container.querySelectorAll('.main-tab'))
-                .map(btn => btn.getAttribute('data-tab-id'))
-                .filter(Boolean);
-        }
+            if (!container) return;
 
-        function persistMainTabsOrder(order) {
-            if (!Array.isArray(order) || order.length === 0) return;
-            localStorage.setItem(window.mainTabsOrderStorageKey, JSON.stringify(order));
-        }
-
-        function loadMainTabsOrder() {
+            // Charger l'ordre du localStorage et réordonner le DOM
             try {
                 const raw = localStorage.getItem(window.mainTabsOrderStorageKey);
-                if (!raw) return getMainTabsDefaultOrder();
-                const parsed = JSON.parse(raw);
-                if (!Array.isArray(parsed) || parsed.length === 0) return getMainTabsDefaultOrder();
-
-                // Forcer la nouvelle séquence si des anciens ordres sont présents.
-                const wanted = getMainTabsDefaultOrder();
-                const wantedSet = new Set(wanted);
-                const filtered = parsed.filter(id => wantedSet.has(id));
-                // Re-composer l'ordre exact: même si localStorage a une vieille valeur.
-                return wanted.map(id => (filtered.includes(id) ? id : id));
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        const currentTabs = Array.from(container.querySelectorAll('.main-tab'));
+                        const tabById = new Map(currentTabs.map(btn => [btn.getAttribute('data-tab-id'), btn]));
+                        
+                        const frag = document.createDocumentFragment();
+                        parsed.forEach(id => {
+                            if (tabById.has(id)) {
+                                frag.appendChild(tabById.get(id));
+                                tabById.delete(id);
+                            }
+                        });
+                        tabById.forEach(btn => frag.appendChild(btn));
+                        
+                        container.innerHTML = '';
+                        container.appendChild(frag);
+                    }
+                }
             } catch (e) {
-                return getMainTabsDefaultOrder();
+                console.warn('Erreur lecture ordre tabs', e);
             }
-        }
 
-
-        function reorderMainTabsInDOM() {
-            const container = document.getElementById('mainTabs');
-            if (!container) return;
-
-            const currentTabs = Array.from(container.querySelectorAll('.main-tab'));
-            const tabById = new Map(currentTabs.map(btn => [btn.getAttribute('data-tab-id'), btn]));
-
-            const activeEl = container.querySelector('.main-tab.active');
-            const activeTabId = activeEl ? activeEl.getAttribute('data-tab-id') : null;
-
-            let order = loadMainTabsOrder();
-            const defaultOrder = getMainTabsDefaultOrder();
-
-            // Fallback + cleanup: garder seulement les ids existants
-            const existingIds = currentTabs.map(b => b.getAttribute('data-tab-id'));
-            order = (order && order.length ? order : defaultOrder).filter(id => existingIds.includes(id));
-
-            // Ajouter les tabs manquantes (si jamais)
-            defaultOrder.forEach(id => {
-                if (existingIds.includes(id) && !order.includes(id)) order.push(id);
-            });
-
-            // Si aucun ordre n'est valide, sortir
-            if (!order.length) return;
-
-            // Réordonner
-            const frag = document.createDocumentFragment();
-            order.forEach(id => {
-                const btn = tabById.get(id);
-                if (btn) frag.appendChild(btn);
-            });
-            container.innerHTML = '';
-            container.appendChild(frag);
-
-            // Remettre active
-            if (activeTabId) {
-                const activeBtn = container.querySelector(`.main-tab[data-tab-id="${activeTabId}"]`);
-                if (activeBtn) activeBtn.classList.add('active');
+            // Init SortableJS
+            if (typeof Sortable !== 'undefined') {
+                new Sortable(container, {
+                    animation: 150,
+                    delay: 150, // Délai long press pour mobile
+                    delayOnTouchOnly: true,
+                    dataIdAttr: 'data-tab-id',
+                    onStart: function (evt) {
+                        window.__isDraggingMainTabs = true;
+                    },
+                    onEnd: function (evt) {
+                        window.__isDraggingMainTabs = false;
+                    },
+                    store: {
+                        set: function (sortable) {
+                            const order = sortable.toArray();
+                            localStorage.setItem(window.mainTabsOrderStorageKey, JSON.stringify(order));
+                            if (window.showToast) window.showToast('Ordre onglets enregistré !', 'success', 1000);
+                        }
+                    }
+                });
             }
-        }
-
-        function wireMainTabsDragAndDrop() {
-            const container = document.getElementById('mainTabs');
-            if (!container) return;
-
-            container.querySelectorAll('.main-tab').forEach(btn => {
-                btn.setAttribute('draggable', 'true');
-            });
-
-            let draggedTabId = null;
-            let isDraggingMainTabs = false;
-
-            window.onMainTabsDragStart = function (e, tabId) {
-                draggedTabId = tabId;
-                isDraggingMainTabs = true;
-                e.dataTransfer.setData('text/plain', tabId);
-                e.target.style.opacity = '0.6';
-            };
-
-            window.onMainTabsDragOver = function (e) {
-                if (!isDraggingMainTabs) return;
-                e.preventDefault();
-            };
-
-            window.onMainTabsDrop = function (e, targetTabId) {
-                e.preventDefault();
-                if (!draggedTabId || draggedTabId === targetTabId) return;
-
-                const btnById = new Map(
-                    Array.from(container.querySelectorAll('.main-tab'))
-                        .map(b => [b.getAttribute('data-tab-id'), b])
-                );
-
-                let order = loadMainTabsOrder();
-                if (!Array.isArray(order) || order.length === 0) order = getCurrentMainTabOrderFromDOM();
-
-                // Si l'ordre stocké ne contient pas les ids, partir du DOM
-                const existingIds = Array.from(btnById.keys());
-                order = order.filter(id => existingIds.includes(id));
-
-                // Garantir tous les ids
-                getMainTabsDefaultOrder().forEach(id => {
-                    if (existingIds.includes(id) && !order.includes(id)) order.push(id);
-                });
-
-                const fromIdx = order.indexOf(draggedTabId);
-                const toIdx = order.indexOf(targetTabId);
-                if (fromIdx === -1 || toIdx === -1) return;
-
-                order.splice(fromIdx, 1);
-                order.splice(toIdx, 0, draggedTabId);
-
-                persistMainTabsOrder(order);
-                reorderMainTabsInDOM();
-
-                // Garder l'onglet actif
-                // (la réordonnance ci-dessus le remet si possible)
-                window.showToast && window.showToast('Ordre onglets enregistré !', 'success', 1000);
-
-                draggedTabId = null;
-                isDraggingMainTabs = false;
-            };
-
-            // Re-wire les handlers inline existants (car l'HTML a déjà draggable, mais pas nos events)
-            container.querySelectorAll('.main-tab').forEach(btn => {
-                const tabId = btn.getAttribute('data-tab-id');
-                btn.addEventListener('dragstart', (e) => window.onMainTabsDragStart(e, tabId));
-                btn.addEventListener('dragover', (e) => window.onMainTabsDragOver(e));
-                btn.addEventListener('drop', (e) => window.onMainTabsDrop(e, tabId));
-                btn.addEventListener('dragend', () => {
-                    isDraggingMainTabs = false;
-                    draggedTabId = null;
-                });
-            });
-
-            // Flag global pour bloquer le swipe pendant drag
-            window.__mainTabsDragging = () => isDraggingMainTabs;
+            
+            window.__mainTabsDragging = () => window.__isDraggingMainTabs || false;
         }
 
 
@@ -3475,8 +3381,23 @@
         };
 
         window.setCalcMode = function (mode, e) {
-            // En mode vertical, on calcule seulement selon le mode (l'affichage des sections est déjà en vertical via CSS)
             window.currentCalcMode = mode;
+
+            // Mettre à jour l'état actif des boutons
+            document.querySelectorAll('.calc-tab').forEach(t => t.classList.remove('active'));
+            if (e && e.currentTarget) {
+                e.currentTarget.classList.add('active');
+            } else {
+                const btn = document.getElementById(`tab-btn-${mode}`);
+                if (btn) btn.classList.add('active');
+            }
+
+            // Mettre à jour l'affichage des sections d'inputs
+            document.querySelectorAll('.calc-section').forEach(s => s.classList.remove('active'));
+            const activeInputSection = document.getElementById(`section-${mode}`);
+            if (activeInputSection) {
+                activeInputSection.classList.add('active');
+            }
 
             const boitesSummary = document.getElementById('boites-summary-display');
             if (boitesSummary && mode !== 'boites') boitesSummary.style.display = 'none';

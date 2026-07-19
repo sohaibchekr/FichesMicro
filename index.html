@@ -5427,8 +5427,10 @@
             div.innerHTML = `
                 <button type="button" onclick="document.getElementById('${rowId}').remove()" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer;">✕</button>
                 <div class="form-group">
-                    <label>Produit</label>
-                    <input type="text" class="form-input row-prod" value="${data ? data.produit : ''}" placeholder="Nom du produit..." list="produit-suggestions" required>
+                    <label>Produit <span style="font-size:0.6rem; color:var(--text-dim); font-weight:500;">(saisir nom ou code fiche pour auto-remplir)</span></label>
+                    <input type="text" class="form-input row-prod" value="${data ? data.produit : ''}" placeholder="Nom du produit ou code fiche..." list="fiche-suggest-${rowId}" required autocomplete="off">
+                    <datalist id="fiche-suggest-${rowId}"></datalist>
+                    <div class="fiche-link-badge" style="display:none; margin-top:6px; background:rgba(79,70,229,0.08); border:1px solid rgba(79,70,229,0.2); border-radius:10px; padding:6px 10px; font-size:0.62rem; color:var(--primary); font-weight:700;"></div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
@@ -5436,8 +5438,8 @@
                         <input type="text" class="form-input row-lot" value="${data ? (data.lot || '') : ''}" placeholder="ex: L240601">
                     </div>
                     <div class="form-group">
-                        <label>N° de contrôle</label>
-                        <input type="text" class="form-input row-code" value="${data ? (data.codeControl || '') : ''}" placeholder="ex: CTRL-001">
+                        <label>N° de contrôle <span class="code-autofill-hint" style="font-size:0.55rem; color:var(--success); font-weight:600;"></span></label>
+                        <input type="text" class="form-input row-code" value="${data ? (data.codeControl || '') : ''}" placeholder="ex: M-01">
                     </div>
                 </div>
 
@@ -5502,6 +5504,95 @@
             `;
             container.appendChild(div);
             updateDailyReadings(div, data ? data.dailyReadings : null);
+
+            // Initialiser l'autocomplete lié aux fiches signélétiques
+            window.initAnalysisRowAutofill(div);
+
+            // Si données existantes, afficher le badge si la fiche est reconnue
+            if (data && data.produit) {
+                const matchedFiche = fiches.find(f =>
+                    (f.designation || '').toLowerCase() === (data.produit || '').toLowerCase() ||
+                    (f.code && f.code.toLowerCase() === (data.codeControl || '').toLowerCase())
+                );
+                if (matchedFiche) window.applyFicheToRow(div, matchedFiche, false);
+            }
+        };
+
+        // Initialise l'autocomplete pour une ligne d'analyse
+        window.initAnalysisRowAutofill = function(rowDiv) {
+            const prodInput = rowDiv.querySelector('.row-prod');
+            const datalistEl = rowDiv.querySelector('datalist');
+            if (!prodInput || !datalistEl) return;
+
+            function refreshDatalist() {
+                const suggestions = [];
+                fiches.forEach(f => {
+                    if (f.designation) suggestions.push(f.designation);
+                    if (f.code) suggestions.push(f.code + ' — ' + (f.designation || ''));
+                });
+                datalistEl.innerHTML = [...new Set(suggestions)].map(s => `<option value="${s}">`).join('');
+            }
+            refreshDatalist();
+
+            prodInput.addEventListener('change', () => window.onAnalysisProdChange(prodInput, rowDiv));
+            prodInput.addEventListener('input', () => {
+                refreshDatalist();
+                const val = prodInput.value.trim();
+                const matched = fiches.find(f => f.code && f.code.toLowerCase() === val.toLowerCase());
+                if (matched) window.onAnalysisProdChange(prodInput, rowDiv);
+            });
+        };
+
+        // Cherche la fiche correspondant au produit saisi et déclenche l'autofill
+        window.onAnalysisProdChange = function(prodInput, rowDiv) {
+            const val = prodInput.value.trim().toLowerCase();
+            if (!val) return;
+            const codeFromSuggestion = val.split(' — ')[0].trim();
+            const matched = fiches.find(f =>
+                (f.designation || '').toLowerCase() === val ||
+                (f.code || '').toLowerCase() === val ||
+                (f.code || '').toLowerCase() === codeFromSuggestion
+            );
+            if (matched) {
+                if (val.includes(' — ')) prodInput.value = matched.designation || matched.code;
+                window.applyFicheToRow(rowDiv, matched, true);
+            }
+        };
+
+        // Applique les données d'une fiche signélétique à une ligne d'analyse
+        window.applyFicheToRow = function(rowDiv, fiche, overwrite = true) {
+            const codeInput = rowDiv.querySelector('.row-code');
+            const badge = rowDiv.querySelector('.fiche-link-badge');
+            const codeHint = rowDiv.querySelector('.code-autofill-hint');
+            const germContainer = rowDiv.querySelector('.germs-dynamic-container');
+
+            if (codeInput && (overwrite || !codeInput.value.trim())) {
+                codeInput.value = fiche.code || '';
+                codeInput.style.borderColor = 'rgba(79,70,229,0.4)';
+                codeInput.style.background = 'rgba(79,70,229,0.04)';
+            }
+            if (codeHint) codeHint.textContent = fiche.code ? `✅ depuis fiche ${fiche.code}` : '';
+            if (badge) {
+                const methodeInfo = fiche.methode ? ` | Méthode : ${fiche.methode}` : '';
+                badge.innerHTML = `📋 <strong>Fiche liée :</strong> ${fiche.designation || '—'} <span style="color:var(--secondary); margin-left:6px;">${fiche.code || ''}</span>${methodeInfo}`;
+                badge.style.display = 'block';
+            }
+            if (overwrite && germContainer && germContainer.children.length === 0 && fiche.germesDetails && fiche.germesDetails.length > 0) {
+                fiche.germesDetails.forEach(g => {
+                    const germDiv = document.createElement('div');
+                    germDiv.style = 'display:flex; align-items:center; gap:8px; background:rgba(79,70,229,0.07); padding:5px 10px; border-radius:8px; border:1px solid rgba(79,70,229,0.1);';
+                    germDiv.innerHTML = `
+                        <input type="checkbox" checked class="row-germ-check">
+                        <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${g.name}</span>
+                        <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${g.norm || '—'}</span>
+                        <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                        <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                        <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                    `;
+                    germContainer.appendChild(germDiv);
+                });
+                window.showToast(`✅ Fiche "${fiche.designation}" liée ! Code + germes importés.`, 'success', 2500);
+            }
         };
 
         window.quickAddGerm = function (btn, name) {

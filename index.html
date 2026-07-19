@@ -2165,10 +2165,21 @@
                         style="margin-top: 10px; border-style: dashed;" placeholder="Note sur les réactifs...">
                 </div>
 
+                <div class="section-divider"><span class="section-label">📜 Protocole Opératoire</span></div>
+
+                <div class="form-group" style="background: rgba(14, 165, 233, 0.05); padding: 12px; border-radius: 14px; border: 1px solid rgba(14, 165, 233, 0.1);">
+                    <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        Étapes du Protocole
+                        <button type="button" onclick="addProtocolStep()" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:6px 12px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 2px 5px rgba(79,70,229,0.3);">+ Ajouter Étape</button>
+                    </label>
+                    <div id="protocol-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+                    <p style="font-size:0.65rem; color:var(--text-dim); margin-top:10px; text-align:center;">Ces étapes génèrent le schéma dans le PDF imprimé.</p>
+                </div>
+
                 <div class="form-group">
-                    <label>Observations & Méthodologie</label>
-                    <textarea id="observation" class="form-input" style="height: 120px; resize: none;"
-                        placeholder="Détaillez ici la préparation, le dénombrement, l'expression des résultats..."></textarea>
+                    <label>Observations Supplémentaires</label>
+                    <textarea id="observation" class="form-input" style="height: 80px; resize: none;"
+                        placeholder="Note additionnelle libre si nécessaire..."></textarea>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -5037,6 +5048,28 @@
             window.openModal('entryModalOverlay');
         };
 
+        window.addProtocolStep = function(step = null) {
+            const container = document.getElementById('protocol-container');
+            const div = document.createElement('div');
+            div.className = 'protocol-step';
+            div.style = "display:flex; align-items:center; gap:8px; background:#fff; padding:8px; border-radius:8px; border:1px solid var(--glass-border); box-shadow:0 1px 3px rgba(0,0,0,0.02);";
+            div.innerHTML = `
+                <div style="cursor:grab; color:var(--text-dim); padding:0 5px;" class="drag-handle">☰</div>
+                <input type="text" class="form-input step-text" value="${step ? (step.text || '').replace(/"/g, '&quot;') : ''}" placeholder="ex: Mettre 10g dans 90mL de diluant..." style="flex:1; margin:0; padding:6px 10px; font-size:0.75rem;">
+                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer; padding:5px;">✕</button>
+            `;
+            container.appendChild(div);
+
+            // Optional: Auto-init Sortable if Sortable is available (it's loaded from CDN)
+            if (typeof Sortable !== 'undefined' && !container.dataset.sortableInit) {
+                new Sortable(container, {
+                    handle: '.drag-handle',
+                    animation: 150
+                });
+                container.dataset.sortableInit = "true";
+            }
+        };
+
         window.deleteEntry = async function() {
             const id = document.getElementById('entryEditId').value;
             if(!id) return;
@@ -5278,6 +5311,13 @@
             document.getElementById('observation').value = f.observation || '';
             document.getElementById('reactifs-custom').value = f.reactifsCustom || '';
 
+            // Load Protocol Steps
+            const pContainer = document.getElementById('protocol-container');
+            pContainer.innerHTML = '';
+            if (f.protocolSteps && f.protocolSteps.length > 0) {
+                f.protocolSteps.forEach(step => addProtocolStep(step));
+            }
+
             setChipsActive('dilution-group', f.dilution || '');
             setChipsActive('application-group', f.application || '');
 
@@ -5337,11 +5377,18 @@
                 };
             });
 
+            const protocolSteps = Array.from(document.querySelectorAll('.protocol-step')).map(stepDiv => {
+                return {
+                    text: stepDiv.querySelector('.step-text').value.trim()
+                };
+            }).filter(s => s.text);
+
             const data = {
                 designation: document.getElementById('designation').value,
                 code: document.getElementById('code').value,
                 methode: document.getElementById('methode').value,
                 observation: document.getElementById('observation').value,
+                protocolSteps: protocolSteps,
                 dgat: document.getElementById('dgat').value,
                 dmlt: document.getElementById('dmlt').value,
                 germesDetails: germesDetails,
@@ -5834,13 +5881,26 @@
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.width;
 
+            const s = (str) => {
+                if (!str) return str;
+                return String(str)
+                    .replace(/²/g, '^2')
+                    .replace(/³/g, '^3')
+                    .replace(/⁴/g, '^4')
+                    .replace(/⁵/g, '^5')
+                    .replace(/⁶/g, '^6')
+                    .replace(/⁻¹/g, '^-1')
+                    .replace(/⁻²/g, '^-2')
+                    .replace(/⁻³/g, '^-3');
+            };
+
             let y = 20;
 
             // Header Simple
             doc.setTextColor(0, 0, 0);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(16);
-            doc.text("RÉSUMÉ", 15, y);
+            doc.text("MON RÉSUMÉ", 15, y);
 
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
@@ -5863,7 +5923,7 @@
             doc.autoTable({
                 startY: y,
                 head: [['DGAT (Norme)', 'DMLT (Norme)', 'Application']],
-                body: [[f.dgat || '-', f.dmlt || '-', f.application || 'Routine']],
+                body: [[s(f.dgat) || '-', s(f.dmlt) || '-', f.application || 'Routine']],
                 theme: 'grid',
                 headStyles: { fillColor: [255, 255, 255], textColor: 0 },
                 styles: { lineColor: [0, 0, 0], textColor: 0 }
@@ -5880,7 +5940,7 @@
             doc.autoTable({
                 startY: y,
                 head: [['Dilution', 'Diluants']],
-                body: [[f.dilution || '-', (f.diluants || []).join(', ') || '-']],
+                body: [[s(f.dilution) || '-', (f.diluants || []).join(', ') || '-']],
                 theme: 'grid',
                 headStyles: { fillColor: [255, 255, 255], textColor: 0 },
                 styles: { lineColor: [0, 0, 0], textColor: 0 }
@@ -5896,7 +5956,7 @@
             doc.autoTable({
                 startY: y,
                 head: [['Germe', 'Norme']],
-                body: (f.germesDetails || []).map(g => [g.name, g.norm]),
+                body: (f.germesDetails || []).map(g => [g.name, s(g.norm)]),
                 theme: 'grid',
                 headStyles: { fillColor: [255, 255, 255], textColor: 0 },
                 styles: { lineColor: [0, 0, 0], textColor: 0 }
@@ -5931,22 +5991,62 @@
             });
             y = doc.lastAutoTable.finalY + 15;
 
-            // Observation
-            if (f.observation) {
+            const pageHeight = doc.internal.pageSize.height;
+
+            // Protocole Opératoire (Schema)
+            if (f.protocolSteps && f.protocolSteps.length > 0) {
+                if (y > pageHeight - 40) { doc.addPage(); y = 20; }
                 doc.setFont("helvetica", "bold");
                 doc.setTextColor(0, 0, 0);
-                doc.text("Observations & Méthodologie", 15, y);
+                doc.text("Protocole Opératoire", 15, y);
+                y += 8;
+
+                f.protocolSteps.forEach((step, idx) => {
+                    const textLines = doc.splitTextToSize(s(step.text), pageWidth - 45);
+                    const blockHeight = (textLines.length * 5);
+                    
+                    if (y + blockHeight > pageHeight - 20) { doc.addPage(); y = 20; }
+                    
+                    // Dessiner une case à cocher
+                    doc.setDrawColor(100, 100, 100);
+                    doc.rect(15, y - 3.5, 4, 4);
+                    
+                    // Texte de l'étape
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(9);
+                    doc.text(`ÉTAPE ${idx + 1}`, 22, y);
+                    
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(10);
+                    doc.text(textLines, 40, y);
+                    
+                    // Flèche / Ligne de liaison visuelle
+                    if (idx < f.protocolSteps.length - 1) {
+                        doc.setDrawColor(200, 200, 200);
+                        doc.line(17, y + 2, 17, y + blockHeight + 1); // Ligne verticale
+                    }
+                    
+                    y += blockHeight + 3;
+                });
+                y += 5;
+            }
+
+            // Observation
+            if (f.observation) {
+                if (y > pageHeight - 30) { doc.addPage(); y = 20; }
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(0, 0, 0);
+                doc.text("Observations Supplémentaires", 15, y);
                 y += 7;
 
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(10);
                 doc.setTextColor(0, 0, 0);
-                const splitObs = doc.splitTextToSize(f.observation, pageWidth - 30);
+                const splitObs = doc.splitTextToSize(s(f.observation), pageWidth - 30);
                 doc.text(splitObs, 15, y);
             }
 
             // Footer
-            const pageHeight = doc.internal.pageSize.height;
             doc.setFontSize(8);
             doc.setTextColor(0, 0, 0);
             doc.text(`Imprimé le : ${new Date().toLocaleString()}`, 15, pageHeight - 10);

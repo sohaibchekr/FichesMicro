@@ -1309,6 +1309,7 @@
             <button onclick="window.switchTab('preps')" id="tab-preps" class="main-tab" draggable="true" data-tab-id="preps">⚗️ Preps</button>
             <button onclick="window.switchTab('photos')" id="tab-photos" class="main-tab" draggable="true" data-tab-id="photos">📸 Photos</button>
             <button onclick="window.switchTab('registres')" id="tab-registres" class="main-tab" draggable="true" data-tab-id="registres">📓 Registres</button>
+            <button onclick="window.switchTab('bulletins')" id="tab-bulletins" class="main-tab" draggable="true" data-tab-id="bulletins">📄 Stabilité</button>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
@@ -1963,19 +1964,20 @@
             <form id="analysisForm">
                 <input type="hidden" id="analysisEditId">
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label>Date d'analyse</label>
                         <input type="date" id="dateAnalyse" class="form-input" required onchange="calcIncubation()">
                     </div>
                     <div class="form-group">
                         <label>Classe / Catégorie</label>
-                        <select id="classeAnalyse" class="form-input">
+                        <select id="classeAnalyse" class="form-input" onchange="window.onClasseChange()">
                             <option value="EAUX">EAUX</option>
                             <option value="MP">MP (Matière Première)</option>
                             <option value="PF">PF (Produit Fini)</option>
                             <option value="PSF">PSF (Produit Semi-Fini)</option>
                             <option value="ADC">ADC (Article Cond.)</option>
+                            <option value="STAB">📄 STAB (Stabilité)</option>
                         </select>
                     </div>
                 </div>
@@ -2031,6 +2033,28 @@
                     <label>Résultats</label>
                     <textarea id="resultatsAnalyse" class="form-input" style="height: 60px; resize: none;"
                         placeholder="Saisir les résultats..."></textarea>
+                </div>
+
+                <!-- Observation Status Checkboxes (for STAB) -->
+                <div id="stabObservationStatus" style="display:none; background:rgba(124,58,237,0.05); border:1.5px solid rgba(124,58,237,0.15); border-radius:14px; padding:15px; margin-bottom:12px;">
+                    <label style="font-size:0.65rem; font-weight:800; color:var(--secondary); text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:10px;">📋 Statut d'Observation (Stabilité)</label>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        <label class="stab-checkbox-item" style="display:flex; align-items:center; gap:8px; padding:8px 14px; background:rgba(34,197,94,0.08); border:1.5px solid rgba(34,197,94,0.2); border-radius:10px; cursor:pointer; transition:0.2s;">
+                            <input type="checkbox" class="stab-obs-check" data-status="CONFORME" style="width:18px; height:18px; accent-color:var(--success); cursor:pointer;">
+                            <span style="font-weight:800; font-size:0.75rem; color:var(--success);">✅ CONFORME</span>
+                        </label>
+                        <label class="stab-checkbox-item" style="display:flex; align-items:center; gap:8px; padding:8px 14px; background:rgba(239,68,68,0.08); border:1.5px solid rgba(239,68,68,0.2); border-radius:10px; cursor:pointer; transition:0.2s;">
+                            <input type="checkbox" class="stab-obs-check" data-status="NON_CONFORME" style="width:18px; height:18px; accent-color:#dc2626; cursor:pointer;">
+                            <span style="font-weight:800; font-size:0.75rem; color:#dc2626;">❌ NON CONFORME</span>
+                        </label>
+                        <label class="stab-checkbox-item" style="display:flex; align-items:center; gap:8px; padding:8px 14px; background:rgba(245,158,11,0.08); border:1.5px solid rgba(245,158,11,0.2); border-radius:10px; cursor:pointer; transition:0.2s;">
+                            <input type="checkbox" class="stab-obs-check" data-status="A_REVOIR" style="width:18px; height:18px; accent-color:#f59e0b; cursor:pointer;">
+                            <span style="font-weight:800; font-size:0.75rem; color:#d97706;">🔄 À REVOIR</span>
+                        </label>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <textarea id="stabObsNote" class="form-input" style="height:50px; resize:none; font-size:0.8rem;" placeholder="Note complémentaire (optionnelle)..."></textarea>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -2293,6 +2317,48 @@
         </div>
     </div>
 
+    <!-- Bulletin ModalOverlay -->
+    <div id="bulletinModalOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="window.closeModal('bulletinModalOverlay')">✕</button>
+            <h2 id="bulletinModalTitle" style="margin-bottom: 25px; font-weight: 800; font-size: 1.5rem; color: var(--success);">📄 Nouveau Bulletin</h2>
+            <form id="bulletinForm">
+                <input type="hidden" id="bullEditId">
+                <div class="form-group">
+                    <label>Désignation Produit</label>
+                    <input type="text" id="bullDesig" class="form-input" required placeholder="Nom du produit...">
+                </div>
+                <div class="form-group">
+                    <label>Numéro de Lot</label>
+                    <input type="text" id="bullLot" class="form-input" required placeholder="Lot...">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+                    <div class="form-group" style="margin:0;">
+                        <label>Date d'analyse</label>
+                        <input type="date" id="bullDateAnalyse" class="form-input" required onchange="window.calcBulletinIncub()">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label>Date de Sortie (5j)</label>
+                        <input type="date" id="bullDateSortie" class="form-input" readonly style="background:#f1f5f9; font-weight:800; color:var(--primary);">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Observation</label>
+                    <textarea id="bullObs" class="form-input" style="height:60px; resize:none;" placeholder="Notes ou conditions..."></textarea>
+                </div>
+                <div class="form-group" style="flex-direction:row; align-items:center; gap:10px; background:rgba(34,197,94,0.1); padding:10px; border-radius:12px; border:1px solid rgba(34,197,94,0.2);">
+                    <input type="checkbox" id="bullClasse" style="width:20px; height:20px; cursor:pointer;" checked>
+                    <label for="bullClasse" style="margin-bottom:0; cursor:pointer; color:var(--success); font-weight:800;">BULLETIN DÉJÀ CLASSÉ</label>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button type="submit" class="save-btn" style="flex:2;">Enregistrer</button>
+                    <button type="button" class="cancel-btn" style="flex:2;" onclick="window.closeModal('bulletinModalOverlay')">Annuler</button>
+                    <button type="button" id="deleteBullBtn" class="delete-btn" style="display:none; flex:1;" onclick="window.deleteBulletin()">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // === VERSION 4.5.0 - STABLE ===
 
@@ -2387,6 +2453,8 @@
             if (oldBar) oldBar.remove();
             const oldPrepBar = document.getElementById('prep-expiry-filter-bar');
             if (oldPrepBar) oldPrepBar.remove();
+            const oldBullBar = document.getElementById('bulletin-filter-bar');
+            if (oldBullBar) oldBullBar.remove();
             window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
@@ -2414,6 +2482,9 @@
                 } else if (tab === 'registres') {
                     addBtn.innerText = "+ RÉGLAGES / NOUVELLE ENTRÉE";
                     searchInput.placeholder = "Chercher dans les registres...";
+                } else if (tab === 'bulletins') {
+                    addBtn.innerText = "+ NOUVEAU BULLETIN";
+                    searchInput.placeholder = "Chercher par produit, lot, observation...";
                 }
             }
             if (typeof render === 'function') render();
@@ -2422,7 +2493,7 @@
         // --- GESTION DU SWIPE POUR CHANGER D'ONGLET ---
         let touchstartX = 0;
         let touchendX = 0;
-        const tabsOrder = ['fiches', 'analyses', 'preps', 'photos', 'registres'];
+        const tabsOrder = ['fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins'];
 
         // ===========================
         // REORDER DES ONGLETs PRINCIPAUX (SortableJS)
@@ -2430,7 +2501,7 @@
         window.mainTabsOrderStorageKey = 'microbio_main_tabs_order';
 
         function getMainTabsDefaultOrder() {
-            return ['fiches', 'analyses', 'preps', 'photos', 'registres'];
+            return ['fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins'];
         }
 
         window.__mainTabsInitDone = false;
@@ -2636,6 +2707,7 @@
         let preps = [];
         let registres = [];
         let rEntries = [];
+        let bulletins = [];
         let catalogs = {
             germes: ['E.coli', 'Salmonella', 'Staph. aureus'],
             consommables: ['Boîte Petri 90', 'Pipette Pasteur', 'Pipette Graduée'],
@@ -2649,6 +2721,7 @@
         const PHOTOS_COL = "photos";
         const REGISTRES_COL = "registres_config";
         const R_ENTRIES_COL = "registres_data";
+        const BULLETINS_COL = "bulletins_stabilite";
         const CATALOGS_DOC = "laboratoires"; // Pour le catalogue permanent
 
         let lastUsedCategory = localStorage.getItem('microbio_last_photo_cat') || 'ANALYSES';
@@ -2824,6 +2897,60 @@
 
         // Listeners groupés plus bas
 
+
+        // ==============================
+        // STAB - Observation Status Logic
+        window.onClasseChange = function() {
+            const classe = document.getElementById('classeAnalyse').value;
+            const stabDiv = document.getElementById('stabObservationStatus');
+            if (!stabDiv) return;
+            
+            if (classe === 'STAB') {
+                stabDiv.style.display = 'block';
+                // Reset checkboxes
+                document.querySelectorAll('.stab-obs-check').forEach(cb => cb.checked = false);
+                document.getElementById('stabObsNote').value = '';
+            } else {
+                stabDiv.style.display = 'none';
+            }
+        };
+
+        // Make checkboxes mutually exclusive
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('stab-obs-check')) {
+                document.querySelectorAll('.stab-obs-check').forEach(cb => {
+                    if (cb !== e.target) cb.checked = false;
+                });
+                // Update the observation textarea with the status
+                const checked = document.querySelector('.stab-obs-check:checked');
+                const note = document.getElementById('stabObsNote').value.trim();
+                const obsTextarea = document.getElementById('obsAnalyse');
+                if (checked) {
+                    const status = checked.dataset.status;
+                    const statusLabel = status === 'CONFORME' ? 'CONFORME' : (status === 'NON_CONFORME' ? 'NON CONFORME' : 'A REVOIR');
+                    obsTextarea.value = 'STATUT: ' + statusLabel + (note ? ' | ' + note : '');
+                } else {
+                    obsTextarea.value = note ? note : '';
+                }
+            }
+        });
+
+        // Also update obs field when note changes
+        document.addEventListener('input', function(e) {
+            if (e.target.id === 'stabObsNote') {
+                const checked = document.querySelector('.stab-obs-check:checked');
+                const note = e.target.value.trim();
+                const obsTextarea = document.getElementById('obsAnalyse');
+                if (checked) {
+                    const status = checked.dataset.status;
+                    const statusLabel = status === 'CONFORME' ? 'CONFORME' : (status === 'NON_CONFORME' ? 'NON CONFORME' : 'A REVOIR');
+                    obsTextarea.value = 'STATUT: ' + statusLabel + (note ? ' | ' + note : '');
+                } else {
+                    obsTextarea.value = note ? note : '';
+                }
+            }
+        });
+
         window.calcIncubation = function () {
             const dateVal = document.getElementById('dateAnalyse').value;
             if (!dateVal) return;
@@ -2890,6 +3017,8 @@
             } else if (window.currentTab === 'registres') {
                 // Créer un nouveau carnet directement
                 window.openRegistreConfig();
+            } else if (window.currentTab === 'bulletins') {
+                window.openBulletinModal();
             } else {
                 window.openModal('modalOverlay');
             }
@@ -3941,6 +4070,14 @@
             window.showToast("❌ Erreur de synchronisation [Entrées] : " + err.message, 'error', 5000);
         });
 
+        window.db.collection(BULLETINS_COL).orderBy('updatedAt', 'desc').onSnapshot(snap => {
+            bulletins = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (window.currentTab === 'bulletins') render();
+        }, err => {
+            console.error("Bulletins Sync Error:", err);
+            window.showToast("❌ Erreur de synchronisation [Bulletins] : " + err.message, 'error', 5000);
+        });
+
         window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
                 catalogs = doc.data() || {};
@@ -4892,8 +5029,134 @@
                         </div>
                     `;
                 }).join('');
+            } else if (window.currentTab === 'bulletins') {
+                let filtered = bulletins.filter(b => 
+                    (b.designation && b.designation.toLowerCase().includes(query)) ||
+                    (b.lot && b.lot.toLowerCase().includes(query)) ||
+                    (b.observation && b.observation.toLowerCase().includes(query))
+                );
+
+                const countClassés = bulletins.filter(b => b.isClassé).length;
+                
+                // Add header/filter area
+                const filterId = 'bulletin-filter-bar';
+                let filterEl = document.getElementById(filterId);
+                if (!filterEl) {
+                    filterEl = document.createElement('div');
+                    filterEl.id = filterId;
+                    container.parentNode.insertBefore(filterEl, container);
+                }
+                filterEl.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(34,197,94,0.1); padding:12px; border-radius:12px; margin-bottom:15px; border:1px solid rgba(34,197,94,0.3);">
+                    <span style="font-weight:800; color:var(--success); font-size:0.8rem; letter-spacing:1px;">📦 BULLETINS CLASSÉS </span>
+                    <span style="font-size:1.2rem; font-weight:900; color:var(--success); background:#fff; padding:4px 12px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">${countClassés} / ${bulletins.length}</span>
+                </div>`;
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📁</div><h3>Aucun bulletin trouvé</h3></div>`;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(b => {
+                    const isSelected = selectedFiches.has(b.id);
+                    return `
+                        <div class="fiche-card ${isSelected ? 'selected' : ''}" 
+                             onclick="${isSelectionMode ? `toggleItemSelection('${b.id}', 'bulletins', event); render();` : `openBulletinModal('${b.id}')`}"
+                             style="border-left: 5px solid ${b.isClassé ? 'var(--success)' : 'var(--glass-border)'}; cursor: pointer; transition: 0.3s; background: ${b.isClassé ? 'rgba(34,197,94,0.02)' : '#fff'};">
+                            <div class="card-header">
+                                <div class="designation">${b.designation}</div>
+                                <div style="font-weight:900; font-size:0.85rem; color:var(--primary); background:rgba(99,102,241,0.08); padding:4px 8px; border-radius:6px;">${window.formatStringToDate(b.dateAnalyse)}</div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background:rgba(0,0,0,0.015); padding:10px; border-radius:10px;">
+                                <div>
+                                    <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase;">Lot :</div>
+                                    <div style="font-weight:800; color:var(--text-main); font-size:0.9rem;">${b.lot}</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase;">Date de sortie prévue :</div>
+                                    <div style="font-weight:800; color:var(--secondary); font-size: 0.85rem;">${window.formatStringToDate(b.dateSortie)}</div>
+                                </div>
+                            </div>
+                            ${b.observation ? `<div style="margin-top:10px; background:rgba(245,158,11,0.05); padding:10px; border-radius:10px; font-size:0.75rem; color: #b45309; font-weight: 500; font-style:italic;">📝 ${b.observation}</div>` : ''}
+                            <div style="margin-top:12px; display:flex; justify-content:flex-end;">
+                                <div onclick="event.stopPropagation(); window.toggleBulletinStatus('${b.id}', ${b.isClassé})" style="background:${b.isClassé ? 'var(--success)' : 'rgba(0,0,0,0.05)'}; color:${b.isClassé ? 'white' : 'var(--text-dim)'}; padding:8px 16px; border-radius:10px; font-weight:800; font-size:0.7rem; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.03); transition: 0.2s;">
+                                    ${b.isClassé ? '✅ BULLETIN CLASSÉ' : '⏳ NON CLASSÉ'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             }
         }
+        
+        window.calcBulletinIncub = function() {
+            const dateVal = document.getElementById('bullDateAnalyse').value;
+            if (!dateVal) return;
+            const parts = dateVal.split('-');
+            const d = new Date(parts[0], parts[1]-1, parts[2]);
+            d.setDate(d.getDate() + 5);
+            document.getElementById('bullDateSortie').value = d.toISOString().split('T')[0];
+        };
+
+        window.openBulletinModal = function(id = null) {
+            document.getElementById('bulletinForm').reset();
+            document.getElementById('bullEditId').value = id || '';
+            document.getElementById('bulletinModalTitle').innerText = id ? '📄 Modifier Bulletin' : '📄 Nouveau Bulletin';
+            document.getElementById('deleteBullBtn').style.display = id ? 'block' : 'none';
+            document.getElementById('bullDateAnalyse').value = new Date().toISOString().split('T')[0];
+            window.calcBulletinIncub();
+            document.getElementById('bullClasse').checked = false;
+
+            if (id) {
+                const b = bulletins.find(x => x.id === id);
+                if (b) {
+                    document.getElementById('bullDesig').value = b.designation || '';
+                    document.getElementById('bullLot').value = b.lot || '';
+                    document.getElementById('bullDateAnalyse').value = b.dateAnalyse || '';
+                    document.getElementById('bullDateSortie').value = b.dateSortie || '';
+                    document.getElementById('bullObs').value = b.observation || '';
+                    document.getElementById('bullClasse').checked = !!b.isClassé;
+                }
+            }
+            window.openModal('bulletinModalOverlay');
+        };
+
+        window.toggleBulletinStatus = function(id, curState) {
+            window.db.collection(BULLETINS_COL).doc(id).update({
+                isClassé: !curState
+            });
+        };
+
+        window.deleteBulletin = async function() {
+            const id = document.getElementById('bullEditId').value;
+            if(!id) return;
+            if(confirm('Supprimer ce bulletin ?')) {
+                await window.db.collection(BULLETINS_COL).doc(id).delete();
+                window.closeModal('bulletinModalOverlay');
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const bForm = document.getElementById('bulletinForm');
+            if (bForm) {
+                bForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const id = document.getElementById('bullEditId').value;
+                    const data = {
+                        designation: document.getElementById('bullDesig').value.trim(),
+                        lot: document.getElementById('bullLot').value.trim(),
+                        dateAnalyse: document.getElementById('bullDateAnalyse').value,
+                        dateSortie: document.getElementById('bullDateSortie').value,
+                        observation: document.getElementById('bullObs').value.trim(),
+                        isClassé: document.getElementById('bullClasse').checked,
+                        updatedAt: Date.now()
+                    };
+                    if (id) window.db.collection(BULLETINS_COL).doc(id).update(data);
+                    else window.db.collection(BULLETINS_COL).add(data);
+
+                    window.closeModal('bulletinModalOverlay');
+                });
+            }
+        });
         
         // REGISTRES LOGIC Helpers
         window.openRegistreConfig = function(id = null) {
@@ -5742,6 +6005,18 @@
                 classe: document.getElementById('classeAnalyse').value,
                 resultats: document.getElementById('resultatsAnalyse').value,
                 observations: document.getElementById('obsAnalyse').value,
+                observationStatus: (function() {
+                    const classe = document.getElementById('classeAnalyse').value;
+                    if (classe === 'STAB') {
+                        const checked = document.querySelector('.stab-obs-check:checked');
+                        const note = document.getElementById('stabObsNote').value.trim();
+                        return {
+                            status: checked ? checked.dataset.status : null,
+                            note: note
+                        };
+                    }
+                    return null;
+                })(),
                 updatedAt: new Date().toISOString()
             };
 
@@ -5806,6 +6081,34 @@
                 }
             });
 
+            // Auto-create bulletin in Stabilité tab if classe is STAB
+            const classeVal = document.getElementById('classeAnalyse').value;
+            if (classeVal === 'STAB') {
+                rows.forEach(row => {
+                    const elProd = row.querySelector('.row-prod');
+                    const elLot = row.querySelector('.row-lot');
+                    const elCode = row.querySelector('.row-code');
+                    const checked = document.querySelector('.stab-obs-check:checked');
+                    const note = document.getElementById('stabObsNote').value.trim();
+                    const statusLabel = checked ? (checked.dataset.status === 'CONFORME' ? 'CONFORME' : (checked.dataset.status === 'NON_CONFORME' ? 'NON CONFORME' : 'A REVOIR')) : 'EN COURS';
+                    
+                    const bullData = {
+                        designation: elProd ? elProd.value : '',
+                        lot: elLot ? elLot.value : '',
+                        dateAnalyse: document.getElementById('dateAnalyse').value,
+                        dateSortie: document.getElementById('dateSortie').value,
+                        observation: 'STABILITE - ' + statusLabel + (note ? ' | ' + note : ''),
+                        isClassé: false,
+                        updatedAt: Date.now()
+                    };
+                    if (bullData.designation && bullData.lot) {
+                        window.db.collection(BULLETINS_COL).add(bullData).catch(err => {
+                            console.warn("Bulletin auto-creation warning:", err);
+                        });
+                    }
+                });
+            }
+
             batch.commit().catch(err => {
                 console.error("Save Error:", err);
                 window.showToast("Erreur d'enregistrement : " + err.message, 'error', 5000);
@@ -5845,6 +6148,19 @@
             document.getElementById('isLibere').parentElement.style.display = 'none';
             document.getElementById('resultatsAnalyse').value = a.resultats || '';
             document.getElementById('obsAnalyse').value = a.observations || '';
+            // Restore STAB observation status if present
+            if (a.observationStatus && a.classe === 'STAB') {
+                window.onClasseChange();
+                const status = a.observationStatus.status;
+                if (status) {
+                    document.querySelectorAll('.stab-obs-check').forEach(cb => {
+                        if (cb.dataset.status === status) cb.checked = true;
+                    });
+                }
+                if (a.observationStatus.note) {
+                    document.getElementById('stabObsNote').value = a.observationStatus.note;
+                }
+            }
 
             window.calcIncubation();
 

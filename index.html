@@ -1365,7 +1365,7 @@
             </div>
 
             <!-- MODE : DOSAGE (Règle de 3) -->
-            <div id="section-dose" class="calc-section" style="display:none;">
+            <div id="section-dose" class="calc-section">
                 <button type="button" class="boite-toggle" data-toggle-target="section-dose" style="width:100%; margin:10px 0 12px; padding:12px 14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:rgba(255,255,255,0.95); border-radius:14px; font-weight:900; cursor:pointer; text-transform:uppercase; letter-spacing:0.5px;">📌 Dosage</button>
                 <div
                     style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
@@ -2143,14 +2143,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Dilution (Multi-sélection)</label>
+                    <label>Dilution (Éditable / Sélection)</label>
                     <div class="chip-group" id="dilution-group">
                         <div class="chip" data-val="10-1">10⁻¹</div>
                         <div class="chip" data-val="10-2">10⁻²</div>
                         <div class="chip" data-val="10-3">10⁻³</div>
                         <div class="chip" data-val="PUR">PUR</div>
                     </div>
-                    <input type="hidden" id="dilution-val">
+                    <input type="text" id="dilution-val" class="form-input" style="margin-top: 8px;" placeholder="Saisir ou choisir dilution (ex: 10⁻¹, 10⁻², PUR...)">
                 </div>
 
                 <div class="form-group">
@@ -2192,12 +2192,15 @@
                 <div class="section-divider"><span class="section-label">📜 Protocole Opératoire</span></div>
 
                 <div class="form-group" style="background: rgba(14, 165, 233, 0.05); padding: 12px; border-radius: 14px; border: 1px solid rgba(14, 165, 233, 0.1);">
-                    <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-                        Étapes du Protocole
-                        <button type="button" onclick="addProtocolStep()" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:6px 12px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 2px 5px rgba(79,70,229,0.3);">+ Ajouter Étape</button>
+                    <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-wrap:wrap; gap:6px;">
+                        <span>Étapes du Protocole</span>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" onclick="addProtocolGermesPreset()" style="background:var(--secondary); color:white; border:none; border-radius:6px; padding:4px 8px; font-size:0.65rem; font-weight:800; cursor:pointer;">+ Modèle Germes / Dilution</button>
+                            <button type="button" onclick="addProtocolStep()" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:6px 12px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 2px 5px rgba(79,70,229,0.3);">+ Ajouter Étape</button>
+                        </div>
                     </label>
                     <div id="protocol-container" style="display:flex; flex-direction:column; gap:10px;"></div>
-                    <p style="font-size:0.65rem; color:var(--text-dim); margin-top:10px; text-align:center;">Ces étapes génèrent le schéma dans le PDF imprimé.</p>
+                    <p style="font-size:0.65rem; color:var(--text-dim); margin-top:10px; text-align:center;">Conseil: utilisez "apres", ";" ou "->" pour lier automatiquement vos étapes de préparation et dilution par des flèches.</p>
                 </div>
 
                 <div class="form-group">
@@ -3352,6 +3355,7 @@
                 dateInput.value = new Date().toISOString().split('T')[0];
             }
             window.renderCalcTabs();
+            window.setCalcMode(window.currentCalcMode || 'dose');
             calcOverlay.classList.add('active');
         };
 
@@ -3533,10 +3537,14 @@
             }
 
             // Mettre à jour l'affichage des sections d'inputs
-            document.querySelectorAll('.calc-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.calc-section').forEach(s => {
+                s.classList.remove('active');
+                s.style.display = 'none';
+            });
             const activeInputSection = document.getElementById(`section-${mode}`);
             if (activeInputSection) {
                 activeInputSection.classList.add('active');
+                activeInputSection.style.display = 'block';
             }
 
             const boitesSummary = document.getElementById('boites-summary-display');
@@ -4248,11 +4256,13 @@
                         if (isMulti) {
                             chip.classList.toggle('active');
                             const activeVals = Array.from(group.querySelectorAll('.chip.active')).map(c => c.dataset.val);
-                            group.nextElementSibling.value = activeVals.join('|');
+                            const targetInput = document.getElementById(group.id.replace('-group', '-val')) || group.nextElementSibling;
+                            if (targetInput) targetInput.value = activeVals.join('|');
                         } else {
                             group.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
                             chip.classList.add('active');
-                            group.nextElementSibling.value = chip.dataset.val;
+                            const targetInput = document.getElementById(group.id.replace('-group', '-val')) || group.nextElementSibling;
+                            if (targetInput) targetInput.value = chip.dataset.val;
                         }
                     }
                 });
@@ -4261,10 +4271,11 @@
         setupChips();
 
         function setChipsActive(groupId, valuesStr) {
-            const values = (valuesStr || '').split('|');
+            const values = (valuesStr || '').split(/[|,\s]+/);
             const group = document.getElementById(groupId);
             if (group) {
-                group.nextElementSibling.value = valuesStr;
+                const targetInput = document.getElementById(groupId.replace('-group', '-val')) || group.nextElementSibling;
+                if (targetInput) targetInput.value = valuesStr || '';
                 group.querySelectorAll('.chip').forEach(c => {
                     if (values.includes(c.dataset.val)) c.classList.add('active');
                     else c.classList.remove('active');
@@ -4322,6 +4333,20 @@
             window.toggleItemSelection(id, 'fiches', e);
         };
 
+        window.getFicheTime = function(f) {
+            if (!f) return 0;
+            const dt = f.updatedAt || f.createdAt;
+            if (!dt) return 0;
+            if (typeof dt === 'number') return dt;
+            if (typeof dt === 'string') {
+                const t = new Date(dt).getTime();
+                return isNaN(t) ? 0 : t;
+            }
+            if (dt.toDate && typeof dt.toDate === 'function') return dt.toDate().getTime();
+            if (dt.seconds) return dt.seconds * 1000;
+            return 0;
+        };
+
         // Render List
         window.render = function render() {
             const query = searchInput.value.toLowerCase().trim();
@@ -4335,15 +4360,19 @@
                 );
                 filtered.sort((a, b) => {
                     if (window.sortBy === 'name') {
-                        const na = (a.designation || '').toLowerCase();
-                        const nb = (b.designation || '').toLowerCase();
-                        return window.sortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
+                        const na = (a.designation || '').trim();
+                        const nb = (b.designation || '').trim();
+                        const res = na.localeCompare(nb, 'fr', { sensitivity: 'base', numeric: true });
+                        return window.sortOrder === 'asc' ? res : -res;
                     } else {
-                        // date: use updatedAt if available, else fall back to name
-                        const da = a.updatedAt || 0;
-                        const db = b.updatedAt || 0;
-                        if (da === db) return (a.designation || '').localeCompare(b.designation || '');
-                        return window.sortOrder === 'desc' ? db - da : da - db;
+                        const ta = window.getFicheTime(a);
+                        const tb = window.getFicheTime(b);
+                        if (ta === tb) {
+                            const na = (a.designation || '').trim();
+                            const nb = (b.designation || '').trim();
+                            return na.localeCompare(nb, 'fr', { sensitivity: 'base', numeric: true });
+                        }
+                        return window.sortOrder === 'desc' ? tb - ta : ta - tb;
                     }
                 });
 
@@ -4395,6 +4424,27 @@
                             `).join('')}
                             </div>
                         </div>
+                        ${f.protocolSteps && f.protocolSteps.length > 0 ? `
+                            <div class="prep-box" style="margin-top:10px; background: rgba(79, 70, 229, 0.02); border: 1px solid var(--glass-border); border-radius:14px; padding:12px;">
+                                <span class="prep-label" style="color:var(--primary); font-weight:800; font-size:0.7rem; display:block; margin-bottom:6px;">📜 Protocole Opératoire</span>
+                                <div style="display:flex; flex-direction:column; gap:8px;">
+                                    ${f.protocolSteps.map((st, i) => {
+                                        const sTitle = typeof st === 'object' ? st.title : '';
+                                        const sText = typeof st === 'object' ? st.text : st;
+                                        return `
+                                        <div style="font-size:0.75rem; color:var(--text-main); background:#fff; padding:8px 10px; border-radius:8px; border:1px solid var(--glass-border); display:flex; flex-direction:column; gap:4px;">
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <span style="font-weight:800; color:var(--primary); font-size:0.65rem; background:rgba(79,70,229,0.1); padding:2px 6px; border-radius:4px; flex-shrink:0;">E${i+1}</span>
+                                                ${sTitle ? `<span style="font-weight:800; color:var(--text-main); font-size:0.75rem;">${sTitle}</span>` : ''}
+                                            </div>
+                                            <div style="padding-left: 2px; color:var(--text-main);">
+                                                ${window.formatProtocolStep(sText).replace(/ -> /g, ' <span style="color:var(--primary); font-weight:bold; margin:0 4px;">→</span> ')}
+                                            </div>
+                                        </div>
+                                    `}).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                         ${f.observation ? `<div class="obs-card-footer"><span>📝</span><span>${f.observation}</span></div>` : ''}
                     </div>
                 `).join('');
@@ -5311,19 +5361,37 @@
             window.openModal('entryModalOverlay');
         };
 
+        window.formatProtocolStep = function(text) {
+            if (!text) return '';
+            let formatted = String(text)
+                .replace(/\b(apres|après)\s*;?/gi, ' -> ')
+                .replace(/;/g, ' -> ')
+                .replace(/\bpuis\b/gi, ' -> ')
+                .replace(/--+>/g, ' -> ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            formatted = formatted.replace(/( -> )+/g, ' -> ');
+            return formatted;
+        };
+
         window.addProtocolStep = function(step = null) {
             const container = document.getElementById('protocol-container');
             const div = document.createElement('div');
             div.className = 'protocol-step';
             div.style = "display:flex; align-items:center; gap:8px; background:#fff; padding:8px; border-radius:8px; border:1px solid var(--glass-border); box-shadow:0 1px 3px rgba(0,0,0,0.02);";
+            
+            const stepTitle = step ? (step.title || '') : '';
+            const stepText = step ? (step.text || (typeof step === 'string' ? step : '')) : '';
+
             div.innerHTML = `
                 <div style="cursor:grab; color:var(--text-dim); padding:0 5px;" class="drag-handle">☰</div>
-                <input type="text" class="form-input step-text" value="${step ? (step.text || '').replace(/"/g, '&quot;') : ''}" placeholder="ex: Mettre 10g dans 90mL de diluant..." style="flex:1; margin:0; padding:6px 10px; font-size:0.75rem;">
+                <input type="text" class="form-input step-title" value="${stepTitle.replace(/"/g, '&quot;')}" placeholder="Titre (ex: Entérobactéries, Dilution...)" style="width:160px; margin:0; padding:6px 10px; font-size:0.75rem; font-weight:700;">
+                <input type="text" class="form-input step-text" value="${stepText.replace(/"/g, '&quot;')}" placeholder="ex: 10g PF dans 90ml TSB -> Incubé 2h-5h (20-25°C) -> Dilution 10⁻² avec Mossel" style="flex:1; margin:0; padding:6px 10px; font-size:0.75rem;">
+                <button type="button" onclick="window.insertArrowToStep(this)" title="Insérer une flèche ->" style="background:rgba(79,70,229,0.1); border:1px solid rgba(79,70,229,0.2); color:var(--primary); border-radius:6px; font-weight:bold; padding:4px 8px; font-size:0.75rem; cursor:pointer;">→</button>
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer; padding:5px;">✕</button>
             `;
             container.appendChild(div);
 
-            // Optional: Auto-init Sortable if Sortable is available (it's loaded from CDN)
             if (typeof Sortable !== 'undefined' && !container.dataset.sortableInit) {
                 new Sortable(container, {
                     handle: '.drag-handle',
@@ -5331,6 +5399,19 @@
                 });
                 container.dataset.sortableInit = "true";
             }
+        };
+
+        window.insertArrowToStep = function(btn) {
+            const input = btn.parentElement.querySelector('.step-text');
+            if (input) {
+                const val = input.value;
+                input.value = val ? val + ' -> ' : ' -> ';
+                input.focus();
+            }
+        };
+
+        window.addProtocolGermesPreset = function() {
+            window.addProtocolStep({ title: "Entérobactéries", text: "10g de PF dans 90 ml de TSB -> Incubé 2h à 5h (20-25°C) -> Dilution 10⁻² avec Mossel" });
         };
 
         window.deleteEntry = async function() {
@@ -5642,9 +5723,10 @@
 
             const protocolSteps = Array.from(document.querySelectorAll('.protocol-step')).map(stepDiv => {
                 return {
-                    text: stepDiv.querySelector('.step-text').value.trim()
+                    title: stepDiv.querySelector('.step-title')?.value.trim() || '',
+                    text: stepDiv.querySelector('.step-text')?.value.trim() || ''
                 };
-            }).filter(s => s.text);
+            }).filter(s => s.text || s.title);
 
             const data = {
                 designation: document.getElementById('designation').value,
@@ -6212,36 +6294,38 @@
 
             let y = 20;
 
-            // Header Simple
+            // Header Résumé avec Désignation (Noir & Blanc)
             doc.setTextColor(0, 0, 0);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(16);
-            doc.text("MON RÉSUMÉ", 15, y);
+            const headerTitle = `RÉSUMÉ : ${(f.designation || 'FICHE').toUpperCase()}`;
+            doc.text(headerTitle, 15, y);
 
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
             doc.text(`Doc ID: ${f.code || 'N/A'}`, pageWidth - 15, y, { align: 'right' });
 
             y += 10;
 
-            // Main Info Table
+            // Main Info Table (Style Noir & Blanc)
             doc.autoTable({
                 startY: y,
                 head: [['Désignation', 'Méthode d\'analyse']],
                 body: [[f.designation || 'N/A', f.methode || 'N/A']],
                 theme: 'grid',
-                headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold' },
+                headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
                 styles: { fontSize: 10, cellPadding: 5, lineColor: [0, 0, 0], textColor: 0 }
             });
             y = doc.lastAutoTable.finalY + 10;
 
-            // Norms Table
+            // Norms Table (Style Noir & Blanc)
             doc.autoTable({
                 startY: y,
                 head: [['DGAT (Norme)', 'DMLT (Norme)', 'Application']],
                 body: [[s(f.dgat) || '-', s(f.dmlt) || '-', f.application || 'Routine']],
                 theme: 'grid',
-                headStyles: { fillColor: [255, 255, 255], textColor: 0 },
+                headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
                 styles: { lineColor: [0, 0, 0], textColor: 0 }
             });
             y = doc.lastAutoTable.finalY + 10;
@@ -6258,7 +6342,7 @@
                 head: [['Dilution', 'Diluants']],
                 body: [[s(f.dilution) || '-', (f.diluants || []).join(', ') || '-']],
                 theme: 'grid',
-                headStyles: { fillColor: [255, 255, 255], textColor: 0 },
+                headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
                 styles: { lineColor: [0, 0, 0], textColor: 0 }
             });
             y = doc.lastAutoTable.finalY + 10;
@@ -6274,7 +6358,7 @@
                 head: [['Germe', 'Norme']],
                 body: (f.germesDetails || []).map(g => [g.name, s(g.norm)]),
                 theme: 'grid',
-                headStyles: { fillColor: [255, 255, 255], textColor: 0 },
+                headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
                 styles: { lineColor: [0, 0, 0], textColor: 0 }
             });
             y = doc.lastAutoTable.finalY + 10;
@@ -6302,49 +6386,92 @@
                 head: [['Consommables', 'Qté', 'Réactifs']],
                 body: combinedBody,
                 theme: 'grid',
-                headStyles: { fillColor: [255, 255, 255], textColor: 0 },
+                headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
                 styles: { lineColor: [0, 0, 0], textColor: 0 }
             });
             y = doc.lastAutoTable.finalY + 15;
 
             const pageHeight = doc.internal.pageSize.height;
 
-            // Protocole Opératoire (Schema)
+            // Protocole Opératoire (Schema) - Noir & Blanc
             if (f.protocolSteps && f.protocolSteps.length > 0) {
                 if (y > pageHeight - 40) { doc.addPage(); y = 20; }
                 doc.setFont("helvetica", "bold");
+                doc.setFontSize(12);
                 doc.setTextColor(0, 0, 0);
-                doc.text("Protocole Opératoire", 15, y);
+                doc.text("Protocole Opératoire (Schéma)", 15, y);
                 y += 8;
 
                 f.protocolSteps.forEach((step, idx) => {
-                    const textLines = doc.splitTextToSize(s(step.text), pageWidth - 45);
-                    const blockHeight = (textLines.length * 5);
+                    const stepTitle = typeof step === 'object' ? step.title : '';
+                    const stepText = typeof step === 'object' ? step.text : step;
                     
-                    if (y + blockHeight > pageHeight - 20) { doc.addPage(); y = 20; }
+                    const rawClean = window.formatProtocolStep(stepText);
+                    const subSteps = rawClean.split(' -> ').map(sText => sText.trim()).filter(Boolean);
                     
-                    // Dessiner une case à cocher
-                    doc.setDrawColor(100, 100, 100);
-                    doc.rect(15, y - 3.5, 4, 4);
+                    const blockHeader = stepTitle ? `Étape ${idx + 1} : ${stepTitle}` : `Étape ${idx + 1}`;
                     
-                    // Texte de l'étape
+                    let totalHeight = 10;
+                    subSteps.forEach(ss => {
+                        const lines = doc.splitTextToSize(s(ss), pageWidth - 55);
+                        totalHeight += lines.length * 5 + 4;
+                    });
+
+                    if (y + totalHeight > pageHeight - 20) { doc.addPage(); y = 20; }
+
+                    // Dessiner encadré de l'étape (Noir & Blanc)
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(0.4);
+                    doc.setFillColor(255, 255, 255);
+                    doc.roundedRect(15, y, pageWidth - 30, totalHeight, 2, 2, 'FD');
+
+                    // Badge numéro & titre de l'étape (Remplissage Noir)
+                    doc.setFillColor(0, 0, 0);
+                    const headerWidth = Math.min(pageWidth - 30, doc.getTextWidth(blockHeader.toUpperCase()) + 10);
+                    doc.rect(15, y, headerWidth, 6, 'F');
                     doc.setFont("helvetica", "bold");
-                    doc.setFontSize(9);
-                    doc.text(`ÉTAPE ${idx + 1}`, 22, y);
-                    
-                    doc.setFont("helvetica", "normal");
-                    doc.setFontSize(10);
-                    doc.text(textLines, 40, y);
-                    
-                    // Flèche / Ligne de liaison visuelle
+                    doc.setFontSize(8);
+                    doc.setTextColor(255, 255, 255);
+                    doc.text(blockHeader.toUpperCase(), 17, y + 4.2);
+
+                    doc.setTextColor(0, 0, 0);
+                    let subY = y + 11;
+
+                    subSteps.forEach((ss, ssIdx) => {
+                        doc.setFont("helvetica", ssIdx === 0 ? "bold" : "normal");
+                        doc.setFontSize(9.5);
+
+                        const lines = doc.splitTextToSize(s(ss), pageWidth - 60);
+                        
+                        doc.setFillColor(0, 0, 0);
+                        doc.circle(22, subY - 1.5, 0.8, 'F');
+                        
+                        doc.text(lines, 26, subY);
+                        subY += lines.length * 5;
+
+                        // Indicateur sous-étape / flèche
+                        if (ssIdx < subSteps.length - 1) {
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(9);
+                            doc.setTextColor(0, 0, 0);
+                            doc.text("v", 21.3, subY);
+                            subY += 3.5;
+                        }
+                    });
+
+                    y += totalHeight + 4;
+
+                    // Flèche de liaison vers l'étape suivante
                     if (idx < f.protocolSteps.length - 1) {
-                        doc.setDrawColor(200, 200, 200);
-                        doc.line(17, y + 2, 17, y + blockHeight + 1); // Ligne verticale
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(10);
+                        doc.setTextColor(0, 0, 0);
+                        doc.text("|", 21.5, y - 2);
+                        doc.text("v", 21.2, y + 1);
+                        y += 4;
                     }
-                    
-                    y += blockHeight + 3;
                 });
-                y += 5;
+                y += 4;
             }
 
             // Observation
@@ -6364,10 +6491,10 @@
 
             // Footer
             doc.setFontSize(8);
-            doc.setTextColor(0, 0, 0);
+            doc.setTextColor(120, 120, 120);
             doc.text(`Imprimé le : ${new Date().toLocaleString()}`, 15, pageHeight - 10);
 
-            // Save PDF
+            // Save PDF with designation
             const fileName = `Résumé_${(f.designation || 'fiche').replace(/[^a-z0-9]/gi, '_')}.pdf`;
             doc.save(fileName);
         };

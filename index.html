@@ -1310,6 +1310,7 @@
             <button onclick="window.switchTab('photos')" id="tab-photos" class="main-tab" draggable="true" data-tab-id="photos">📸 Photos</button>
             <button onclick="window.switchTab('registres')" id="tab-registres" class="main-tab" draggable="true" data-tab-id="registres">📓 Registres</button>
             <button onclick="window.switchTab('bulletins')" id="tab-bulletins" class="main-tab" draggable="true" data-tab-id="bulletins">📄 Stabilité</button>
+            <button onclick="window.switchTab('germes')" id="tab-germes" class="main-tab" draggable="true" data-tab-id="germes">🦠 Germes</button>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
@@ -2119,14 +2120,12 @@
                 </div>
 
                 <div class="form-group" style="margin-top: 20px;">
-                    <label>Germes Spécifiés (Nom uniquement)</label>
-                    <div id="germes-catalog" class="dynamic-list"></div>
-                    <div class="add-catalog-ui">
-                        <input type="text" id="new-germe" class="add-catalog-input"
-                            placeholder="ex: E.coli, Salmonella...">
-                        <button type="button" class="add-catalog-btn"
-                            onclick="addToCatalog('germes', 'new-germe')">＋</button>
-                    </div>
+                    <label style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <span>🦠 Germes Spécifiés</span>
+                        <span style="font-size:0.6rem; color:var(--text-dim); font-weight:500;">Depuis votre catalogue Germes — méthode auto-remplie</span>
+                    </label>
+                    <div id="germes-catalog" class="dynamic-list" style="max-height:220px; overflow-y:auto;"></div>
+                    <p style="font-size:0.6rem; color:var(--text-dim); margin-top:6px; text-align:center;">Gérez votre catalogue de germes dans l'onglet 🦠 Germes</p>
                 </div>
 
                 <div class="section-divider"><span class="section-label">🧪 Protocole & Dilution</span></div>
@@ -2217,6 +2216,35 @@
                 <button type="button" class="cancel-btn" onclick="window.closeAddModal()" style="margin-top: 10px;">Annuler</button>
                 <button type="button" class="delete-btn" id="deleteBtn"
                     style="display: none; margin-top: 10px;">Supprimer cette fiche</button>
+            </form>
+        </div>
+    </div>
+    <!-- Modal Germe Catalogue -->
+    <div id="germeModalOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 560px; width: 95%;">
+            <button type="button" class="close-modal" onclick="window.closeGermeModal()">✕</button>
+            <h2 id="germeModalTitle">🦠 Nouveau Germe</h2>
+            <form id="germeForm">
+                <input type="hidden" id="germeEditId">
+                <div class="form-group">
+                    <label>🦠 Nom du Germe</label>
+                    <input type="text" id="germeName" class="form-input" placeholder="ex: E.coli, Salmonella, Staphylococcus aureus..." required>
+                </div>
+                <div class="form-group">
+                    <label>📏 Norme / Critère</label>
+                    <input type="text" id="germeNorm" class="form-input" placeholder="ex: Absence, &lt;10 UFC/g, &lt;100 UFC/ml...">
+                </div>
+                <div class="form-group">
+                    <label>📋 Méthode d'Analyse Standard</label>
+                    <textarea id="germeMethode" class="form-input" style="height:100px; resize:vertical;"
+                        placeholder="ex: ISO 6888-1 — Milieu Baird-Parker, incubation 37°C / 48h&#10;ex: ISO 4831 — Bouillon Mossel, incubation 30°C / 24-48h"></textarea>
+                    <span style="font-size:0.6rem; color:var(--text-dim); margin-top:4px;">Cette méthode sera automatiquement copiée dans le protocole de chaque fiche associée.</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px;">
+                    <button type="submit" class="save-btn">💾 Enregistrer</button>
+                    <button type="button" onclick="window.closeGermeModal()" style="background:#f1f5f9; border:1px solid var(--glass-border); color:var(--text-dim); padding:15px; border-radius:12px; cursor:pointer; font-weight:800;">Fermer</button>
+                </div>
+                <button type="button" id="deleteGermeBtn" onclick="window.deleteGerme()" style="display:none; margin-top:10px; width:100%; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); color:#dc2626; padding:12px; border-radius:12px; cursor:pointer; font-weight:800;">🗑 Supprimer ce Germe</button>
             </form>
         </div>
     </div>
@@ -2432,9 +2460,9 @@
         };
 
         document.addEventListener('input', (e) => {
+            const noUpperIds = ['germeMethode', 'observation'];
+            if (noUpperIds.includes(e.target.id)) return;
             if ((e.target.tagName === 'INPUT' && (e.target.type === 'text' || !e.target.type)) || e.target.tagName === 'TEXTAREA') {
-                // Do not uppercase dynamic search/suggestions inputs if unwanted, but we do it globally as requested.
-                // Make sure to avoid cursor jumping
                 const start = e.target.selectionStart;
                 const end = e.target.selectionEnd;
                 const originalVal = e.target.value;
@@ -2458,6 +2486,8 @@
             if (oldPrepBar) oldPrepBar.remove();
             const oldBullBar = document.getElementById('bulletin-filter-bar');
             if (oldBullBar) oldBullBar.remove();
+            const oldGermesBar = document.getElementById('germes-header-bar');
+            if (oldGermesBar) oldGermesBar.remove();
             window.currentTab = tab;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
@@ -2488,6 +2518,9 @@
                 } else if (tab === 'bulletins') {
                     addBtn.innerText = "+ NOUVEAU BULLETIN";
                     searchInput.placeholder = "Chercher par produit, lot, observation...";
+                } else if (tab === 'germes') {
+                    addBtn.innerText = "+ NOUVEAU GERME";
+                    searchInput.placeholder = "Chercher un germe, une méthode...";
                 }
             }
             if (typeof render === 'function') render();
@@ -2496,7 +2529,7 @@
         // --- GESTION DU SWIPE POUR CHANGER D'ONGLET ---
         let touchstartX = 0;
         let touchendX = 0;
-        const tabsOrder = ['fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins'];
+        const tabsOrder = ['fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes'];
 
         // ===========================
         // REORDER DES ONGLETs PRINCIPAUX (SortableJS)
@@ -2504,7 +2537,7 @@
         window.mainTabsOrderStorageKey = 'microbio_main_tabs_order';
 
         function getMainTabsDefaultOrder() {
-            return ['fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins'];
+            return ['fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes'];
         }
 
         window.__mainTabsInitDone = false;
@@ -2725,7 +2758,9 @@
         const REGISTRES_COL = "registres_config";
         const R_ENTRIES_COL = "registres_data";
         const BULLETINS_COL = "bulletins_stabilite";
+        const GERMES_COL = "germes_catalog"; // Catalogue des germes avec méthodes
         const CATALOGS_DOC = "laboratoires"; // Pour le catalogue permanent
+        let germeCatalog = []; // Tableau des germes définis par l'utilisateur
 
         let lastUsedCategory = localStorage.getItem('microbio_last_photo_cat') || 'ANALYSES';
         let customPhotoCategories = JSON.parse(localStorage.getItem('microbio_custom_photo_cats')) || ['ANALYSES', 'MILIEUX / PREPS', 'DIVERS'];
@@ -3022,6 +3057,8 @@
                 window.openRegistreConfig();
             } else if (window.currentTab === 'bulletins') {
                 window.openBulletinModal();
+            } else if (window.currentTab === 'germes') {
+                window.openGermeModal();
             } else {
                 window.openModal('modalOverlay');
             }
@@ -4086,6 +4123,14 @@
             window.showToast("❌ Erreur de synchronisation [Bulletins] : " + err.message, 'error', 5000);
         });
 
+        window.db.collection(GERMES_COL).orderBy('name', 'asc').onSnapshot(snap => {
+            germeCatalog = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderCatalogs();
+            if (window.currentTab === 'germes') render();
+        }, err => {
+            console.error("Germes Catalog Sync Error:", err);
+        });
+
         window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
                 catalogs = doc.data() || {};
@@ -4174,21 +4219,47 @@
         };
 
         function renderCatalogs() {
-            const types = ['germes', 'consommables', 'diluants', 'reactifs'];
+            // --- Germes : utiliser le catalogue dédié germeCatalog ---
+            const germesContainer = document.getElementById('germes-catalog');
+            if (germesContainer) {
+                const currentGermState = {};
+                germesContainer.querySelectorAll('.germes-check:checked').forEach(cb => {
+                    const val = cb.dataset.val;
+                    const normInput = Array.from(germesContainer.querySelectorAll('.germ-norm-input')).find(i => i.dataset.for === val);
+                    currentGermState[val] = { norm: normInput ? normInput.value : 'Absence' };
+                });
+
+                if (germeCatalog.length === 0) {
+                    germesContainer.innerHTML = `<div style="font-size:0.7rem; color:var(--text-dim); padding:10px; text-align:center; background:rgba(79,70,229,0.03); border-radius:10px; border:1px dashed rgba(79,70,229,0.15);">
+                        Aucun germe défini. Allez dans l'onglet 🦠 Germes pour créer votre catalogue.
+                    </div>`;
+                } else {
+                    germesContainer.innerHTML = germeCatalog.map(g => {
+                        const isChecked = currentGermState[g.name] !== undefined;
+                        const normVal = isChecked ? currentGermState[g.name].norm : (g.norm || 'Absence');
+                        return `
+                        <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:4px; padding:8px 10px;">
+                            <label class="list-item-main" style="display:flex; align-items:center; gap:10px; width:100%;">
+                                <input type="checkbox" class="germes-check" data-val="${g.name}" ${isChecked ? 'checked' : ''}>
+                                <span style="flex:1; font-weight:700; font-size:0.8rem;">${g.name}</span>
+                                <input type="text" class="germ-norm-input" data-for="${g.name}" placeholder="Norme" value="${normVal}" style="width:90px; font-size:0.65rem; background:#fff; border:1px solid var(--glass-border); color:var(--text-main); border-radius:4px; padding:2px 5px;" onclick="event.stopPropagation()">
+                            </label>
+                            ${g.methode ? `<div style="margin-left:28px; font-size:0.62rem; color:var(--text-dim); background:rgba(79,70,229,0.05); padding:3px 8px; border-radius:6px; border:1px solid rgba(79,70,229,0.1);">📋 ${g.methode}</div>` : ''}
+                        </div>`;
+                    }).join('');
+                }
+            }
+
+            // --- Autres types (consommables, diluants, reactifs) ---
+            const types = ['consommables', 'diluants', 'reactifs'];
             types.forEach(type => {
                 const container = document.getElementById(`${type}-catalog`);
                 if (container) {
                     const currentState = {};
                     container.querySelectorAll(`.${type}-check:checked`).forEach(cb => {
                         const val = cb.dataset.val;
-                        // Utilisation de find pour éviter les erreurs de sélecteur CSS avec des caractères spéciaux
                         const qtyInput = Array.from(container.querySelectorAll('.qty-input')).find(i => i.dataset.for === val);
-                        const normInput = Array.from(container.querySelectorAll('.germ-norm-input')).find(i => i.dataset.for === val);
-
-                        currentState[val] = {
-                            qty: (qtyInput ? qtyInput.value : 1),
-                            norm: (normInput ? normInput.value : 'Absence')
-                        };
+                        currentState[val] = { qty: (qtyInput ? qtyInput.value : 1) };
                     });
 
                     const list = catalogs[type] || [];
@@ -4198,9 +4269,8 @@
                                 <input type="checkbox" class="${type}-check" data-val="${val}" ${currentState[val] ? 'checked' : ''}>
                                 <span style="flex: 1;">${val}</span>
                                 ${type === 'consommables' ? `<input type="number" class="qty-input" data-for="${val}" value="${currentState[val]?.qty || 1}" min="1" onClick="event.stopPropagation()">` : ''}
-                                ${type === 'germes' ? `<input type="text" class="germ-norm-input" data-for="${val}" placeholder="Norme" value="${currentState[val]?.norm || 'Absence'}" style="width: 100px; font-size: 0.7rem; background: #fff; border: 1px solid var(--glass-border); color: var(--text-main); border-radius: 4px; padding: 2px 5px;" onClick="event.stopPropagation()">` : ''}
                             </label>
-                            <button type="button" class="delete-item-btn" onclick="deleteFromCatalog('${type}', '${val.replace(/'/g, "\\'")}')" title="Supprimer du catalogue">✕</button>
+                            <button type="button" class="delete-item-btn" onclick="deleteFromCatalog('${type}', '${val.replace(/'/g, "\\'")}')">✕</button>
                         </div>
                     `).join('');
                 }
@@ -4212,7 +4282,7 @@
                 const list = catalogs['additifs'] || [];
                 catPrep.innerHTML = list.map(val => `
                     <span class="mini-tag" style="cursor:pointer; background:rgba(79, 70, 229, 0.05); border:1px solid rgba(79, 70, 229, 0.1); display:flex; align-items:center; gap:8px;">
-                        <span onclick="document.getElementById('newAdditifName').value = '${val.replace(/'/g, "\\'")}';">${val}</span>
+                        <span onclick="document.getElementById('newAdditifName').value = '${val.replace(/'/g, "\\'")}'">${val}</span>
                         <span onclick="deleteFromCatalog('additifs', '${val.replace(/'/g, "\\'")}')" style="color:#ef4444; font-weight:800; cursor:pointer; padding:2px;">✕</span>
                     </span>
                 `).join('') || '<span style="font-size:0.6rem; color:var(--text-dim);">Catalogue vide. Ajoutez vos additifs ci-dessous.</span>';
@@ -4417,9 +4487,12 @@
                             <span class="prep-label" style="color:var(--success); margin-bottom: 8px; display: block;">🧫 Germes Spécifiés</span>
                             <div style="display: flex; flex-direction: column; gap: 6px;">
                             ${(f.germesDetails || []).map(g => `
-                                <div class="germe-item" style="display:flex; justify-content:space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
-                                    <span style="color:var(--text-dim); font-size:0.75rem; font-weight: 600;">${g.name}</span>
-                                    <span style="color:var(--success); font-weight:800; font-size: 0.75rem;">${g.norm}</span>
+                                <div class="germe-item" style="display:flex; flex-direction:column; gap:2px; border-bottom: 1px solid rgba(79,70,229,0.06); padding-bottom: 6px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span style="color:var(--text-main); font-size:0.78rem; font-weight:700;">🦠 ${g.name}</span>
+                                        <span style="color:var(--success); font-weight:800; font-size:0.75rem; background:rgba(5,150,105,0.08); padding:2px 8px; border-radius:6px;">${g.norm}</span>
+                                    </div>
+                                    ${g.methode ? `<div style="font-size:0.6rem; color:var(--text-dim); padding:2px 4px; background:rgba(79,70,229,0.04); border-radius:4px; border-left:2px solid rgba(79,70,229,0.2);">📋 ${g.methode}</div>` : ''}
                                 </div>
                             `).join('')}
                             </div>
@@ -5135,9 +5208,112 @@
                         </div>
                     `;
                 }).join('');
+            } else if (window.currentTab === 'germes') {
+                // ========== VUE CATALOGUE GERMES ==========
+                let filtered = germeCatalog.filter(g =>
+                    (g.name && g.name.toLowerCase().includes(query)) ||
+                    (g.methode && g.methode.toLowerCase().includes(query)) ||
+                    (g.norm && g.norm.toLowerCase().includes(query))
+                );
+
+                const headerBar = document.getElementById('germes-header-bar') || (() => {
+                    const el = document.createElement('div');
+                    el.id = 'germes-header-bar';
+                    container.parentNode.insertBefore(el, container);
+                    return el;
+                })();
+                headerBar.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,rgba(79,70,229,0.08),rgba(124,58,237,0.06)); padding:14px 18px; border-radius:16px; margin-bottom:16px; border:1px solid rgba(79,70,229,0.12);">
+                    <div>
+                        <div style="font-weight:900; color:var(--primary); font-size:0.85rem; letter-spacing:0.5px;">🦠 CATALOGUE DES GERMES</div>
+                        <div style="font-size:0.62rem; color:var(--text-dim); margin-top:2px;">Définissez vos germes et leurs méthodes standards — ils s'appliquent automatiquement dans les Fiches</div>
+                    </div>
+                    <span style="font-size:1.4rem; font-weight:900; color:var(--primary); background:#fff; padding:4px 14px; border-radius:10px; box-shadow:0 2px 8px rgba(79,70,229,0.1);">${germeCatalog.length}</span>
+                </div>`;
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="empty-state">
+                        <div class="empty-icon">🦠</div>
+                        <h3>Aucun germe défini</h3>
+                        <p style="color:var(--text-dim); font-size:0.85rem; margin-top:8px;">Appuyez sur <strong>+ NOUVEAU GERME</strong> pour créer votre catalogue</p>
+                    </div>`;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(g => `
+                    <div class="fiche-card" onclick="window.openGermeModal('${g.id}')" style="border-left:4px solid var(--primary); cursor:pointer;">
+                        <div class="card-header">
+                            <div>
+                                <div class="designation" style="font-size:1rem;">🦠 ${g.name}</div>
+                                ${g.norm ? `<div class="code-badge" style="margin-top:4px; background:rgba(5,150,105,0.08); color:var(--success); border-color:rgba(5,150,105,0.15);">${g.norm}</div>` : ''}
+                            </div>
+                            <button class="pdf-btn" onclick="event.stopPropagation(); window.openGermeModal('${g.id}')" style="color:var(--primary); border-color:rgba(79,70,229,0.2); background:rgba(79,70,229,0.04);">
+                                ✏️ Modifier
+                            </button>
+                        </div>
+                        ${g.methode ? `
+                        <div style="background:rgba(79,70,229,0.04); border:1px solid rgba(79,70,229,0.1); border-radius:12px; padding:10px 14px;">
+                            <div style="font-size:0.6rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">📋 Méthode d'Analyse</div>
+                            <div style="font-size:0.78rem; color:var(--text-main); line-height:1.5; white-space:pre-wrap;">${g.methode}</div>
+                        </div>` : `<div style="font-size:0.7rem; color:var(--text-dim); font-style:italic; padding: 4px 8px;">Aucune méthode définie</div>`}
+                    </div>
+                `).join('');
             }
         }
         
+        // ========== FONCTIONS CRUD CATALOGUE GERMES ==========
+        window.openGermeModal = function(id = null) {
+            document.getElementById('germeForm').reset();
+            document.getElementById('germeEditId').value = id || '';
+            document.getElementById('germeModalTitle').innerText = id ? '✏️ Modifier le Germe' : '🦠 Nouveau Germe';
+            document.getElementById('deleteGermeBtn').style.display = id ? 'block' : 'none';
+            if (id) {
+                const g = germeCatalog.find(x => x.id === id);
+                if (g) {
+                    document.getElementById('germeName').value = g.name || '';
+                    document.getElementById('germeNorm').value = g.norm || '';
+                    document.getElementById('germeMethode').value = g.methode || '';
+                }
+            }
+            window.openModal('germeModalOverlay');
+        };
+
+        window.closeGermeModal = function() {
+            window.closeModal('germeModalOverlay');
+        };
+
+        window.deleteGerme = function() {
+            const id = document.getElementById('germeEditId').value;
+            if (!id) return;
+            if (confirm('⚠️ Supprimer ce germe du catalogue ?')) {
+                window.db.collection(GERMES_COL).doc(id).delete()
+                    .then(() => { window.showToast('Germe supprimé !', 'success'); window.closeGermeModal(); })
+                    .catch(err => window.showToast('Erreur: ' + err.message, 'error', 4000));
+            }
+        };
+
+        document.getElementById('germeForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const id = document.getElementById('germeEditId').value;
+            const name = document.getElementById('germeName').value.trim();
+            if (!name) return;
+            const data = {
+                name: name,
+                norm: document.getElementById('germeNorm').value.trim(),
+                methode: document.getElementById('germeMethode').value.trim(),
+                updatedAt: new Date().toISOString()
+            };
+            if (id) {
+                window.db.collection(GERMES_COL).doc(id).update(data)
+                    .then(() => { window.showToast('Germe mis à jour !', 'success'); window.closeGermeModal(); })
+                    .catch(err => window.showToast('Erreur: ' + err.message, 'error', 4000));
+            } else {
+                window.db.collection(GERMES_COL).add(data)
+                    .then(() => { window.showToast('Germe ajouté au catalogue !', 'success'); window.closeGermeModal(); })
+                    .catch(err => window.showToast('Erreur: ' + err.message, 'error', 4000));
+            }
+        });
+
+
         window.calcBulletinIncub = function() {
             const dateVal = document.getElementById('bullDateAnalyse').value;
             if (!dateVal) return;
@@ -5665,8 +5841,6 @@
             setChipsActive('dilution-group', f.dilution || '');
             setChipsActive('application-group', f.application || '');
 
-            renderCatalogs();
-
             const checkItems = (type, selectedArr) => {
                 document.querySelectorAll(`.${type}-check`).forEach(cb => {
                     const val = cb.dataset.val;
@@ -5686,12 +5860,12 @@
                 });
             };
 
+            renderCatalogs();
+
             checkItems('germes', f.germesDetails || f.germes);
             checkItems('diluants', f.diluants || (f.diluant ? [f.diluant] : []));
             checkItems('reactifs', f.reactifs);
             checkItems('consommables', f.materiels);
-
-            renderCatalogs();
 
             document.getElementById('modalTitle').innerText = 'Modifier la Fiche';
             deleteBtn.style.display = 'block';
@@ -5707,7 +5881,13 @@
 
             const germesDetails = Array.from(document.querySelectorAll('.germes-check:checked')).map(cb => {
                 const normInput = cb.closest('.list-item').querySelector('.germ-norm-input');
-                return { name: cb.dataset.val, norm: normInput.value || 'Absence' };
+                const germeName = cb.dataset.val;
+                const catalogEntry = germeCatalog.find(g => g.name === germeName);
+                return {
+                    name: germeName,
+                    norm: normInput ? normInput.value || 'Absence' : 'Absence',
+                    methode: catalogEntry ? (catalogEntry.methode || '') : ''
+                };
             });
 
             const diluants = getChecked('diluants');
@@ -6355,11 +6535,12 @@
 
             doc.autoTable({
                 startY: y,
-                head: [['Germe', 'Norme']],
-                body: (f.germesDetails || []).map(g => [g.name, s(g.norm)]),
+                head: [['Germe', 'Norme', 'Méthode d\'Analyse']],
+                body: (f.germesDetails || []).map(g => [g.name, s(g.norm), s(g.methode) || '—']),
                 theme: 'grid',
                 headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
-                styles: { lineColor: [0, 0, 0], textColor: 0 }
+                styles: { lineColor: [0, 0, 0], textColor: 0, fontSize: 8 },
+                columnStyles: { 2: { cellWidth: 80 } }
             });
             y = doc.lastAutoTable.finalY + 10;
 

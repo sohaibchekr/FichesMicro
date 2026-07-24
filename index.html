@@ -653,7 +653,7 @@
         .main-tabs::-webkit-scrollbar { display: none; }
 
         .main-tab {
-            flex: 1;
+            flex: 0 0 auto;
             min-width: 100px;
             padding: 12px;
             border: none;
@@ -1328,11 +1328,13 @@
             </button>
         </div>
         <div id="selectionActions"
-            style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center; gap: 10px;">
+            style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
             <span id="selectedCount" style="color: #ef4444; font-weight: 800; font-size: 0.8rem;">0 sélectionnée(s)</span>
-            <div style="display:flex; gap:10px;">
+            <div style="display:flex; gap:8px; flex-wrap: wrap;">
                 <button onclick="window.selectAllVisible()"
                     style="background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">TOUT SÉLECTIONNER</button>
+                <button onclick="window.runBatchPDF()"
+                    style="background: #10b981; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">📄 EXPORTER PDF</button>
                 <button onclick="window.runBatchDelete()"
                     style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">SUPPRIMER DÉFINITIVEMENT</button>
             </div>
@@ -1346,8 +1348,8 @@
     <button id="addBtn" class="fab" onclick="window.openAddModal()">+</button>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
-        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.6.0 • Stockage Local Direct</div>
-        <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.6.0'); location.reload(true);"
+        <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.11.0 • Stockage Local Direct</div>
+        <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.11.0'); location.reload(true);"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
     </footer>
@@ -2231,14 +2233,45 @@
                     <input type="text" id="germeName" class="form-input" placeholder="ex: E.coli, Salmonella, Staphylococcus aureus..." required>
                 </div>
                 <div class="form-group">
+                    <label>🏷️ Titre / Produit concerné</label>
+                    <input type="text" id="germeTitle" class="form-input" list="germe-title-list" placeholder="ex: PRODUITS FINIS, MATIÈRES PREMIÈRES, EAU DE RINÇAGE, BIOLECT...">
+                    <datalist id="germe-title-list">
+                        <option value="PRODUITS FINIS (PF)"></option>
+                        <option value="MATIÈRES PREMIÈRES (MP)"></option>
+                        <option value="EAU DE PROCESS / RINÇAGE"></option>
+                        <option value="ARTICLES DE CONDITIONNEMENT (ADC)"></option>
+                        <option value="STABILITÉ (STAB)"></option>
+                    </datalist>
+                    <span style="font-size:0.6rem; color:var(--text-dim); margin-top:2px;">Spécifiez le produit ou la catégorie auquel s'applique ce germe.</span>
+                </div>
+                <div class="form-group">
                     <label>📏 Norme / Critère</label>
                     <input type="text" id="germeNorm" class="form-input" placeholder="ex: Absence, &lt;10 UFC/g, &lt;100 UFC/ml...">
                 </div>
                 <div class="form-group">
                     <label>📋 Méthode d'Analyse Standard</label>
-                    <textarea id="germeMethode" class="form-input" style="height:100px; resize:vertical;"
-                        placeholder="ex: ISO 6888-1 — Milieu Baird-Parker, incubation 37°C / 48h&#10;ex: ISO 4831 — Bouillon Mossel, incubation 30°C / 24-48h"></textarea>
-                    <span style="font-size:0.6rem; color:var(--text-dim); margin-top:4px;">Cette méthode sera automatiquement copiée dans le protocole de chaque fiche associée.</span>
+                    <textarea id="germeMethode" class="form-input" style="height:90px; resize:vertical;"
+                        placeholder="ex: 10ml de PF dans 90ml de TSB -> Incuber pdt 18 à 24H -> Isolement sur VRBG"></textarea>
+                    <span style="font-size:0.6rem; color:var(--text-dim); margin-top:4px;">Séparez les étapes par des flèches (-> ou ➔) ou sauts de ligne pour créer la méthode d'analyse.</span>
+                </div>
+                <datalist id="germe-period-list">
+                    <option value="2H à 5H"></option>
+                    <option value="18H à 24H"></option>
+                    <option value="24H à 48H"></option>
+                    <option value="48H MAX"></option>
+                    <option value="72H"></option>
+                </datalist>
+                <datalist id="germe-temp-list">
+                    <option value="30-35°C"></option>
+                    <option value="20-25°C"></option>
+                    <option value="42-44°C"></option>
+                </datalist>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>⏳🌡️ Conditions d'incubation (Phases & Repiquages)</label>
+                    <div id="germeIncubationList" style="display:flex; flex-direction:column; gap:8px; margin-top:5px;">
+                        <!-- Lignes js dynamiques -->
+                    </div>
+                    <button type="button" onclick="window.addGermIncubationRow()" style="margin-top:8px; background:rgba(79,70,229,0.06); color:var(--primary); border:1px dashed rgba(79,70,229,0.3); padding:8px 12px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; width:100%; text-align:center; transition:0.2s;">+ Ajouter une phase (ex: Repiquage, Enrichment...)</button>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px;">
                     <button type="submit" class="save-btn">💾 Enregistrer</button>
@@ -2407,6 +2440,72 @@
             } catch (e) {
                 return dateStr;
             }
+        };
+
+        window.calculateGermNextActionsHtml = function(germeName, dateAnalyseStr) {
+            if (!germeName || !dateAnalyseStr || typeof germeCatalog === 'undefined') return '';
+            const germ = germeCatalog.find(cat => cat.name === germeName);
+            if (!germ) return '';
+
+            const baseDate = new Date(dateAnalyseStr);
+            baseDate.setHours(8, 0, 0, 0); 
+
+            let html = '';
+            
+            function parseMaxHours(periodStr) {
+                if (!periodStr) return 0;
+                let p = periodStr.toUpperCase();
+                let matches = p.match(/\d+/g);
+                if (matches && matches.length > 0) {
+                    return parseInt(matches[matches.length - 1], 10);
+                }
+                return 0;
+            }
+
+            let currentBaseDate = new Date(baseDate);
+
+            if (germ.incubations && germ.incubations.length > 0) {
+                let phasesHtml = [];
+                const totalPhases = germ.incubations.length;
+                let repiquageCount = 1;
+
+                for (let i = 0; i < totalPhases; i++) {
+                    const phase = germ.incubations[i];
+                    let maxH = parseMaxHours(phase.period);
+                    
+                    if (maxH > 0) {
+                        currentBaseDate.setHours(currentBaseDate.getHours() + maxH);
+                        let dateStr = currentBaseDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                        
+                        let label = "";
+                        if (i === totalPhases - 1) {
+                            label = "Résultat";
+                        } else {
+                            if (totalPhases > 2) {
+                                label = `Repiquage ${repiquageCount}`;
+                                repiquageCount++;
+                            } else {
+                                label = "Repiquage";
+                            }
+                        }
+                        const condStr = phase.temp ? ` [${phase.temp} - ${phase.period}]` : ` [${phase.period}]`;
+                        phasesHtml.push(`<span style="font-size:0.55rem; color:#0369a1; font-weight:800;">⏳ ${label} : ${dateStr} <span style="color:var(--text-dim); font-weight:600;">${condStr}</span></span>`);
+                    }
+                }
+                if (phasesHtml.length > 0) {
+                    html += `<div style="display:flex; flex-direction:column; gap:1px; margin-top:2px;">${phasesHtml.join('')}</div>`;
+                }
+            } else if (germ.incubationPeriod) {
+                let maxH = parseMaxHours(germ.incubationPeriod);
+                if (maxH > 0) {
+                    currentBaseDate.setHours(currentBaseDate.getHours() + maxH);
+                    let dateStr = currentBaseDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                    const condStr = germ.incubationTemp ? ` [${germ.incubationTemp} - ${germ.incubationPeriod}]` : ` [${germ.incubationPeriod}]`;
+                    html += `<div style="font-size:0.55rem; color:#0369a1; font-weight:800; margin-top:2px;">⏳ Résultat : ${dateStr} <span style="color:var(--text-dim); font-weight:600;">${condStr}</span></div>`;
+                }
+            }
+
+            return html;
         };
 
         window.formatStringToLongDate = function (dateStr, fallback = '-') {
@@ -4755,6 +4854,7 @@
                     const matchesText = (a.produit && a.produit.toLowerCase().includes(query)) ||
                         (a.lot && a.lot.toLowerCase().includes(query)) ||
                         (a.codeControl && a.codeControl.toLowerCase().includes(query)) ||
+                        (a.codeFiche && a.codeFiche.toLowerCase().includes(query)) ||
                         (a.classe && a.classe.toLowerCase().includes(query));
 
                     const matchesDate = !dateFilter || a.dateAnalyse === dateFilter;
@@ -4868,7 +4968,8 @@
                                          <div style="${i.isLibere ? 'text-decoration: line-through; color: var(--text-dim);' : ''}; flex: 1;">
                                              <div style="font-size: 0.9rem; font-weight: 700; color: ${i.isLibere ? 'var(--text-dim)' : 'var(--text-main)'};">${i.produit}</div>
                                              ${i.bulletin || i.page ? `<div style="font-size: 0.65rem; color: var(--primary); font-weight: 800; margin-bottom: 2px;">📄 Bulletin: ${i.bulletin || '-'} | Page: ${i.page || '-'}</div>` : ''}
-                                             <div style="font-size: 0.65rem; color: var(--text-dim);">Lot: ${i.lot || '-'} | Code: ${i.codeControl || '-'}</div>
+                                             <div style="font-size: 0.65rem; color: var(--text-dim);">Lot: ${i.lot || '-'} | N°Ctrl: ${i.codeControl || '-'}</div>
+                                             ${i.codeFiche ? `<div style="font-size: 0.6rem; color: var(--primary); font-weight: 700; background: rgba(79,70,229,0.06); padding: 1px 6px; border-radius: 4px; display:inline-block; margin-top:2px; border: 1px solid rgba(79,70,229,0.15);">📋 Fiche: ${i.codeFiche}</div>` : ''}
                                          </div>
                                          <div style="text-align: right;">
                                              <div style="font-size: 0.7rem; color: var(--success); font-weight: 800; background: rgba(34, 197, 94, 0.1); padding: 2px 6px; border-radius: 4px;">
@@ -4904,8 +5005,9 @@
                                                      <span style="color:var(--primary); font-weight:800;">${g.name}: <span style="color:var(--text-main); font-weight:800;">${g.result || '...'}</span></span>
                                                  </div>
                                                  ${g.remark ? `<div style="font-size:0.45rem; color:var(--text-dim); font-weight:400; font-style:italic; border-top:1px solid rgba(0,0,0,0.05); padding-top:2px;">"${g.remark}"</div>` : ''}
+                                                 ${window.calculateGermNextActionsHtml(g.name, i.dateAnalyse)}
                                              </div>
-                                         `).join('') : (Array.isArray(i.germs) ? i.germs.map(g => `<span class="mini-tag">${g}</span>`).join('') : (i.germs || ''))}
+                                         `).join('') : (Array.isArray(i.germs) ? i.germs.map(g => `<div style="background: rgba(79, 70, 229, 0.05); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(79, 70, 229, 0.1);"><span class="mini-tag" style="display:block;">${g}</span>${window.calculateGermNextActionsHtml(g, i.dateAnalyse)}</div>`).join('') : (i.germs || ''))}
                                      </div>
                                  </div>
                             `}).join('')}
@@ -5212,6 +5314,7 @@
                 // ========== VUE CATALOGUE GERMES ==========
                 let filtered = germeCatalog.filter(g =>
                     (g.name && g.name.toLowerCase().includes(query)) ||
+                    (g.title && g.title.toLowerCase().includes(query)) ||
                     (g.methode && g.methode.toLowerCase().includes(query)) ||
                     (g.norm && g.norm.toLowerCase().includes(query))
                 );
@@ -5222,12 +5325,17 @@
                     container.parentNode.insertBefore(el, container);
                     return el;
                 })();
-                headerBar.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,rgba(79,70,229,0.08),rgba(124,58,237,0.06)); padding:14px 18px; border-radius:16px; margin-bottom:16px; border:1px solid rgba(79,70,229,0.12);">
+                headerBar.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,rgba(79,70,229,0.08),rgba(124,58,237,0.06)); padding:14px 18px; border-radius:16px; margin-bottom:16px; border:1px solid rgba(79,70,229,0.12); flex-wrap:wrap; gap:10px;">
                     <div>
-                        <div style="font-weight:900; color:var(--primary); font-size:0.85rem; letter-spacing:0.5px;">🦠 CATALOGUE DES GERMES</div>
-                        <div style="font-size:0.62rem; color:var(--text-dim); margin-top:2px;">Définissez vos germes et leurs méthodes standards — ils s'appliquent automatiquement dans les Fiches</div>
+                        <div style="font-weight:900; color:var(--primary); font-size:0.85rem; letter-spacing:0.5px;">🦠 GERMES SPÉCIFIÉS — CATALOGUE</div>
+                        <div style="font-size:0.62rem; color:var(--text-dim); margin-top:2px;">Normes & Schémas opératoires d'analyse</div>
                     </div>
-                    <span style="font-size:1.4rem; font-weight:900; color:var(--primary); background:#fff; padding:4px 14px; border-radius:10px; box-shadow:0 2px 8px rgba(79,70,229,0.1);">${germeCatalog.length}</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button onclick="window.generateGermesPDF()" style="background:var(--primary); color:white; border:none; padding:8px 14px; border-radius:10px; font-weight:800; font-size:0.7rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px var(--primary-glow);">
+                            📄 EXPORTER PDF
+                        </button>
+                        <span style="font-size:1.2rem; font-weight:900; color:var(--primary); background:#fff; padding:4px 12px; border-radius:10px; box-shadow:0 2px 8px rgba(79,70,229,0.1);">${germeCatalog.length}</span>
+                    </div>
                 </div>`;
 
                 if (filtered.length === 0) {
@@ -5239,40 +5347,106 @@
                     return;
                 }
 
-                container.innerHTML = filtered.map(g => `
-                    <div class="fiche-card" onclick="window.openGermeModal('${g.id}')" style="border-left:4px solid var(--primary); cursor:pointer;">
-                        <div class="card-header">
-                            <div>
-                                <div class="designation" style="font-size:1rem;">🦠 ${g.name}</div>
-                                ${g.norm ? `<div class="code-badge" style="margin-top:4px; background:rgba(5,150,105,0.08); color:var(--success); border-color:rgba(5,150,105,0.15);">${g.norm}</div>` : ''}
-                            </div>
-                            <button class="pdf-btn" onclick="event.stopPropagation(); window.openGermeModal('${g.id}')" style="color:var(--primary); border-color:rgba(79,70,229,0.2); background:rgba(79,70,229,0.04);">
-                                ✏️ Modifier
-                            </button>
+                container.innerHTML = filtered.map(g => {
+                    const isSelected = selectedFiches.has(g.id);
+                    const steps = window.parseMethodSteps ? window.parseMethodSteps(g.methode || '') : [];
+                    
+                    const stepsHtml = steps.length > 0 ? steps.map((stepText, idx) => `
+                        <div style="background:linear-gradient(135deg, rgba(79,70,229,0.08), rgba(124,58,237,0.05)); border:1px solid rgba(79,70,229,0.18); padding:6px 12px; border-radius:10px; font-size:0.75rem; font-weight:700; color:var(--text-main); display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                            <span style="background:var(--primary); color:white; border-radius:50%; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; font-size:0.6rem; font-weight:800; flex-shrink:0;">${idx + 1}</span>
+                            <span>${stepText}</span>
                         </div>
-                        ${g.methode ? `
-                        <div style="background:rgba(79,70,229,0.04); border:1px solid rgba(79,70,229,0.1); border-radius:12px; padding:10px 14px;">
-                            <div style="font-size:0.6rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">📋 Méthode d'Analyse</div>
-                            <div style="font-size:0.78rem; color:var(--text-main); line-height:1.5; white-space:pre-wrap;">${g.methode}</div>
-                        </div>` : `<div style="font-size:0.7rem; color:var(--text-dim); font-style:italic; padding: 4px 8px;">Aucune méthode définie</div>`}
+                    `).join('<div style="color:var(--primary); font-weight:900; font-size:1.1rem; display:inline-flex; align-items:center; justify-content:center; padding:0 2px;">➔</div>') : '<div style="font-size:0.7rem; color:var(--text-dim); font-style:italic;">Aucune méthode renseignée</div>';
+
+                    return `
+                    <div class="fiche-card ${isSelected ? 'selected' : ''}" onclick="${isSelectionMode ? `toggleItemSelection('${g.id}', 'germes', event); render();` : `window.openGermeModal('${g.id}')`}" style="border-left:4px solid var(--primary); cursor:pointer; ${isSelected ? 'border-color: #ef4444 !important; background: rgba(239, 68, 68, 0.04);' : ''}">
+                        <div class="card-header">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                ${isSelectionMode ? `<div style="width:22px; height:22px; border-radius:6px; border:2px solid ${isSelected ? '#ef4444' : 'var(--glass-border)'}; display:flex; align-items:center; justify-content:center; color:#ef4444; font-weight:bold;">${isSelected ? '✓' : ''}</div>` : ''}
+                                <div>
+                                    <div class="designation" style="font-size:1rem; font-weight:800;">
+                                        🦠 ${g.name} ${g.title ? `<span style="font-size:0.75rem; color:var(--primary); font-weight:700;">(${g.title})</span>` : ''}
+                                    </div>
+                                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                                        ${g.title ? `<div class="code-badge" style="background:rgba(124,58,237,0.08); color:var(--primary); border-color:rgba(124,58,237,0.15);">🏷️ ${g.title}</div>` : ''}
+                                        ${g.norm ? `<div class="code-badge" style="background:rgba(5,150,105,0.08); color:var(--success); border-color:rgba(5,150,105,0.15);">Norme : ${g.norm}</div>` : ''}
+                                        ${(() => {
+                                            if (g.incubations && g.incubations.length > 0) {
+                                                return g.incubations.map((inc, i) => `
+                                                    <div class="code-badge" style="background:rgba(79,70,229,0.08); color:var(--primary); border-color:rgba(79,70,229,0.15);">
+                                                        P${i+1} : ⏳ ${inc.period || '?'} | 🌡️ ${inc.temp || '?'}
+                                                    </div>
+                                                `).join('');
+                                            } else {
+                                                let old = '';
+                                                if (g.incubationPeriod) old += `<div class="code-badge" style="background:rgba(79,70,229,0.08); color:var(--primary); border-color:rgba(79,70,229,0.15);">⏳ ${g.incubationPeriod}</div>`;
+                                                if (g.incubationTemp) old += `<div class="code-badge" style="background:rgba(245,158,11,0.08); color:#b45309; border-color:rgba(245,158,11,0.15);">🌡️ ${g.incubationTemp}</div>`;
+                                                return old;
+                                            }
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button class="pdf-btn" onclick="event.stopPropagation(); window.generateGermesPDF(['${g.id}'])" style="color:var(--success); border-color:rgba(16,185,129,0.2); background:rgba(16,185,129,0.05); font-weight:800;">
+                                    📄 PDF
+                                </button>
+                                <button class="pdf-btn" onclick="event.stopPropagation(); window.openGermeModal('${g.id}')" style="color:var(--primary); border-color:rgba(79,70,229,0.2); background:rgba(79,70,229,0.04);">
+                                    ✏️ Modifier
+                                </button>
+                            </div>
+                        </div>
+                        <div style="background:rgba(79,70,229,0.03); border:1px solid rgba(79,70,229,0.1); border-radius:12px; padding:10px 14px; margin-top:8px;">
+                            <div style="font-size:0.62rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px;">📋 MÉTHODE D'ANALYSE</div>
+                            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+                                ${stepsHtml}
+                            </div>
+                        </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
         
         // ========== FONCTIONS CRUD CATALOGUE GERMES ==========
+        window.addGermIncubationRow = function(period = '', temp = '') {
+            const list = document.getElementById('germeIncubationList');
+            const div = document.createElement('div');
+            div.style = "display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center;";
+            div.innerHTML = `
+                <input type="text" class="form-input germe-incub-period" list="germe-period-list" placeholder="Durée (ex: 18-24H)" value="${period}">
+                <input type="text" class="form-input germe-incub-temp" list="germe-temp-list" placeholder="Température (ex: 30-35°C)" value="${temp}">
+                <button type="button" onclick="this.parentElement.remove()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:34px; height:34px; border-radius:8px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center;">✕</button>
+            `;
+            list.appendChild(div);
+        };
+
         window.openGermeModal = function(id = null) {
             document.getElementById('germeForm').reset();
             document.getElementById('germeEditId').value = id || '';
             document.getElementById('germeModalTitle').innerText = id ? '✏️ Modifier le Germe' : '🦠 Nouveau Germe';
             document.getElementById('deleteGermeBtn').style.display = id ? 'block' : 'none';
+            document.getElementById('germeIncubationList').innerHTML = '';
+            
             if (id) {
                 const g = germeCatalog.find(x => x.id === id);
                 if (g) {
                     document.getElementById('germeName').value = g.name || '';
+                    document.getElementById('germeTitle').value = g.title || '';
                     document.getElementById('germeNorm').value = g.norm || '';
                     document.getElementById('germeMethode').value = g.methode || '';
+
+                    if (g.incubations && g.incubations.length > 0) {
+                        g.incubations.forEach(inc => window.addGermIncubationRow(inc.period, inc.temp));
+                    } else if (g.incubationPeriod || g.incubationTemp) {
+                        // Compatibilité données existantes
+                        window.addGermIncubationRow(g.incubationPeriod || '', g.incubationTemp || '');
+                    } else {
+                        window.addGermIncubationRow();
+                    }
                 }
+            } else {
+                window.addGermIncubationRow();
             }
             window.openModal('germeModalOverlay');
         };
@@ -5296,12 +5470,27 @@
             const id = document.getElementById('germeEditId').value;
             const name = document.getElementById('germeName').value.trim();
             if (!name) return;
+
+            const periodInputs = Array.from(document.querySelectorAll('.germe-incub-period')).map(input => input.value.trim());
+            const tempInputs = Array.from(document.querySelectorAll('.germe-incub-temp')).map(input => input.value.trim());
+            let incubations = [];
+            for (let i = 0; i < periodInputs.length; i++) {
+                if (periodInputs[i] || tempInputs[i]) {
+                    incubations.push({ period: periodInputs[i], temp: tempInputs[i] });
+                }
+            }
+
             const data = {
                 name: name,
+                title: document.getElementById('germeTitle').value.trim(),
                 norm: document.getElementById('germeNorm').value.trim(),
                 methode: document.getElementById('germeMethode').value.trim(),
+                incubationPeriod: '', // Vider l'ancien champ pour forcer la nouvelle logique
+                incubationTemp: '', // Vider l'ancien champ
+                incubations: incubations,
                 updatedAt: new Date().toISOString()
             };
+
             if (id) {
                 window.db.collection(GERMES_COL).doc(id).update(data)
                     .then(() => { window.showToast('Germe mis à jour !', 'success'); window.closeGermeModal(); })
@@ -5963,6 +6152,7 @@
             else if (window.currentTab === 'photos') { targetCol = PHOTOS_COL; label = "photo(s)"; }
             else if (window.currentTab === 'preps') { targetCol = PREPS_COL; label = "préparation(s)"; }
             else if (window.currentTab === 'registres') { targetCol = R_ENTRIES_COL; label = "entrée(s) de registre"; }
+            else if (window.currentTab === 'germes') { targetCol = GERMES_COL; label = "germe(s)"; }
 
             if (confirm(`⚠️ Supprimer définitivement ${selectedFiches.size} ${label} ?`)) {
                 const batch = window.db.batch();
@@ -5984,6 +6174,25 @@
                     selectedFiches.clear();
                     window.toggleSelectionMode(false);
                 }).catch(err => window.showToast("Erreur suppression groupée: " + err.message, 'error', 5000));
+            }
+        };
+
+        // Export PDF groupé
+        window.runBatchPDF = function() {
+            if (window.currentTab === 'germes') {
+                if (selectedFiches.size === 0) {
+                    window.generateGermesPDF([]);
+                } else {
+                    window.generateGermesPDF(Array.from(selectedFiches));
+                }
+            } else if (window.currentTab === 'fiches') {
+                if (selectedFiches.size === 0) {
+                    window.showToast("Sélectionnez au moins une fiche.", "info");
+                    return;
+                }
+                selectedFiches.forEach(id => window.generatePDF(id));
+            } else {
+                window.showToast("Option d'export PDF disponible pour les Fiches et les Germes.", "info");
             }
         };
 
@@ -6010,9 +6219,14 @@
                         <input type="text" class="form-input row-lot" value="${data ? (data.lot || '') : ''}" placeholder="ex: L240601">
                     </div>
                     <div class="form-group">
-                        <label>N° de contrôle <span class="code-autofill-hint" style="font-size:0.55rem; color:var(--success); font-weight:600;"></span></label>
+                        <label>N° de contrôle</label>
                         <input type="text" class="form-input row-code" value="${data ? (data.codeControl || '') : ''}" placeholder="ex: M-01">
                     </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <label style="color: var(--primary);">📋 Code Fiche <span style="font-size:0.55rem; color:var(--text-dim); font-weight:500;">(auto-rempli depuis la fiche — ex: FS/BT519/PF/00)</span></label>
+                    <input type="text" class="form-input row-code-fiche" value="${data ? (data.codeFiche || '') : ''}" placeholder="ex: FS/BT519/PF/00" style="background:rgba(79,70,229,0.04); border-color:rgba(79,70,229,0.25); color:var(--primary); font-weight:700;">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
@@ -6046,19 +6260,24 @@
                             <div style="display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
                                 <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${g.name}</span>
+                                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${g.norm || '—'}</span>
                                 <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
                                 <input type="text" class="row-germ-remark" value="${g.remark || ''}" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
-                        `).join('') : (data && Array.isArray(data.germs) ? data.germs.map(gname => `
+                        `).join('') : (data && Array.isArray(data.germs) ? data.germs.map(gname => {
+                            const catalogEntry = typeof window !== 'undefined' && window.germeCatalog ? window.germeCatalog.find(catG => catG.name === gname) : null;
+                            const normText = catalogEntry && catalogEntry.norm ? catalogEntry.norm : '—';
+                            return `
                             <div style="display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
                                 <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${gname}</span>
+                                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
                                 <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
                                 <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
                             </div>
-                        `).join('') : '')}
+                        `;}).join('') : '')}
                     </div>
                     
                     <div style="display:flex; gap:5px; margin-bottom: 8px;">
@@ -6066,9 +6285,9 @@
                         <button type="button" onclick="addGermToRow(this)" style="background:var(--primary); border:none; color:white; width:30px; height:30px; border-radius:8px; cursor:pointer; font-weight:800;">+</button>
                     </div>
 
-                    <!-- Suggestions Rapides -->
+                    <!-- Suggestions Rapides (Depuis catalogue) -->
                     <div class="germ-suggestions" style="display:flex; flex-wrap:wrap; gap:5px;">
-                        ${["DGAT", "DMLT", "P.a", "E.coli", "Strepto. fécaux", "Coliformes T.", "Clostri. sulfuto", "Salmonelle"].map(sg => `
+                        ${(germeCatalog && germeCatalog.length > 0 ? germeCatalog.map(g => g.name) : ["DGAT", "DMLT", "P.a", "E.coli", "Strepto. fécaux", "Coliformes T.", "Clostri. sulfuto", "Salmonelle"]).map(sg => `
                             <button type="button" onclick="quickAddGerm(this, '${sg}')" style="background:rgba(79, 70, 229, 0.05); border:1px solid var(--glass-border); color:var(--text-dim); padding:4px 8px; border-radius:6px; font-size:0.55rem; cursor:pointer; transition:all 0.2s;">${sg}</button>
                         `).join('')}
                     </div>
@@ -6084,6 +6303,7 @@
             if (data && data.produit) {
                 const matchedFiche = fiches.find(f =>
                     (f.designation || '').toLowerCase() === (data.produit || '').toLowerCase() ||
+                    (data.codeFiche && f.code && f.code.toLowerCase() === data.codeFiche.toLowerCase()) ||
                     (f.code && f.code.toLowerCase() === (data.codeControl || '').toLowerCase())
                 );
                 if (matchedFiche) window.applyFicheToRow(div, matchedFiche, false);
@@ -6133,17 +6353,18 @@
 
         // Applique les données d'une fiche signélétique à une ligne d'analyse
         window.applyFicheToRow = function(rowDiv, fiche, overwrite = true) {
-            const codeInput = rowDiv.querySelector('.row-code');
+            const codeFicheInput = rowDiv.querySelector('.row-code-fiche');
             const badge = rowDiv.querySelector('.fiche-link-badge');
             const codeHint = rowDiv.querySelector('.code-autofill-hint');
             const germContainer = rowDiv.querySelector('.germs-dynamic-container');
 
-            if (codeInput && (overwrite || !codeInput.value.trim())) {
-                codeInput.value = fiche.code || '';
-                codeInput.style.borderColor = 'rgba(79,70,229,0.4)';
-                codeInput.style.background = 'rgba(79,70,229,0.04)';
+            // Remplir le champ Code Fiche (FS/...) — pas le N° de contrôle
+            if (codeFicheInput && (overwrite || !codeFicheInput.value.trim())) {
+                codeFicheInput.value = fiche.code || '';
+                codeFicheInput.style.borderColor = 'rgba(79,70,229,0.4)';
+                codeFicheInput.style.background = 'rgba(79,70,229,0.06)';
             }
-            if (codeHint) codeHint.textContent = fiche.code ? `✅ depuis fiche ${fiche.code}` : '';
+            if (codeHint) codeHint.textContent = '';
             if (badge) {
                 const methodeInfo = fiche.methode ? ` | Méthode : ${fiche.methode}` : '';
                 badge.innerHTML = `📋 <strong>Fiche liée :</strong> ${fiche.designation || '—'} <span style="color:var(--secondary); margin-left:6px;">${fiche.code || ''}</span>${methodeInfo}`;
@@ -6171,10 +6392,14 @@
             const row = btn.closest('.analysis-row');
             const container = row.querySelector('.germs-dynamic-container');
             const div = document.createElement('div');
+            const catalogEntry = germeCatalog.find(g => g.name === name);
+            const normText = catalogEntry && catalogEntry.norm ? catalogEntry.norm : '—';
+            
             div.style = "display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;";
             div.innerHTML = `
                 <input type="checkbox" checked class="row-germ-check">
                 <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${name}</span>
+                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
                 <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
                 <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
@@ -6245,10 +6470,14 @@
 
             const container = btn.parentElement.previousElementSibling;
             const div = document.createElement('div');
+            const catalogEntry = germeCatalog.find(g => g.name.toLowerCase() === value.toLowerCase());
+            const normText = catalogEntry && catalogEntry.norm ? catalogEntry.norm : '—';
+            
             div.style = "display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;";
             div.innerHTML = `
                 <input type="checkbox" checked class="row-germ-check">
-                <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${value}</span>
+                <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${catalogEntry ? catalogEntry.name : value}</span>
+                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
                 <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
                 <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
@@ -6317,6 +6546,7 @@
                 const elProd = row.querySelector('.row-prod');
                 const elLot = row.querySelector('.row-lot');
                 const elCode = row.querySelector('.row-code');
+                const elCodeFiche = row.querySelector('.row-code-fiche');
                 const elBulletin = row.querySelector('.row-bulletin');
                 const elPage = row.querySelector('.row-page');
                 const elLibere = row.querySelector('.row-libere');
@@ -6326,6 +6556,7 @@
                     produit: elProd ? elProd.value : '',
                     lot: elLot ? elLot.value : '',
                     codeControl: elCode ? elCode.value : '',
+                    codeFiche: elCodeFiche ? elCodeFiche.value : '',
                     bulletin: elBulletin ? elBulletin.value : '',
                     page: elPage ? elPage.value : '',
                     isLibere: elLibere ? elLibere.checked : false,
@@ -6449,6 +6680,248 @@
         if ('serviceWorker' in navigator) {
             console.log("SW Bypass Active");
         }
+
+        // --- PARSER ÉTAPES MÉTHODE POUR SCHÉMA FLÈCHES ---
+        window.parseMethodSteps = function (methodeText) {
+            if (!methodeText) return [];
+            const rawSteps = methodeText.split(/->|➔|—>|-->|\n|;|\|/);
+            return rawSteps.map(s => s.trim()).filter(s => s.length > 0);
+        };
+
+        // --- GÉNÉRATION PDF CATALOGUE GERMES SPÉCIFIÉS (NOIR & BLANC POUR IMPRESSION) ---
+        window.generateGermesPDF = function (germIds = []) {
+            let listToExport = [];
+            if (Array.isArray(germIds) && germIds.length > 0) {
+                listToExport = germeCatalog.filter(g => germIds.includes(g.id));
+            } else if (selectedFiches && selectedFiches.size > 0 && window.currentTab === 'germes') {
+                listToExport = germeCatalog.filter(g => selectedFiches.has(g.id));
+            } else {
+                listToExport = germeCatalog;
+            }
+
+            if (!listToExport || listToExport.length === 0) {
+                window.showToast("⚠️ Aucun germe à exporter en PDF.", "warning");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.width;
+            const pageHeight = doc.internal.pageSize.height;
+
+            // Fonction de nettoyage stricte sans emojis pour éviter le texte corrompu (Ø=ÜË...)
+            const s = (str) => {
+                if (!str) return '';
+                return String(str)
+                    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+                    .replace(/²/g, '^2').replace(/³/g, '^3').replace(/⁴/g, '^4')
+                    .replace(/⁵/g, '^5').replace(/⁶/g, '^6').replace(/⁻¹/g, '^-1')
+                    .replace(/⁻²/g, '^-2').replace(/⁻³/g, '^-3')
+                    .trim();
+            };
+
+            // Dessin vectoriel d'une flèche noire nette
+            const drawVectorArrow = (x, y, length = 5) => {
+                doc.setLineWidth(0.4);
+                doc.setDrawColor(0, 0, 0);
+                doc.line(x, y, x + length, y);
+                doc.setFillColor(0, 0, 0);
+                doc.triangle(x + length, y, x + length - 2, y - 1.2, x + length - 2, y + 1.2, 'F');
+            };
+
+            let y = 15;
+
+            // En-tête Noir & Blanc pour impression
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("GERMES SPÉCIFIÉS", 15, y + 5);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.text("CATALOGUE DES MÉTHODES & NORMES D'ANALYSE", 15, y + 11);
+
+            const dateStr = new Date().toLocaleDateString('fr-FR');
+            doc.text(`Date : ${dateStr}`, pageWidth - 15, y + 5, { align: 'right' });
+
+            // Ligne de séparation principale
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.8);
+            doc.line(15, y + 15, pageWidth - 15, y + 15);
+
+            y += 22;
+
+            // Parcourir les germes
+            listToExport.forEach((g, index) => {
+                if (y > pageHeight - 45) {
+                    doc.addPage();
+                    y = 20;
+                }
+
+                // Bloc Entête Germe Spécifié (Fond gris très clair, bordure noire)
+                doc.setFillColor(245, 245, 245);
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.4);
+                doc.roundedRect(15, y, pageWidth - 30, 9, 1.5, 1.5, 'FD');
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                const titlePart = g.title ? ` [ ${s(g.title).toUpperCase()} ]` : '';
+                doc.text(`GERME SPÉCIFIÉ : ${s(g.name).toUpperCase()}${titlePart}`, 20, y + 6);
+
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Norme : ${s(g.norm) || 'Non définie'}`, pageWidth - 20, y + 6, { align: 'right' });
+
+                y += 13;
+
+                // Ligne Titre Produit / Conditions / Période d'incubation (si renseignées)
+                let metaInfo = [];
+                if (g.title) metaInfo.push(`Produit concerné : ${s(g.title)}`);
+                if (metaInfo.length > 0) {
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text(metaInfo.join('  |  '), 15, y);
+                    y += 6;
+                }
+
+                if (g.incubations && g.incubations.length > 0) {
+                    doc.setFont("helvetica", "italic");
+                    doc.setFontSize(8);
+                    const totalPhases = g.incubations.length;
+                    let repiquageCount = 1;
+
+                    g.incubations.forEach((inc, i) => {
+                        let label = "";
+                        if (i === totalPhases - 1) {
+                            label = "Résultat";
+                        } else {
+                            if (totalPhases > 2) {
+                                label = `Repiquage ${repiquageCount}`;
+                                repiquageCount++;
+                            } else {
+                                label = "Repiquage";
+                            }
+                        }
+                        doc.text(`${label} : Incubation ${s(inc.period)}  |  Temp. ${s(inc.temp)}`, 15, y);
+                        y += 5;
+                    });
+                    y += 2;
+                } else {
+                    // Compatibilité anciens germes
+                    let oldInc = [];
+                    if (g.incubationPeriod) oldInc.push(`Incubation : ${s(g.incubationPeriod)}`);
+                    if (g.incubationTemp) oldInc.push(`Temp. : ${s(g.incubationTemp)}`);
+                    if (oldInc.length > 0) {
+                        doc.setFont("helvetica", "italic");
+                        doc.setFontSize(8);
+                        doc.text(oldInc.join('  |  '), 15, y);
+                        y += 6;
+                    }
+                }
+
+                // Libellé Méthode d'analyse
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8.5);
+                doc.setTextColor(0, 0, 0);
+                doc.text("Methode d'Analyse :", 15, y);
+                y += 5;
+
+                const steps = window.parseMethodSteps(g.methode || '');
+
+                if (steps.length === 0) {
+                    doc.setFont("helvetica", "italic");
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(80, 80, 80);
+                    doc.text("Aucune méthode d'analyse renseignée", 20, y + 4);
+                    y += 12;
+                } else {
+                    let currentX = 15;
+                    let currentY = y;
+                    const marginX = 15;
+                    const maxX = pageWidth - 15;
+                    const arrowGap = 8;
+
+                    steps.forEach((stepText, idx) => {
+                        const stepClean = s(stepText);
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(8);
+                        
+                        const textWidth = doc.getTextWidth(stepClean);
+                        const boxWidth = Math.min(maxX - marginX, Math.max(28, textWidth + 14));
+                        const boxHeight = 9;
+
+                        if (currentX + boxWidth > maxX) {
+                            currentX = marginX;
+                            currentY += 13;
+
+                            if (currentY > pageHeight - 30) {
+                                doc.addPage();
+                                currentY = 20;
+                                currentX = marginX;
+                            }
+                        }
+
+                        // Case Étape (Bordure noire, fond blanc)
+                        doc.setFillColor(255, 255, 255);
+                        doc.setDrawColor(0, 0, 0);
+                        doc.setLineWidth(0.3);
+                        doc.roundedRect(currentX, currentY, boxWidth, boxHeight, 1.5, 1.5, 'FD');
+
+                        // Cercle Numéro (Fond Noir)
+                        doc.setFillColor(0, 0, 0);
+                        doc.circle(currentX + 4.5, currentY + 4.5, 3, 'F');
+
+                        // Numéro (Texte Blanc)
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFontSize(7);
+                        doc.setFont("helvetica", "bold");
+                        doc.text(String(idx + 1), currentX + 4.5, currentY + 5.5, { align: 'center' });
+
+                        // Texte Étape (Texte Noir)
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFontSize(8);
+                        doc.setFont("helvetica", "bold");
+                        doc.text(stepClean, currentX + 9.5, currentY + 5.8);
+
+                        currentX += boxWidth;
+
+                        // Dessin de la flèche vectorielle si pas la dernière étape
+                        if (idx < steps.length - 1) {
+                            if (currentX + arrowGap <= maxX) {
+                                drawVectorArrow(currentX + 1.5, currentY + 4.5, 5);
+                                currentX += arrowGap;
+                            } else {
+                                currentX = marginX;
+                                currentY += 13;
+                                if (currentY > pageHeight - 30) {
+                                    doc.addPage();
+                                    currentY = 20;
+                                }
+                            }
+                        }
+                    });
+
+                    y = currentY + 14;
+                }
+
+                // Ligne de séparation fine entre les germes
+                if (index < listToExport.length - 1) {
+                    doc.setDrawColor(200, 200, 200);
+                    doc.setLineWidth(0.3);
+                    doc.line(15, y - 4, pageWidth - 15, y - 4);
+                }
+            });
+
+            const filename = listToExport.length === 1 
+                ? `Germe_${s(listToExport[0].name).replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+                : `Catalogue_Germes_Specifies_${new Date().toISOString().slice(0,10)}.pdf`;
+            
+            doc.save(filename);
+            window.showToast("✅ PDF Noir & Blanc des Germes téléchargé !", "success");
+        };
 
         // --- PDF GENERATION ---
         window.generatePDF = function (id) {

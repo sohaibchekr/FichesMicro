@@ -6787,124 +6787,114 @@
                     y += 6;
                 }
 
-                if (g.incubations && g.incubations.length > 0) {
-                    doc.setFont("helvetica", "italic");
-                    doc.setFontSize(8);
-                    const totalPhases = g.incubations.length;
-                    let repiquageCount = 1;
+                const steps = window.parseMethodSteps(g.methode || '');
+                let incubs = g.incubations && g.incubations.length > 0 ? g.incubations : [];
 
-                    g.incubations.forEach((inc, i) => {
-                        let label = "";
-                        if (i === totalPhases - 1) {
-                            label = "Résultat";
-                        } else {
-                            if (totalPhases > 2) {
-                                label = `Repiquage ${repiquageCount}`;
-                                repiquageCount++;
-                            } else {
-                                label = "Repiquage";
-                            }
-                        }
-                        doc.text(`${label} : Incubation ${s(inc.period)}  |  Temp. ${s(inc.temp)}`, 15, y);
-                        y += 5;
-                    });
-                    y += 2;
-                } else {
-                    // Compatibilité anciens germes
-                    let oldInc = [];
-                    if (g.incubationPeriod) oldInc.push(`Incubation : ${s(g.incubationPeriod)}`);
-                    if (g.incubationTemp) oldInc.push(`Temp. : ${s(g.incubationTemp)}`);
-                    if (oldInc.length > 0) {
-                        doc.setFont("helvetica", "italic");
-                        doc.setFontSize(8);
-                        doc.text(oldInc.join('  |  '), 15, y);
-                        y += 6;
-                    }
+                // Compatibilité anciens germes
+                if (incubs.length === 0 && g.incubationPeriod) {
+                    incubs = [{ period: g.incubationPeriod, temp: g.incubationTemp || '' }];
                 }
 
-                // Libellé Méthode d'analyse
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(8.5);
-                doc.setTextColor(0, 0, 0);
-                doc.text("Methode d'Analyse :", 15, y);
-                y += 5;
+                if (steps.length > 0 || incubs.length > 0) {
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text("Protocole Analytique & Incubation :", 15, y);
+                    y += 6;
+                    
+                    const marginX = 15;
+                    const maxX = pageWidth - 15;
+                    const arrowGap = 6;
+                    const maxRows = Math.max(steps.length, incubs.length);
 
-                const steps = window.parseMethodSteps(g.methode || '');
+                    for (let idx = 0; idx < maxRows; idx++) {
+                        let currentX = marginX;
+                        const boxHeight = 8;
+                        
+                        // 1. Draw Method Step if exists
+                        if (idx < steps.length) {
+                             const stepClean = s(steps[idx]);
+                             doc.setFont("helvetica", "bold");
+                             doc.setFontSize(7.5);
+                             
+                             // Calculate width, but limit it so incubation fits.
+                             let textWidth = doc.getTextWidth(stepClean);
+                             let maxStepWidth = maxX - marginX - 50; // Leave space for arrow & incubation
+                             
+                             if (idx >= incubs.length) {
+                                 // No incubation for this step, it can take full width
+                                 maxStepWidth = maxX - marginX;
+                             }
+                             
+                             const boxWidth = Math.min(maxStepWidth, Math.max(28, textWidth + 14));
+                             
+                             // Draw Box
+                             doc.setFillColor(255, 255, 255);
+                             doc.setDrawColor(0, 0, 0);
+                             doc.setLineWidth(0.3);
+                             doc.roundedRect(currentX, y, boxWidth, boxHeight, 1.5, 1.5, 'FD');
 
-                if (steps.length === 0) {
+                             // Circle Index
+                             doc.setFillColor(0, 0, 0);
+                             doc.circle(currentX + 4.5, y + 4, 2.5, 'F');
+                             doc.setTextColor(255, 255, 255);
+                             doc.setFontSize(6.5);
+                             doc.text(String(idx + 1), currentX + 4.5, y + 4.8, { align: 'center' });
+
+                             // Text
+                             doc.setTextColor(0, 0, 0);
+                             doc.setFontSize(7.5);
+                             
+                             let printText = stepClean;
+                             if (doc.getTextWidth(printText) > boxWidth - 12) {
+                                 while (printText.length > 0 && doc.getTextWidth(printText + "...") > boxWidth - 12) {
+                                     printText = printText.slice(0, -1);
+                                 }
+                                 printText += "...";
+                             }
+                             doc.text(printText, currentX + 9, y + 5.2);
+
+                             currentX += boxWidth;
+                        }
+
+                        // 2. Draw Arrow and Incubation if exists
+                        if (idx < incubs.length) {
+                             const inc = incubs[idx];
+                             const incText = `${s(inc.period)} | ${s(inc.temp)}`;
+                             
+                             if (idx < steps.length) {
+                                // Draw Arrow between step and incubation
+                                drawVectorArrow(currentX + 2, y + 4, 4);
+                                currentX += arrowGap + 4;
+                             }
+
+                             doc.setFont("helvetica", "bold");
+                             doc.setFontSize(7.5);
+                             let incBoxWidth = doc.getTextWidth(incText) + 8;
+                             
+                             // Draw Inc Box (Gray background)
+                             doc.setFillColor(245, 245, 245);
+                             doc.setDrawColor(0, 0, 0);
+                             doc.setLineWidth(0.3);
+                             doc.roundedRect(currentX, y, incBoxWidth, boxHeight, 1.5, 1.5, 'FD');
+                             doc.setTextColor(0, 0, 0);
+                             doc.text(incText, currentX + incBoxWidth/2, y + 5.2, { align: 'center' });
+                        }
+
+                        y += 11; // Next line
+                        
+                        if (y > pageHeight - 30 && idx < maxRows - 1) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                    }
+                    y += 4;
+                } else {
                     doc.setFont("helvetica", "italic");
                     doc.setFontSize(8.5);
                     doc.setTextColor(80, 80, 80);
-                    doc.text("Aucune méthode d'analyse renseignée", 20, y + 4);
-                    y += 12;
-                } else {
-                    let currentX = 15;
-                    let currentY = y;
-                    const marginX = 15;
-                    const maxX = pageWidth - 15;
-                    const arrowGap = 8;
-
-                    steps.forEach((stepText, idx) => {
-                        const stepClean = s(stepText);
-                        doc.setFont("helvetica", "bold");
-                        doc.setFontSize(8);
-                        
-                        const textWidth = doc.getTextWidth(stepClean);
-                        const boxWidth = Math.min(maxX - marginX, Math.max(28, textWidth + 14));
-                        const boxHeight = 9;
-
-                        if (currentX + boxWidth > maxX) {
-                            currentX = marginX;
-                            currentY += 13;
-
-                            if (currentY > pageHeight - 30) {
-                                doc.addPage();
-                                currentY = 20;
-                                currentX = marginX;
-                            }
-                        }
-
-                        // Case Étape (Bordure noire, fond blanc)
-                        doc.setFillColor(255, 255, 255);
-                        doc.setDrawColor(0, 0, 0);
-                        doc.setLineWidth(0.3);
-                        doc.roundedRect(currentX, currentY, boxWidth, boxHeight, 1.5, 1.5, 'FD');
-
-                        // Cercle Numéro (Fond Noir)
-                        doc.setFillColor(0, 0, 0);
-                        doc.circle(currentX + 4.5, currentY + 4.5, 3, 'F');
-
-                        // Numéro (Texte Blanc)
-                        doc.setTextColor(255, 255, 255);
-                        doc.setFontSize(7);
-                        doc.setFont("helvetica", "bold");
-                        doc.text(String(idx + 1), currentX + 4.5, currentY + 5.5, { align: 'center' });
-
-                        // Texte Étape (Texte Noir)
-                        doc.setTextColor(0, 0, 0);
-                        doc.setFontSize(8);
-                        doc.setFont("helvetica", "bold");
-                        doc.text(stepClean, currentX + 9.5, currentY + 5.8);
-
-                        currentX += boxWidth;
-
-                        // Dessin de la flèche vectorielle si pas la dernière étape
-                        if (idx < steps.length - 1) {
-                            if (currentX + arrowGap <= maxX) {
-                                drawVectorArrow(currentX + 1.5, currentY + 4.5, 5);
-                                currentX += arrowGap;
-                            } else {
-                                currentX = marginX;
-                                currentY += 13;
-                                if (currentY > pageHeight - 30) {
-                                    doc.addPage();
-                                    currentY = 20;
-                                }
-                            }
-                        }
-                    });
-
-                    y = currentY + 14;
+                    doc.text("Aucun protocole ou incubation défini.", 15, y);
+                    y += 10;
                 }
 
                 // Ligne de séparation fine entre les germes
@@ -7008,12 +6998,25 @@
 
             doc.autoTable({
                 startY: y,
-                head: [['Germe', 'Norme', 'Méthode d\'Analyse']],
-                body: (f.germesDetails || []).map(g => [g.name, s(g.norm), s(g.methode) || '—']),
+                head: [['Germe', 'Norme', 'Incubation', 'Méthode d\'Analyse']],
+                body: (f.germesDetails || []).map(g => {
+                    let incText = "—";
+                    if (g.incubations && g.incubations.length > 0) {
+                        let repCount = 1;
+                        const total = g.incubations.length;
+                        incText = g.incubations.map((inc, i) => {
+                            let label = (i === total - 1) ? "Résultat" : (total > 2 ? `Repiquage ${repCount++}` : "Repiquage");
+                            return `[${s(inc.period)}|${s(inc.temp)}] ➔ ${label}`;
+                        }).join('\n➔ ');
+                    } else if (g.incubationPeriod) {
+                        incText = `[${s(g.incubationPeriod)}|${s(g.incubationTemp)}] ➔ Résultat`;
+                    }
+                    return [g.name, s(g.norm), incText, s(g.methode) || '—'];
+                }),
                 theme: 'grid',
                 headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
                 styles: { lineColor: [0, 0, 0], textColor: 0, fontSize: 8 },
-                columnStyles: { 2: { cellWidth: 80 } }
+                columnStyles: { 2: { cellWidth: 40 }, 3: { cellWidth: 60 } }
             });
             y = doc.lastAutoTable.finalY + 10;
 

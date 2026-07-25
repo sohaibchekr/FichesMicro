@@ -2449,12 +2449,14 @@
 
             const baseDate = new Date(dateAnalyseStr);
             baseDate.setHours(8, 0, 0, 0); 
-
-            let html = '';
             
             function parseMaxHours(periodStr) {
                 if (!periodStr) return 0;
-                let p = periodStr.toUpperCase();
+                let p = periodStr.toUpperCase()
+                    .replace(/À/g, 'A')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                p = p.replace(/(\d+)\s*J/g, (m, n) => (parseInt(n) * 24) + 'H');
                 let matches = p.match(/\d+/g);
                 if (matches && matches.length > 0) {
                     return parseInt(matches[matches.length - 1], 10);
@@ -2462,6 +2464,7 @@
                 return 0;
             }
 
+            let html = '';
             let currentBaseDate = new Date(baseDate);
 
             if (germ.incubations && germ.incubations.length > 0) {
@@ -2475,22 +2478,25 @@
                     
                     if (maxH > 0) {
                         currentBaseDate.setHours(currentBaseDate.getHours() + maxH);
-                        let dateStr = currentBaseDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-                        
-                        let label = "";
-                        if (i === totalPhases - 1) {
-                            label = "Résultat";
-                        } else {
-                            if (totalPhases > 2) {
-                                label = `Repiquage ${repiquageCount}`;
-                                repiquageCount++;
-                            } else {
-                                label = "Repiquage";
-                            }
-                        }
-                        const condStr = phase.temp ? ` [${phase.temp} - ${phase.period}]` : ` [${phase.period}]`;
-                        phasesHtml.push(`<span style="font-size:0.55rem; color:#0369a1; font-weight:800;">⏳ ${label} : ${dateStr} <span style="color:var(--text-dim); font-weight:600;">${condStr}</span></span>`);
                     }
+                    let dateStr = maxH > 0
+                        ? currentBaseDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+                        : '?';
+                    
+                    let label = "";
+                    if (i === totalPhases - 1) {
+                        label = "Résultat";
+                    } else {
+                        if (totalPhases > 2) {
+                            label = `Repiquage ${repiquageCount}`;
+                            repiquageCount++;
+                        } else {
+                            label = "Repiquage";
+                        }
+                        if (phase.milieu) label += ` sur ${phase.milieu}`;
+                    }
+                    const condStr = phase.temp ? ` [${phase.temp} - ${phase.period}]` : ` [${phase.period}]`;
+                    phasesHtml.push(`<span style="font-size:0.55rem; color:#0369a1; font-weight:800;">⏳ ${label} : ${dateStr} <span style="color:var(--text-dim); font-weight:600;">${condStr}</span></span>`);
                 }
                 if (phasesHtml.length > 0) {
                     html += `<div style="display:flex; flex-direction:column; gap:1px; margin-top:2px;">${phasesHtml.join('')}</div>`;
@@ -5005,7 +5011,41 @@
                                                      <span style="color:var(--primary); font-weight:800;">${g.name}: <span style="color:var(--text-main); font-weight:800;">${g.result || '...'}</span></span>
                                                  </div>
                                                  ${g.remark ? `<div style="font-size:0.45rem; color:var(--text-dim); font-weight:400; font-style:italic; border-top:1px solid rgba(0,0,0,0.05); padding-top:2px;">"${g.remark}"</div>` : ''}
-                                                 ${window.calculateGermNextActionsHtml(g.name, i.dateAnalyse)}
+                                                 ${(() => {
+                                                     const cat = germeCatalog.find(c => c.name === g.name);
+                                                     const incubs = (cat && cat.incubations && cat.incubations.length > 0) ? cat.incubations : (cat && cat.incubationPeriod ? [{period: cat.incubationPeriod, temp: cat.incubationTemp || '', milieu: ''}] : []);
+                                                     if (incubs.length === 0) return window.calculateGermNextActionsHtml(g.name, i.dateAnalyse);
+                                                     function parseH(s) { if(!s) return 0; let p=s.toUpperCase().replace(/À/g,'A').replace(/\s+/g,' ').trim(); p=p.replace(/(\d+)\s*J/g,(m,n)=>(parseInt(n)*24)+'H'); const mm=p.match(/\d+/g); return mm?parseInt(mm[mm.length-1]):0; }
+                                                     let cur = i.dateAnalyse ? new Date(i.dateAnalyse) : new Date();
+                                                     cur.setHours(8,0,0,0);
+                                                     const totalSteps = incubs.length + 1;
+                                                     return Array.from({length: totalSteps}).map((_, pi) => {
+                                                         const isFinal = pi === totalSteps - 1;
+                                                         const inc = isFinal ? null : incubs[pi];
+                                                         let calcDate = '?';
+                                                         if (inc) {
+                                                             const maxH = parseH(inc.period);
+                                                             if (maxH > 0) cur = new Date(cur.getTime() + maxH * 3600000);
+                                                             calcDate = maxH > 0 ? cur.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) : '?';
+                                                         }
+                                                         
+                                                         let label = isFinal ? 'Résultat Final' : (incubs.length > 0 ? `Rep. ${pi + 1}` : 'Repiquage');
+                                                         if (inc && inc.milieu) label += ` sur ${inc.milieu}`;
+
+                                                         const saved = g.phases && g.phases[pi] ? g.phases[pi] : {};
+                                                         const savedDateRep = (saved.dateRep || saved.date) ? new Date(saved.dateRep || saved.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : null;
+                                                         const savedDateLect = saved.dateLect ? new Date(saved.dateLect).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}) : null;
+                                                         const savedResult = saved.result || '';
+                                                         const hasResult = !!savedResult;
+                                                         const displayDateRep = savedDateRep || calcDate;
+                                                         
+                                                         let htmlBlock = `<div style="font-size:0.5rem; color:${isFinal ? 'var(--success)' : '#0369a1'}; font-weight:700; display:flex; align-items:center; gap:3px; flex-wrap:wrap;">${isFinal ? '✅' : '↳'} <span>${label}</span>`;
+                                                         if (!isFinal || savedDateRep) htmlBlock += ` <span style="background:${isFinal ? 'rgba(5,150,105,0.08)' : 'rgba(3,105,161,0.08)'}; padding:1px 5px; border-radius:4px; font-weight:800;" title="${isFinal ? 'Date' : 'Date repiquage/dépôt'}">${displayDateRep}</span>`;
+                                                         if (!isFinal && savedDateLect) htmlBlock += ` <span style="background:rgba(245,158,11,0.15); color:#d97706; padding:1px 5px; border-radius:4px; font-weight:800;" title="Date lecture">Lect: ${savedDateLect}</span>`;
+                                                         htmlBlock += `${hasResult ? `<span style="color:${isFinal ? 'var(--success)' : 'var(--text-main)'}; font-weight:900; background:${isFinal ? 'rgba(5,150,105,0.12)' : 'rgba(0,0,0,0.05)'}; padding:1px 5px; border-radius:4px;">${savedResult}</span>` : `<span style="color:var(--text-dim); font-style:italic; font-weight:400;">...</span>`}</div>`;
+                                                         return htmlBlock;
+                                                     }).join('');
+                                                 })()}
                                              </div>
                                          `).join('') : (Array.isArray(i.germs) ? i.germs.map(g => `<div style="background: rgba(79, 70, 229, 0.05); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(79, 70, 229, 0.1);"><span class="mini-tag" style="display:block;">${g}</span>${window.calculateGermNextActionsHtml(g, i.dateAnalyse)}</div>`).join('') : (i.germs || ''))}
                                      </div>
@@ -5374,7 +5414,7 @@
                                             if (g.incubations && g.incubations.length > 0) {
                                                 return g.incubations.map((inc, i) => `
                                                     <div class="code-badge" style="background:rgba(79,70,229,0.08); color:var(--primary); border-color:rgba(79,70,229,0.15);">
-                                                        P${i+1} : ⏳ ${inc.period || '?'} | 🌡️ ${inc.temp || '?'}
+                                                        P${i+1} : ${inc.milieu ? `🧫 ${inc.milieu} | ` : ''}⏳ ${inc.period || '?'} | 🌡️ ${inc.temp || '?'}
                                                     </div>
                                                 `).join('');
                                             } else {
@@ -5409,11 +5449,12 @@
         }
         
         // ========== FONCTIONS CRUD CATALOGUE GERMES ==========
-        window.addGermIncubationRow = function(period = '', temp = '') {
+        window.addGermIncubationRow = function(period = '', temp = '', milieu = '') {
             const list = document.getElementById('germeIncubationList');
             const div = document.createElement('div');
-            div.style = "display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center;";
+            div.style = "display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center;";
             div.innerHTML = `
+                <input type="text" class="form-input germe-incub-milieu" list="germe-milieu-list" placeholder="Milieu (ex: RVS)" value="${milieu}">
                 <input type="text" class="form-input germe-incub-period" list="germe-period-list" placeholder="Durée (ex: 18-24H)" value="${period}">
                 <input type="text" class="form-input germe-incub-temp" list="germe-temp-list" placeholder="Température (ex: 30-35°C)" value="${temp}">
                 <button type="button" onclick="this.parentElement.remove()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:34px; height:34px; border-radius:8px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center;">✕</button>
@@ -5437,7 +5478,7 @@
                     document.getElementById('germeMethode').value = g.methode || '';
 
                     if (g.incubations && g.incubations.length > 0) {
-                        g.incubations.forEach(inc => window.addGermIncubationRow(inc.period, inc.temp));
+                        g.incubations.forEach(inc => window.addGermIncubationRow(inc.period, inc.temp, inc.milieu));
                     } else if (g.incubationPeriod || g.incubationTemp) {
                         // Compatibilité données existantes
                         window.addGermIncubationRow(g.incubationPeriod || '', g.incubationTemp || '');
@@ -5471,12 +5512,13 @@
             const name = document.getElementById('germeName').value.trim();
             if (!name) return;
 
+            const milieuInputs = Array.from(document.querySelectorAll('.germe-incub-milieu')).map(input => input.value.trim());
             const periodInputs = Array.from(document.querySelectorAll('.germe-incub-period')).map(input => input.value.trim());
             const tempInputs = Array.from(document.querySelectorAll('.germe-incub-temp')).map(input => input.value.trim());
             let incubations = [];
             for (let i = 0; i < periodInputs.length; i++) {
-                if (periodInputs[i] || tempInputs[i]) {
-                    incubations.push({ period: periodInputs[i], temp: tempInputs[i] });
+                if (periodInputs[i] || tempInputs[i] || milieuInputs[i]) {
+                    incubations.push({ period: periodInputs[i], temp: tempInputs[i], milieu: milieuInputs[i] });
                 }
             }
 
@@ -6242,40 +6284,39 @@
                 
                 <!-- Lectures Journalières -->
                 <div class="form-group" style="margin-top:10px;">
-                    <label style="font-size:0.65rem; color:var(--secondary); font-weight:800;">📓 LECTURES JOURNALIÈRES (DÉNOMBREMENT)</label>
-                    <div class="daily-readings-grid" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:5px;">
-                        <!-- Les cases J1, J2... seront générées ici -->
-                    </div>
-                </div>
-
-                <div style="margin: 10px 0; display: flex; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.05); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.1);">
-                    <input type="checkbox" class="row-libere" ${data && data.isLibere ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
-                    <label style="color: var(--success); font-weight: 800; font-size: 0.75rem; cursor: pointer;">RÉSULTAT LIBÉRÉ (TERMINÉ)</label>
+                    <label style="font-size:0.65rem; color:var(--secondary); font-weight:800;">LECTURES JOURNALIÈRES</label>
+                    <div class="daily-readings-grid" style="display:flex; gap:5px; overflow-x:auto; padding:5px 0;"></div>
                 </div>
 
                 <div class="form-group" style="margin-top:10px;">
-                    <label style="font-size:0.65rem; color:var(--primary);">🦠 Germes à rechercher</label>
-                    <div class="germs-dynamic-container" style="display:flex; flex-direction:column; gap:5px; margin-bottom:5px;">
+                    <label style="font-size:0.65rem; color:var(--primary); font-weight:800;">GERMES & PHASES</label>
+                    <div class="germs-dynamic-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
                         ${data && data.germsDetails ? data.germsDetails.map(g => `
-                            <div style="display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;">
+                            <div class="germ-item" style="background:rgba(79, 70, 229, 0.05); padding:6px 10px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
+                              <div style="display:flex; align-items:center; gap:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
                                 <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${g.name}</span>
-                                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${g.norm || '—'}</span>
-                                <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                                <input type="text" class="row-germ-remark" value="${g.remark || ''}" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
-                                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${g.norm || '—'}</span>
+                                <input type="text" class="row-germ-result" value="${g.result || ''}" placeholder="Rés. global" style="width:70px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                                <input type="text" class="row-germ-remark" value="${g.remark || ''}" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:80px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                                <button type="button" onclick="this.closest('.germ-item').remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                              </div>
+                              ${window.buildGermPhaseInputs(g.name, g.phases, data ? data.dateAnalyse : null)}
                             </div>
                         `).join('') : (data && Array.isArray(data.germs) ? data.germs.map(gname => {
                             const catalogEntry = typeof window !== 'undefined' && window.germeCatalog ? window.germeCatalog.find(catG => catG.name === gname) : null;
                             const normText = catalogEntry && catalogEntry.norm ? catalogEntry.norm : '—';
                             return `
-                            <div style="display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;">
+                            <div class="germ-item" style="background:rgba(79, 70, 229, 0.05); padding:6px 10px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
+                              <div style="display:flex; align-items:center; gap:8px;">
                                 <input type="checkbox" checked class="row-germ-check">
                                 <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${gname}</span>
-                                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
-                                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
-                                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
+                                <input type="text" class="row-germ-result" placeholder="Rés. global" style="width:70px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:80px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                                <button type="button" onclick="this.closest('.germ-item').remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                              </div>
+                              ${window.buildGermPhaseInputs(gname, null, data ? data.dateAnalyse : null)}
                             </div>
                         `;}).join('') : '')}
                     </div>
@@ -6373,19 +6414,79 @@
             if (overwrite && germContainer && germContainer.children.length === 0 && fiche.germesDetails && fiche.germesDetails.length > 0) {
                 fiche.germesDetails.forEach(g => {
                     const germDiv = document.createElement('div');
-                    germDiv.style = 'display:flex; align-items:center; gap:8px; background:rgba(79,70,229,0.07); padding:5px 10px; border-radius:8px; border:1px solid rgba(79,70,229,0.1);';
+                    germDiv.className = 'germ-item';
+                    germDiv.style = 'background:rgba(79, 70, 229, 0.05); padding:6px 10px; border-radius:8px; display:flex; flex-direction:column; gap:4px;';
                     germDiv.innerHTML = `
-                        <input type="checkbox" checked class="row-germ-check">
-                        <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${g.name}</span>
-                        <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${g.norm || '—'}</span>
-                        <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                        <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
-                        <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" checked class="row-germ-check">
+                            <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${g.name}</span>
+                            <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${g.norm || '—'}</span>
+                            <input type="text" class="row-germ-result" placeholder="Rés. global" style="width:70px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                            <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:80px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                            <button type="button" onclick="this.closest('.germ-item').remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                        </div>
+                        ${window.buildGermPhaseInputs(g.name, null, document.getElementById('dateAnalyse').value)}
                     `;
                     germContainer.appendChild(germDiv);
                 });
                 window.showToast(`✅ Fiche "${fiche.designation}" liée ! Code + germes importés.`, 'success', 2500);
             }
+        };
+
+        // Helper : génère les champs de saisie pour chaque phase d'incubation d'un germe
+        window.buildGermPhaseInputs = function(germName, savedPhases, dateAnalyseStr) {
+            const cat = germeCatalog.find(g => g.name === germName);
+            let incubs = (cat && cat.incubations && cat.incubations.length > 0)
+                ? cat.incubations
+                : (cat && cat.incubationPeriod ? [{ period: cat.incubationPeriod, temp: cat.incubationTemp || '', milieu: '' }] : []);
+            if (incubs.length === 0) return '';
+
+            function parseHours(str) {
+                if (!str) return 0;
+                let p = str.toUpperCase().replace(/À/g, 'A').replace(/\s+/g, ' ').trim();
+                p = p.replace(/(\d+)\s*J/g, (m, n) => (parseInt(n) * 24) + 'H');
+                const m = p.match(/\d+/g);
+                return m ? parseInt(m[m.length - 1]) : 0;
+            }
+
+            const baseDate = dateAnalyseStr ? new Date(dateAnalyseStr) : new Date();
+            baseDate.setHours(8, 0, 0, 0);
+            let cur = new Date(baseDate);
+
+            let html = `<div class="germ-phases-container" style="margin-top:6px; display:flex; flex-direction:column; gap:4px; padding:6px 8px; background:rgba(79,70,229,0.04); border-radius:8px; border:1px solid rgba(79,70,229,0.12);">
+                <div style="font-size:0.55rem; color:var(--primary); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Suivi des étapes :</div>`;
+
+            const totalSteps = incubs.length + 1;
+            let repNum = 1;
+
+            for (let i = 0; i < totalSteps; i++) {
+                const isFinal = i === totalSteps - 1;
+                const inc = isFinal ? null : incubs[i];
+                let dateCalc = '?';
+                
+                if (inc) {
+                    const maxH = parseHours(inc.period);
+                    if (maxH > 0) cur.setHours(cur.getHours() + maxH);
+                    dateCalc = maxH > 0 ? cur.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '?';
+                }
+
+                let label = isFinal ? 'Résultat Final' : (incubs.length > 0 ? `Rep. ${repNum++}` : 'Repiquage');
+                if (inc && inc.milieu) label += ` sur ${inc.milieu}`;
+
+                const saved = savedPhases && savedPhases[i] ? savedPhases[i] : {};
+                const savedDateRep = saved.dateRep || saved.date || '';
+                const savedDateLect = saved.dateLect || '';
+                const savedResult = saved.result || '';
+
+                html += `<div class="germ-phase-row" data-phase-index="${i}" style="display:grid; grid-template-columns:auto 1fr 1fr 1.5fr; gap:4px; align-items:center;">
+                    <span style="font-size:0.55rem; font-weight:800; color:${isFinal ? 'var(--success)' : 'var(--primary)'}; white-space:nowrap;">${isFinal ? '✅' : '↳'} ${label} ${!isFinal ? `<span style="font-weight:400; color:var(--text-dim);">(~${dateCalc})</span>` : ''}</span>
+                    <input type="date" class="germ-phase-date-rep form-input" style="padding:3px 6px; font-size:0.6rem; border-radius:6px; border-color:rgba(79,70,229,0.2);" value="${savedDateRep}" title="${isFinal ? 'Date' : 'Date de repiquage'}" placeholder="Date">
+                    <input type="date" class="germ-phase-date-lect form-input" style="padding:3px 6px; font-size:0.6rem; border-radius:6px; border-color:rgba(79,70,229,0.2);${isFinal ? ' visibility:hidden;' : ''}" value="${savedDateLect}" title="Date de lecture" placeholder="Lecture">
+                    <input type="text" class="germ-phase-result form-input" style="padding:3px 6px; font-size:0.6rem; font-weight:700; color:${isFinal ? 'var(--success)' : 'var(--text-main)'}; border-radius:6px; border-color:${isFinal ? 'rgba(5,150,105,0.3)' : 'rgba(79,70,229,0.2)'};" value="${savedResult}" placeholder="${isFinal ? 'Résultat Final...' : 'Obs...'}">
+                </div>`;
+            }
+            html += '</div>';
+            return html;
         };
 
         window.quickAddGerm = function (btn, name) {
@@ -6394,15 +6495,20 @@
             const div = document.createElement('div');
             const catalogEntry = germeCatalog.find(g => g.name === name);
             const normText = catalogEntry && catalogEntry.norm ? catalogEntry.norm : '—';
+            const dateAnalyseStr = document.getElementById('dateAnalyse').value;
             
-            div.style = "display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;";
+            div.className = 'germ-item';
+            div.style = "background:rgba(79, 70, 229, 0.05); padding:6px 10px; border-radius:8px; display:flex; flex-direction:column; gap:4px;";
             div.innerHTML = `
-                <input type="checkbox" checked class="row-germ-check">
-                <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${name}</span>
-                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
-                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
-                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" checked class="row-germ-check">
+                    <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${catalogEntry ? catalogEntry.name : name}</span>
+                    <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
+                    <input type="text" class="row-germ-result" placeholder="Rés. global" style="width:70px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                    <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:80px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                    <button type="button" onclick="this.closest('.germ-item').remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                </div>
+                ${window.buildGermPhaseInputs(name, null, dateAnalyseStr)}
             `;
             container.appendChild(div);
         };
@@ -6426,14 +6532,11 @@
             let html = '';
             for (let i = 1; i <= daysCount; i++) {
                 const dayData = (existing && existing[i - 1]) ? existing[i - 1] : { val: '', remark: '' };
-                const val = (typeof dayData === 'object') ? dayData.val : dayData;
-                const remark = (typeof dayData === 'object') ? dayData.remark : '';
-
                 html += `
-                    <div style="display:flex; flex-direction:column; gap:2px; width:70px; background:rgba(79, 70, 229, 0.05); padding:5px; border-radius:8px; border:1px solid var(--glass-border);">
-                        <span style="font-size:0.5rem; text-align:center; color:var(--secondary); font-weight:800;">J${i}</span>
-                        <input type="text" class="daily-input" value="${val}" oninput="autoUpdateDGAT(this)" style="width:100%; height:20px; background:#fff; border:1px solid var(--glass-border); border-radius:4px; color:var(--text-main); text-align:center; font-size:0.65rem;">
-                        <input type="text" class="daily-remark-input" value="${remark}" placeholder="Note..." readonly onclick="window.zoomNote(this)" title="${remark}" style="width:100%; height:15px; background:transparent; border:none; color:var(--text-dim); font-size:0.5rem; text-align:center; margin-top:2px; cursor:zoom-in;">
+                    <div style="background:rgba(255,255,255,0.03); padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:4px; margin-bottom:4px;">
+                        <span style="font-size:0.65rem; color:var(--text-dim); font-weight:700;">Jour ${i}</span>
+                        <input type="text" class="daily-input row-input" data-day="${i}" value="${dayData.val}" placeholder="Résultat..." style="padding:6px; font-size:0.75rem;" onblur="window.autoUpdateDGAT(this)">
+                        <input type="text" class="daily-remark row-input" data-day="${i}" value="${dayData.remark}" placeholder="Remarque..." style="padding:6px; font-size:0.7rem;">
                     </div>
                 `;
             }
@@ -6443,20 +6546,20 @@
         window.autoUpdateDGAT = function (input) {
             const row = input.closest('.analysis-row');
             const allInputs = Array.from(row.querySelectorAll('.daily-input'));
-            // On prend la dernière valeur non vide
             let lastVal = '';
             const nonEmpty = allInputs.reverse().find(i => i.value.trim() !== '');
             if (nonEmpty) lastVal = nonEmpty.value;
-            
-            // On cherche le germe "DGAT" dans ce produit
-            const germRows = Array.from(row.querySelectorAll('.germs-dynamic-container div'));
-            const dgatRow = germRows.find(div => div.querySelector('span').innerText.toUpperCase().includes('DGAT'));
+            const germRows = Array.from(row.querySelectorAll('.germs-dynamic-container > div'));
+            const dgatRow = germRows.find(div => {
+                const sp = div.querySelector('span');
+                return sp && sp.innerText.toUpperCase().includes('DGAT');
+            });
             if (dgatRow) {
-                dgatRow.querySelector('.row-germ-result').value = lastVal;
+                const resInput = dgatRow.querySelector('.row-germ-result');
+                if (resInput) resInput.value = lastVal;
             }
         };
 
-        // Global watcher for date changes to update all rows
         ['dateAnalyse', 'dateSortie'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => {
                 document.querySelectorAll('.analysis-row').forEach(row => updateDailyReadings(row));
@@ -6467,20 +6570,23 @@
             const input = btn.previousElementSibling;
             const value = input.value.trim();
             if (!value) return;
-
             const container = btn.parentElement.previousElementSibling;
             const div = document.createElement('div');
             const catalogEntry = germeCatalog.find(g => g.name.toLowerCase() === value.toLowerCase());
             const normText = catalogEntry && catalogEntry.norm ? catalogEntry.norm : '—';
-            
-            div.style = "display:flex; align-items:center; gap:8px; background:rgba(79, 70, 229, 0.05); padding:5px 10px; border-radius:8px;";
+            const dateAnalyseStr = document.getElementById('dateAnalyse').value;
+            div.className = 'germ-item';
+            div.style = "background:rgba(79, 70, 229, 0.05); padding:6px 10px; border-radius:8px; display:flex; flex-direction:column; gap:4px;";
             div.innerHTML = `
-                <input type="checkbox" checked class="row-germ-check">
-                <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${catalogEntry ? catalogEntry.name : value}</span>
-                <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
-                <input type="text" class="row-germ-result" placeholder="Rés." style="width:50px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
-                <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:100px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
-                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" checked class="row-germ-check">
+                    <span style="font-size:0.7rem; flex:1; color:var(--text-main);">${catalogEntry ? catalogEntry.name : value}</span>
+                    <span style="font-size:0.55rem; color:var(--text-dim); margin-right:4px;">Norme : ${normText}</span>
+                    <input type="text" class="row-germ-result" placeholder="Rés. global" style="width:70px; background:#fff; border:1px solid var(--glass-border); color:var(--success); font-size:0.65rem; padding:3px 5px; border-radius:4px; font-weight:700;">
+                    <input type="text" class="row-germ-remark" placeholder="Remarque..." readonly onclick="window.zoomNote(this)" style="flex:1; max-width:80px; background:#f8fafc; border:1px solid var(--glass-border); color:var(--text-dim); font-size:0.6rem; padding:3px 5px; border-radius:4px; cursor:zoom-in;">
+                    <button type="button" onclick="this.closest('.germ-item').remove()" style="background:none; border:none; color:#ef4444; cursor:pointer;">✕</button>
+                </div>
+                ${window.buildGermPhaseInputs(value, null, dateAnalyseStr)}
             `;
             container.appendChild(div);
             input.value = '';
@@ -6517,7 +6623,7 @@
 
             rows.forEach(row => {
                 const rowId = row.dataset.id;
-                const germItems = Array.from(row.querySelectorAll('.germs-dynamic-container div'));
+                const germItems = Array.from(row.querySelectorAll('.germs-dynamic-container > div'));
                 const germsDetails = germItems
                     .filter(item => {
                         const ck = item.querySelector('.row-germ-check');
@@ -6527,10 +6633,17 @@
                         const span = item.querySelector('span');
                         const res = item.querySelector('.row-germ-result');
                         const rem = item.querySelector('.row-germ-remark');
+                        const phaseRows = Array.from(item.querySelectorAll('.germ-phase-row'));
+                        const phases = phaseRows.map(pr => ({
+                            dateRep: (pr.querySelector('.germ-phase-date-rep') || {}).value || '',
+                            dateLect: (pr.querySelector('.germ-phase-date-lect') || {}).value || '',
+                            result: (pr.querySelector('.germ-phase-result') || {}).value || ''
+                        }));
                         return {
                             name: span ? span.innerText : 'Inconnu',
                             result: res ? res.value : '',
-                            remark: rem ? rem.value : ''
+                            remark: rem ? rem.value : '',
+                            phases: phases
                         };
                     });
 
@@ -6807,6 +6920,16 @@
                     const arrowGap = 6;
                     const maxRows = Math.max(steps.length, incubs.length);
 
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(7.5);
+                    let maxMethodTextWidth = 0;
+                    for (let idx = 0; idx < steps.length; idx++) {
+                        let w = doc.getTextWidth(s(steps[idx])) * 1.35;
+                        if (w > maxMethodTextWidth) maxMethodTextWidth = w;
+                    }
+                    let maxAllowedWidth = incubs.length > 0 ? (maxX - marginX - 55) : (maxX - marginX);
+                    const unifiedBoxWidth = Math.min(maxAllowedWidth, Math.max(28, maxMethodTextWidth + 18));
+
                     for (let idx = 0; idx < maxRows; idx++) {
                         let currentX = marginX;
                         const boxHeight = 8;
@@ -6817,16 +6940,7 @@
                              doc.setFont("helvetica", "bold");
                              doc.setFontSize(7.5);
                              
-                             // Calculate width, but limit it so incubation fits.
-                             let textWidth = doc.getTextWidth(stepClean);
-                             let maxStepWidth = maxX - marginX - 50; // Leave space for arrow & incubation
-                             
-                             if (idx >= incubs.length) {
-                                 // No incubation for this step, it can take full width
-                                 maxStepWidth = maxX - marginX;
-                             }
-                             
-                             const boxWidth = Math.min(maxStepWidth, Math.max(28, textWidth + 14));
+                             const boxWidth = unifiedBoxWidth;
                              
                              // Draw Box
                              doc.setFillColor(255, 255, 255);
@@ -6846,21 +6960,23 @@
                              doc.setFontSize(7.5);
                              
                              let printText = stepClean;
-                             if (doc.getTextWidth(printText) > boxWidth - 12) {
-                                 while (printText.length > 0 && doc.getTextWidth(printText + "...") > boxWidth - 12) {
+                             if (doc.getTextWidth(printText) * 1.35 > boxWidth - 14) {
+                                 while (printText.length > 0 && (doc.getTextWidth(printText + "...") * 1.35) > boxWidth - 14) {
                                      printText = printText.slice(0, -1);
                                  }
                                  printText += "...";
                              }
-                             doc.text(printText, currentX + 9, y + 5.2);
-
-                             currentX += boxWidth;
+                             doc.text(printText, currentX + 9, y + 5.2, { align: 'left' });
                         }
 
+                        currentX += unifiedBoxWidth;
                         // 2. Draw Arrow and Incubation if exists
                         if (idx < incubs.length) {
                              const inc = incubs[idx];
-                             const incText = `${s(inc.period)} | ${s(inc.temp)}`;
+                             let incText = `${s(inc.period)} | ${s(inc.temp)}`;
+                             if (inc.milieu) {
+                                 incText = `[ ${s(inc.milieu)} ]  ${incText}`;
+                             }
                              
                              if (idx < steps.length) {
                                 // Draw Arrow between step and incubation
@@ -7003,10 +7119,14 @@
                     let incText = "—";
                     if (g.incubations && g.incubations.length > 0) {
                         let repCount = 1;
-                        const total = g.incubations.length;
-                        incText = g.incubations.map((inc, i) => {
-                            let label = (i === total - 1) ? "Résultat" : (total > 2 ? `Repiquage ${repCount++}` : "Repiquage");
-                            return `[${s(inc.period)}|${s(inc.temp)}] ➔ ${label}`;
+                        const totalSteps = g.incubations.length + 1;
+                        incText = Array.from({length: totalSteps}).map((_, i) => {
+                            const isFinal = i === totalSteps - 1;
+                            const inc = isFinal ? null : g.incubations[i];
+                            let label = isFinal ? "Résultat Final" : (g.incubations.length > 0 ? `Repiquage ${repCount++}` : "Repiquage");
+                            if (inc && inc.milieu) label += ` sur ${s(inc.milieu)}`;
+                            if (isFinal) return `[—|—] ➔ ${label}      Date : ....... Résultat : .......`;
+                            return `[${s(inc.period)}|${s(inc.temp)}] ➔ ${label}      Date : ....... Lect : .......`;
                         }).join('\n➔ ');
                     } else if (g.incubationPeriod) {
                         incText = `[${s(g.incubationPeriod)}|${s(g.incubationTemp)}] ➔ Résultat`;

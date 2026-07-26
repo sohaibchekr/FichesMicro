@@ -6249,6 +6249,12 @@
             div.style = "background: rgba(255,255,255,0.03); padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative;";
             div.innerHTML = `
                 <button type="button" onclick="document.getElementById('${rowId}').remove()" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer;">✕</button>
+                
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; background: rgba(34, 197, 94, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(34, 197, 94, 0.2); margin-bottom: 15px; width: fit-content; cursor: pointer;" onclick="const cb = this.querySelector('.row-libere'); if(event.target !== cb) cb.checked = !cb.checked;">
+                    <input type="checkbox" class="row-libere" ${data && data.isLibere ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--success);">
+                    <span style="color: var(--success); font-weight: 800; font-size: 0.75rem;">PRODUIT LIBÉRÉ (TERMINÉ)</span>
+                </div>
+
                 <div class="form-group">
                     <label>Produit <span style="font-size:0.6rem; color:var(--text-dim); font-weight:500;">(saisir nom ou code fiche pour auto-remplir)</span></label>
                     <input type="text" class="form-input row-prod" value="${data ? data.produit : ''}" placeholder="Nom du produit ou code fiche..." list="fiche-suggest-${rowId}" required autocomplete="off">

@@ -50,6 +50,9 @@
     <!-- OCR Library (Tesseract.js) -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
+    <!-- Excel (SheetJS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -1322,6 +1325,10 @@
             <div class="search-container" style="width: auto; flex: 0 0 auto;">
                 <input type="date" id="dateFilter" class="search-input" style="padding: 10px; width: 120px;" onchange="render()">
             </div>
+            <button id="importDirectBtn" onclick="window.importNewRegistry()"
+                style="display: none; background: rgba(59, 130, 246, 0.1); border: 1.5px solid #3b82f6; padding: 0 14px; border-radius: 12px; color: #3b82f6; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;">
+                <span>📤 IMPORT RAPIDE Excel</span>
+            </button>
             <button id="sortBtn" onclick="toggleSort()"
                 style="background: #fff; border: 1.5px solid var(--glass-border); padding: 0 14px; border-radius: 12px; color: var(--text-dim); cursor: pointer; height: 40px; display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;" id="sortBtn">
                 <span id="sortBtnIcon">📅</span><span id="sortBtnLabel">Date ↓</span>
@@ -2604,6 +2611,12 @@
 
             const addBtn = document.getElementById('addBtn');
             const searchInput = document.getElementById('searchInput');
+            const importDirectBtn = document.getElementById('importDirectBtn');
+            
+            if (importDirectBtn) {
+                importDirectBtn.style.display = (tab === 'registres') ? 'flex' : 'none';
+            }
+
             if (addBtn && searchInput) {
                 if (tab === 'fiches') {
                     addBtn.innerText = "+ NOUVELLE FICHE";
@@ -5248,6 +5261,7 @@
                                     </div>
                                 </div>
                                 <div style="display:flex; gap:8px;">
+                                    <button onclick="window.importRegistry('${reg.id}')" style="background:rgba(59, 130, 246, 0.1); color:#3b82f6; border:1px solid #3b82f6; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">📤 IMPORT</button>
                                     <button onclick="window.exportRegistry('${reg.id}')" style="background:rgba(34, 197, 94, 0.1); color:var(--success); border:1px solid var(--success); padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">📥 EXCEL</button>
                                     <button onclick="window.openEntryModal('${reg.id}')" style="background:var(--success); color:white; border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.7rem; cursor:pointer;">+ LIGNE</button>
                                     <button onclick="window.openRegistreConfig('${reg.id}')" style="background:rgba(255,255,255,0.05); color:var(--text-dim); border:1px solid rgba(255,255,255,0.1); padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">⚙️</button>
@@ -5884,9 +5898,12 @@
             const entries = rEntries.filter(e => e.regId === regId);
             if (entries.length === 0) return window.showToast("Aucune donnée à exporter.", 'info');
 
-            // Construction du CSV
             const cols = reg.columns || [];
-            let csv = cols.map(c => typeof c === 'string' ? c : c.name).join(';') + '\n';
+            const wsData = [];
+            
+            // Header row
+            const headerRow = cols.map(c => typeof c === 'string' ? c : c.name);
+            wsData.push(headerRow);
             
             entries.forEach(e => {
                 const row = cols.map(c => {
@@ -5894,32 +5911,191 @@
                     let val = e.data ? e.data[colName] : '';
                     if (val === undefined || val === null) val = '';
                     
-                    // Gestion des objets (Multi-cases)
                     if (typeof val === 'object' && val !== null) {
                         val = Object.entries(val)
                             .filter(([_, v]) => v === true || v === 'true')
                             .map(([k, _]) => k)
                             .join(', ');
                     }
-                    // Gestion des booléens simple
                     if (val === true) val = 'OK';
                     if (val === false) val = 'NON';
-
-                    return `"${String(val).replace(/"/g, '""')}"`;
+                    
+                    return val;
                 });
-                csv += row.join(';') + '\n';
+                wsData.push(row);
             });
 
-            // Téléchargement
-            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", `REGISTRE_${reg.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            if (typeof XLSX !== 'undefined') {
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Registre");
+                XLSX.writeFile(wb, `REGISTRE_${reg.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            } else {
+                window.showToast("Librairie Excel non chargée.", 'error');
+            }
+        };
+
+        window.importRegistry = function(regId) {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.xlsx, .xls, .csv';
+            fileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const data = evt.target.result;
+                        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet);
+                        
+                        if (json.length === 0) {
+                            window.showToast("Fichier vide ou mal formaté.", 'error');
+                            return;
+                        }
+                        
+                        const reg = registres.find(r => r.id === regId);
+                        const batch = window.db.batch();
+                        let count = 0;
+                        
+                        json.forEach(row => {
+                            let entryData = {};
+                            
+                            // Normaliser les clés d'Excel (espaces et casse)
+                            const normalizedRow = {};
+                            Object.keys(row).forEach(k => {
+                                normalizedRow[k.trim().toLowerCase()] = row[k];
+                            });
+
+                            reg.columns.forEach(col => {
+                                const colName = typeof col === 'string' ? col : col.name;
+                                const cleanColName = colName.trim().toLowerCase();
+                                if (normalizedRow[cleanColName] !== undefined && normalizedRow[cleanColName] !== null) {
+                                    let val = normalizedRow[cleanColName];
+                                    // Gérer la correction de date d'Excel (cellDates produit des JS Date)
+                                    if (val instanceof Date) {
+                                        // Corriger le décalage de fuseau horaire potentiel pour avoir la date locale
+                                        const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
+                                        val = offsetDate.toISOString().split('T')[0];
+                                    }
+                                    entryData[colName] = val;
+                                }
+                            });
+                            
+                            // Seulement si on a pu récupérer au moins une donnée
+                            if (Object.keys(entryData).length > 0) {
+                                const newRef = window.db.collection(R_ENTRIES_COL).doc();
+                                batch.set(newRef, {
+                                    regId: regId,
+                                    data: entryData,
+                                    // Maintenir l'ordre Excel exact !
+                                    updatedAt: Date.now() - (count * 1000)
+                                });
+                                count++;
+                            }
+                        });
+                        
+                        batch.commit().then(() => {
+                            window.showToast(count + " lignes importées avec succès !", 'success');
+                        }).catch(err => {
+                            console.error(err);
+                            window.showToast("Erreur d'importation", 'error');
+                        });
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast("Erreur de lecture Excel", 'error');
+                    }
+                };
+                reader.readAsBinaryString(file);
+            };
+            fileInput.click();
+        };
+
+        window.importNewRegistry = function() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.xlsx, .xls, .csv';
+            fileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const data = evt.target.result;
+                        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        
+                        if (json.length === 0) { return window.showToast("Fichier vide ou mal formaté.", 'error'); }
+                        
+                        // Extraire les colonnes de la première ligne
+                        const headerKeys = Object.keys(json[0]);
+                        const colsToCreate = headerKeys.map(k => k.trim()).filter(k => k);
+                        
+                        if (colsToCreate.length === 0) { return window.showToast("Aucune colonne détectée.", 'error'); }
+                        
+                        const title = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
+                        const newRegRef = window.db.collection(REGISTRES_COL).doc();
+                        const regId = newRegRef.id;
+                        
+                        const batch = window.db.batch();
+                        batch.set(newRegRef, {
+                            name: title,
+                            icon: '📓',
+                            columns: colsToCreate,
+                            updatedAt: Date.now()
+                        });
+                        
+                        let count = 0;
+                        json.forEach(row => {
+                            let entryData = {};
+                            const normalizedRow = {};
+                            Object.keys(row).forEach(k => {
+                                normalizedRow[k.trim().toLowerCase()] = row[k];
+                            });
+
+                            colsToCreate.forEach(colName => {
+                                const cleanColName = colName.toLowerCase();
+                                if (normalizedRow[cleanColName] !== undefined && normalizedRow[cleanColName] !== "" && normalizedRow[cleanColName] !== null) {
+                                    let val = normalizedRow[cleanColName];
+                                    if (val instanceof Date) {
+                                        const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
+                                        val = offsetDate.toISOString().split('T')[0];
+                                    }
+                                    entryData[colName] = val;
+                                }
+                            });
+                            
+                            if (Object.keys(entryData).length > 0) {
+                                const newEntryRef = window.db.collection(R_ENTRIES_COL).doc();
+                                batch.set(newEntryRef, {
+                                    regId: regId,
+                                    data: entryData,
+                                    updatedAt: Date.now() - (count * 1000)
+                                });
+                                count++;
+                            }
+                        });
+                        
+                        batch.commit().then(() => {
+                            window.showToast(`Registre "${title}" auto-généré avec ${count} lignes !`, 'success');
+                        }).catch(err => {
+                            console.error(err);
+                            window.showToast("Erreur d'enregistrement", 'error');
+                        });
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast("Erreur de lecture Excel", 'error');
+                    }
+                };
+                reader.readAsBinaryString(file);
+            };
+            fileInput.click();
         };
 
         // CSS additionnel

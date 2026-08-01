@@ -1919,12 +1919,16 @@
                             <input type="text" id="newAdditifBoite" class="form-input"
                                 style="font-size:0.75rem; padding:8px;" placeholder="Boîte">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom:10px;">
                             <input type="text" id="newAdditifQty" class="form-input"
                                 style="font-size:0.75rem; padding:8px;" placeholder="Quantité pesée (g/ml)...">
                         </div>
+                        <div class="form-group" style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="saveAdditifToCatalogCheck" checked style="width: auto; margin: 0; cursor: pointer;">
+                            <label for="saveAdditifToCatalogCheck" style="font-size: 0.65rem; text-transform: none; letter-spacing: normal; color: var(--text-dim); cursor: pointer; display: inline;">Sauvegarder dans le catalogue permanent</label>
+                        </div>
                         <button type="button" id="btnAddAdditif" onclick="addAdditifToPrep()"
-                            style="width:100%; margin-top:12px; background:var(--secondary); color:white; border:none; padding:10px; border-radius:12px; cursor:pointer; font-weight:800; font-size:0.7rem;">+
+                            style="width:100%; margin-top:5px; background:var(--secondary); color:white; border:none; padding:10px; border-radius:12px; cursor:pointer; font-weight:800; font-size:0.7rem;">+
                             AJOUTER CET ADDITIF À LA LISTE</button>
                         <button type="button" id="btnCancelEditAdditif" onclick="clearAdditifForm()" style="display:none; width:100%; margin-top:5px; background:rgba(255,255,255,0.05); color:white; border:none; padding:8px; border-radius:10px; cursor:pointer; font-size:0.6rem;">Annuler la modification</button>
                     </div>
@@ -3348,7 +3352,10 @@
                     qty: document.getElementById('newAdditifQty').value.trim()
                 };
 
-                window.saveAdditifNameToCatalog(data.name);
+                const mustSave = document.getElementById('saveAdditifToCatalogCheck')?.checked;
+                if (mustSave) {
+                    window.saveAdditifNameToCatalog(data);
+                }
 
                 if (editIdx !== "") {
                     // Modification
@@ -3447,7 +3454,7 @@
                 e.preventDefault();
                 const id = document.getElementById('prepEditId').value;
                 const additifs = Array.from(document.getElementById('prepAdditifsContainer').querySelectorAll('.additif-entry')).map(div => JSON.parse(div.dataset.info));
-                additifs.forEach(a => window.saveAdditifNameToCatalog(a.name));
+                additifs.forEach(a => window.saveAdditifNameToCatalog(a));
 
                 const flaconEntames = Array.from(document.querySelectorAll('.flacon-entame-row')).map(row => ({
                     num: row.querySelector('.fe-num').value,
@@ -4267,14 +4274,31 @@
             window.showToast("❌ Erreur de synchronisation [Mon Catalogue] : " + err.message, 'error', 5000);
         });
 
-        window.saveAdditifNameToCatalog = function(name) {
-            const val = (name || '').trim();
+        window.saveAdditifNameToCatalog = function(itemOrName) {
+            let data;
+            if (typeof itemOrName === 'object' && itemOrName !== null) {
+                data = itemOrName;
+            } else {
+                data = { name: itemOrName };
+            }
+            const val = (data.name || '').trim();
             if (!val) return;
             if (!catalogs.additifs) catalogs.additifs = [];
-            const exists = catalogs.additifs.some(item => item.toLowerCase() === val.toLowerCase());
-            if (exists) return;
+            
+            // Retirer tout doublon (insensible à la casse)
+            catalogs.additifs = catalogs.additifs.filter(item => {
+                const itemName = (typeof item === 'object' && item !== null) ? item.name : item;
+                return itemName.toLowerCase() !== val.toLowerCase();
+            });
 
-            catalogs.additifs.push(val);
+            catalogs.additifs.push({
+                name: val,
+                lot: (data.lot || '').trim(),
+                code: (data.code || '').trim(),
+                fourn: (data.fourn || '').trim(),
+                boite: (data.boite || '').trim(),
+                qty: (data.qty || '').trim()
+            });
             renderCatalogs();
 
             const newCatalogs = JSON.parse(JSON.stringify(catalogs));
@@ -4331,7 +4355,10 @@
         window.deleteFromCatalog = function (type, val) {
             if (confirm(`Supprimer "${val}" du catalogue permanent ?`)) {
                 const newCatalogs = JSON.parse(JSON.stringify(catalogs));
-                newCatalogs[type] = newCatalogs[type].filter(v => v !== val);
+                newCatalogs[type] = newCatalogs[type].filter(v => {
+                    const name = (typeof v === 'object' && v !== null) ? v.name : v;
+                    return name !== val;
+                });
                 window.db.collection("settings").doc(CATALOGS_DOC).set(newCatalogs);
             }
         };
@@ -4398,12 +4425,19 @@
             const catPrep = document.getElementById('additifs-catalog-prep');
             if (catPrep) {
                 const list = catalogs['additifs'] || [];
-                catPrep.innerHTML = list.map(val => `
+                window.currentAdditifsCatalogList = list;
+                
+                catPrep.innerHTML = list.map((item, idx) => {
+                    const isObj = typeof item === 'object' && item !== null;
+                    const name = isObj ? item.name : item;
+                    
+                    return `
                     <span class="mini-tag" style="cursor:pointer; background:rgba(79, 70, 229, 0.05); border:1px solid rgba(79, 70, 229, 0.1); display:flex; align-items:center; gap:8px;">
-                        <span onclick="document.getElementById('newAdditifName').value = '${val.replace(/'/g, "\\'")}'">${val}</span>
-                        <span onclick="deleteFromCatalog('additifs', '${val.replace(/'/g, "\\'")}')" style="color:#ef4444; font-weight:800; cursor:pointer; padding:2px;">✕</span>
+                        <span onclick="window.selectAdditifFromCatalogByIndex(${idx})">${name}</span>
+                        <span onclick="deleteFromCatalog('additifs', '${name.replace(/'/g, "\\'")}')" style="color:#ef4444; font-weight:800; cursor:pointer; padding:2px;">✕</span>
                     </span>
-                `).join('') || '<span style="font-size:0.6rem; color:var(--text-dim);">Catalogue vide. Ajoutez vos additifs ci-dessous.</span>';
+                    `;
+                }).join('') || '<span style="font-size:0.6rem; color:var(--text-dim);">Catalogue vide. Ajoutez vos additifs ci-dessous.</span>';
             }
         }
         renderCatalogs();
@@ -6065,7 +6099,10 @@
                                     let val = normalizedRow[cleanColName];
                                     if (val instanceof Date) {
                                         const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
-                                        val = offsetDate.toISOString().split('T')[0];
+                                        const j = String(offsetDate.getDate()).padStart(2, '0');
+                                        const m = String(offsetDate.getMonth() + 1).padStart(2, '0');
+                                        const a = offsetDate.getFullYear();
+                                        val = `${j}/${m}/${a}`;
                                     }
                                     entryData[colName] = val;
                                 }
@@ -6615,6 +6652,111 @@
             }
         };
 
+        window.selectAdditifFromCatalog = function(item) {
+            document.getElementById('newAdditifName').value = item.name || '';
+            document.getElementById('newAdditifLot').value = item.lot || '';
+            document.getElementById('newAdditifCode').value = item.code || '';
+            document.getElementById('newAdditifFourn').value = item.fourn || '';
+            document.getElementById('newAdditifBoite').value = item.boite || '';
+            document.getElementById('newAdditifQty').value = item.qty || '';
+        };
+
+        window.selectAdditifFromCatalogByIndex = function(idx) {
+            const list = window.currentAdditifsCatalogList || [];
+            const item = list[idx];
+            if (!item) return;
+            const isObj = typeof item === 'object' && item !== null;
+            
+            document.getElementById('newAdditifName').value = isObj ? (item.name || '') : item;
+            document.getElementById('newAdditifLot').value = isObj ? (item.lot || '') : '';
+            document.getElementById('newAdditifCode').value = isObj ? (item.code || '') : '';
+            document.getElementById('newAdditifFourn').value = isObj ? (item.fourn || '') : '';
+            document.getElementById('newAdditifBoite').value = isObj ? (item.boite || '') : '';
+            document.getElementById('newAdditifQty').value = isObj ? (item.qty || '') : '';
+        };
+
+        window.calculateLectDate = function(dateRepInput, dateLectInput, opt) {
+            const repVal = dateRepInput.value;
+            if (!repVal) {
+                dateLectInput.value = '';
+                return;
+            }
+            const d = new Date(repVal);
+            let daysToAdd = 0;
+            if (opt === '24h') {
+                daysToAdd = 1;
+            } else if (opt === '48h') {
+                daysToAdd = 2;
+            } else if (opt === '72h') {
+                daysToAdd = 3;
+            } else if (opt === '5h') {
+                daysToAdd = 0;
+            }
+            d.setDate(d.getDate() + daysToAdd);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            dateLectInput.value = `${yyyy}-${mm}-${dd}`;
+        };
+
+        window.updateFinalResultDate = function(container) {
+            if (!container) return;
+            const rows = Array.from(container.querySelectorAll('.germ-phase-row'));
+            if (rows.length < 2) return;
+            const finalRow = rows[rows.length - 1]; // Le dernier est toujours le résultat final
+            const repiquageRows = rows.slice(0, rows.length - 1);
+            
+            let lastLectDate = '';
+            for (let j = repiquageRows.length - 1; j >= 0; j--) {
+                const lectVal = repiquageRows[j].querySelector('.germ-phase-date-lect').value;
+                if (lectVal) {
+                    lastLectDate = lectVal;
+                    break;
+                }
+            }
+            if (lastLectDate) {
+                const finalDateInput = finalRow.querySelector('.germ-phase-date-rep');
+                if (finalDateInput) {
+                    finalDateInput.value = lastLectDate;
+                }
+            }
+        };
+
+        window.onGermPhaseOptChange = function(select) {
+            const row = select.closest('.germ-phase-row');
+            const dateRepInput = row.querySelector('.germ-phase-date-rep');
+            const dateLectInput = row.querySelector('.germ-phase-date-lect');
+            const opt = select.value;
+            
+            if (opt === 'Manuel') {
+                dateLectInput.readOnly = false;
+                dateLectInput.style.background = '#fff';
+            } else {
+                dateLectInput.readOnly = true;
+                dateLectInput.style.background = '#f1f5f9';
+                window.calculateLectDate(dateRepInput, dateLectInput, opt);
+            }
+            window.updateFinalResultDate(row.closest('.germ-phases-container'));
+        };
+
+        window.onGermPhaseDateRepChange = function(input) {
+            const row = input.closest('.germ-phase-row');
+            const select = row.querySelector('.germ-phase-opt-select');
+            const dateLectInput = row.querySelector('.germ-phase-date-lect');
+            if (select && dateLectInput) {
+                const opt = select.value;
+                if (opt !== 'Manuel') {
+                    window.calculateLectDate(input, dateLectInput, opt);
+                }
+            }
+            window.updateFinalResultDate(row.closest('.germ-phases-container'));
+        };
+
+        window.onGermPhaseDateLectChange = function(input) {
+            const row = input.closest('.germ-phase-row');
+            window.updateFinalResultDate(row.closest('.germ-phases-container'));
+        };
+
         // Helper : génère les champs de saisie pour chaque phase d'incubation d'un germe
         window.buildGermPhaseInputs = function(germName, savedPhases, dateAnalyseStr) {
             const cat = germeCatalog.find(g => g.name === germName);
@@ -6659,11 +6801,28 @@
                 const savedDateRep = saved.dateRep || saved.date || '';
                 const savedDateLect = saved.dateLect || '';
                 const savedResult = saved.result || '';
+                const savedOpt = saved.incubationOpt || 'Manuel';
 
-                html += `<div class="germ-phase-row" data-phase-index="${i}" style="display:grid; grid-template-columns:auto 1fr 1fr 1.5fr; gap:4px; align-items:center;">
-                    <span style="font-size:0.55rem; font-weight:800; color:${isFinal ? 'var(--success)' : 'var(--primary)'}; white-space:nowrap;">${isFinal ? '✅' : '↳'} ${label} ${!isFinal ? `<span style="font-weight:400; color:var(--text-dim);">(~${dateCalc})</span>` : ''}</span>
-                    <input type="date" class="germ-phase-date-rep form-input" style="padding:3px 6px; font-size:0.6rem; border-radius:6px; border-color:rgba(79,70,229,0.2);" value="${savedDateRep}" title="${isFinal ? 'Date' : 'Date de repiquage'}" placeholder="Date">
-                    <input type="date" class="germ-phase-date-lect form-input" style="padding:3px 6px; font-size:0.6rem; border-radius:6px; border-color:rgba(79,70,229,0.2);${isFinal ? ' visibility:hidden;' : ''}" value="${savedDateLect}" title="Date de lecture" placeholder="Lecture">
+                let selectHtml = '';
+                if (!isFinal) {
+                    selectHtml = `
+                        <select class="germ-phase-opt-select form-input" style="padding:3px 5px; font-size:0.55rem; border-radius:6px; border-color:rgba(79,70,229,0.2); font-weight:800; background:#fff; color:var(--text-main); width:70px; height:24px;" onchange="window.onGermPhaseOptChange(this)">
+                            <option value="Manuel" ${savedOpt === 'Manuel' ? 'selected' : ''}>Manuel</option>
+                            <option value="5h" ${savedOpt === '5h' ? 'selected' : ''}>5h</option>
+                            <option value="24h" ${savedOpt === '24h' ? 'selected' : ''}>24h</option>
+                            <option value="48h" ${savedOpt === '48h' ? 'selected' : ''}>48h</option>
+                            <option value="72h" ${savedOpt === '72h' ? 'selected' : ''}>72h</option>
+                        </select>
+                    `;
+                } else {
+                    selectHtml = `<div style="width:70px;"></div>`;
+                }
+
+                html += `<div class="germ-phase-row" data-phase-index="${i}" style="display:grid; grid-template-columns:auto auto 1fr 1fr 1.5fr; gap:4px; align-items:center;">
+                    <span style="font-size:0.55rem; font-weight:800; color:${isFinal ? 'var(--success)' : 'var(--primary)'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${label}">${isFinal ? '✅' : '↳'} ${label} ${!isFinal ? `<span style="font-weight:400; color:var(--text-dim);">(~${dateCalc})</span>` : ''}</span>
+                    ${selectHtml}
+                    <input type="date" class="germ-phase-date-rep form-input" style="padding:3px 6px; font-size:0.6rem; border-radius:6px; border-color:rgba(79,70,229,0.2);" value="${savedDateRep}" title="${isFinal ? 'Date' : 'Date de repiquage'}" placeholder="Date" oninput="window.onGermPhaseDateRepChange(this)">
+                    <input type="date" class="germ-phase-date-lect form-input" style="padding:3px 6px; font-size:0.6rem; border-radius:6px; border-color:rgba(79,70,229,0.2);${isFinal ? ' visibility:hidden;' : ''}${!isFinal && savedOpt !== 'Manuel' ? ' background:#f1f5f9;' : ''}" value="${savedDateLect}" title="Date de lecture" placeholder="Lecture" oninput="window.onGermPhaseDateLectChange(this)" ${!isFinal && savedOpt !== 'Manuel' ? 'readonly' : ''}>
                     <input type="text" class="germ-phase-result form-input" style="padding:3px 6px; font-size:0.6rem; font-weight:700; color:${isFinal ? 'var(--success)' : 'var(--text-main)'}; border-radius:6px; border-color:${isFinal ? 'rgba(5,150,105,0.3)' : 'rgba(79,70,229,0.2)'};" value="${savedResult}" placeholder="${isFinal ? 'Résultat Final...' : 'Obs...'}">
                 </div>`;
             }
@@ -6819,7 +6978,8 @@
                         const phases = phaseRows.map(pr => ({
                             dateRep: (pr.querySelector('.germ-phase-date-rep') || {}).value || '',
                             dateLect: (pr.querySelector('.germ-phase-date-lect') || {}).value || '',
-                            result: (pr.querySelector('.germ-phase-result') || {}).value || ''
+                            result: (pr.querySelector('.germ-phase-result') || {}).value || '',
+                            incubationOpt: (pr.querySelector('.germ-phase-opt-select') || {}).value || 'Manuel'
                         }));
                         return {
                             name: span ? span.innerText : 'Inconnu',

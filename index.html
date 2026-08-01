@@ -6798,7 +6798,9 @@
                 if (inc && inc.milieu) label += ` sur ${inc.milieu}`;
 
                 const saved = savedPhases && savedPhases[i] ? savedPhases[i] : {};
-                const savedDateRep = saved.dateRep || saved.date || '';
+                // Le 1er repiquage prend la date d'analyse par défaut (si non sauvegardée)
+                const defaultDateRep = (i === 0 && !isFinal && dateAnalyseStr) ? dateAnalyseStr : '';
+                const savedDateRep = saved.dateRep || saved.date || defaultDateRep;
                 const savedDateLect = saved.dateLect || '';
                 const savedResult = saved.result || '';
                 const savedOpt = saved.incubationOpt || 'Manuel';

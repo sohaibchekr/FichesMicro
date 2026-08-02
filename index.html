@@ -1322,8 +1322,12 @@
                 <input type="text" id="searchInput" class="search-input" placeholder="Produit, lot, code..." autocomplete="off" list="search-history-list">
                 <datalist id="search-history-list"></datalist>
             </div>
-            <div class="search-container" style="width: auto; flex: 0 0 auto;">
-                <input type="date" id="dateFilter" class="search-input" style="padding: 10px; width: 120px;" onchange="render()">
+            <div class="search-container" style="width: auto; flex: 0 0 auto; display: flex; gap: 5px;">
+                <input type="date" id="dateFilterStart" class="search-input" style="padding: 10px; width: 130px;" onchange="render()" title="Du (début)">
+                <input type="date" id="dateFilterEnd" class="search-input" style="padding: 10px; width: 130px;" onchange="render()" title="Au (fin)">
+                <button id="excelPrepBtn" onclick="window.exportPrepToExcel()" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1.5px solid #10b981; padding: 0 14px; border-radius: 12px; color: #10b981; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;">
+                    <span>📊 EXCEL</span>
+                </button>
             </div>
             <button id="importDirectBtn" onclick="window.importNewRegistry()"
                 style="display: none; background: rgba(59, 130, 246, 0.1); border: 1.5px solid #3b82f6; padding: 0 14px; border-radius: 12px; color: #3b82f6; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;">
@@ -2643,9 +2647,13 @@
             const addBtn = document.getElementById('addBtn');
             const searchInput = document.getElementById('searchInput');
             const importDirectBtn = document.getElementById('importDirectBtn');
+            const excelPrepBtn = document.getElementById('excelPrepBtn');
             
             if (importDirectBtn) {
                 importDirectBtn.style.display = (tab === 'registres') ? 'flex' : 'none';
+            }
+            if (excelPrepBtn) {
+                excelPrepBtn.style.display = (tab === 'preps') ? 'flex' : 'none';
             }
 
             if (addBtn && searchInput) {
@@ -4928,7 +4936,8 @@
                     </div>
                 `).join('');
             } else if (window.currentTab === 'preps') {
-                const dateFilter = document.getElementById('dateFilter').value;
+                const dateStart = document.getElementById('dateFilterStart').value;
+                const dateEnd = document.getElementById('dateFilterEnd').value;
                 const today = new Date(); today.setHours(0, 0, 0, 0);
 
                 const getExpStatus = (p) => {
@@ -4953,9 +4962,11 @@
                         (p.supplier && p.supplier.toLowerCase().includes(query)) ||
                         (p.boite && p.boite.toLowerCase().includes(query)) ||
                         matchesDestockKeyword || matchesFlaconData;
-                    const matchesDate = !dateFilter || p.datePrep === dateFilter;
+                    const matchesDate = (!dateStart || p.datePrep >= dateStart) && (!dateEnd || p.datePrep <= dateEnd);
                     return matchesText && matchesDate;
                 });
+                
+                window.currentFilteredPreps = allFiltered; // Save for Excel Export
 
                 // Compteurs pour la barre de filtres
                 const countExpired  = allFiltered.filter(p => getExpStatus(p).isExpired).length;
@@ -5156,7 +5167,8 @@
                 });
 
                 // Filtering
-                const dateFilter = document.getElementById('dateFilter').value;
+                const dateStart = document.getElementById('dateFilterStart').value;
+                const dateEnd = document.getElementById('dateFilterEnd').value;
                 filtered = filtered.filter(a => {
                     const matchesText = (a.produit && a.produit.toLowerCase().includes(query)) ||
                         (a.lot && a.lot.toLowerCase().includes(query)) ||
@@ -5164,7 +5176,7 @@
                         (a.codeFiche && a.codeFiche.toLowerCase().includes(query)) ||
                         (a.classe && a.classe.toLowerCase().includes(query));
 
-                    const matchesDate = !dateFilter || a.dateAnalyse === dateFilter;
+                    const matchesDate = (!dateStart || a.dateAnalyse >= dateStart) && (!dateEnd || a.dateAnalyse <= dateEnd);
 
                     // Release filter
                     let matchesRelease = true;
@@ -6182,6 +6194,51 @@
                 window.closeModal('registreModalOverlay');
             }
         }
+
+        window.exportPrepToExcel = function() {
+            if (!window.currentFilteredPreps || window.currentFilteredPreps.length === 0) {
+                window.showToast("Aucune préparation à exporter dans ce filtre/période.", "warning");
+                return;
+            }
+
+            if (typeof XLSX === "undefined") {
+                return window.showToast("Librairie Excel (SheetJS) manquante.", "error");
+            }
+
+            const data = window.currentFilteredPreps.map(p => ({
+                "Désignation / Milieu": p.designation || "",
+                "N° Lot Interne": p.lot || "",
+                "Date Préparation": window.formatStringToDate(p.datePrep, p.datePrep),
+                "Date Péremption": window.formatStringToDate(p.datePeremption, p.datePeremption),
+                "Quantité / Flacons": p.qtyFinal ? p.qtyFinal : (p.totalFlacons ? p.totalFlacons + " Flacons" : ""),
+                "Lot Fournisseur": p.lotFourn || "",
+                "Fournisseur": p.supplier || "",
+                "Code": p.code || "",
+                "Boite": p.boite || ""
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            
+            // Format column widths
+            ws['!cols'] = [
+                { wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
+                { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 10 }
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Preparations");
+            
+            const dateStart = document.getElementById('dateFilterStart').value || 'ALL';
+            const dateEnd = document.getElementById('dateFilterEnd').value || 'ALL';
+            
+            let filename = `Rapport_Preps.xlsx`;
+            if (dateStart !== 'ALL' || dateEnd !== 'ALL') {
+                filename = `Rapport_Preps_${dateStart}_au_${dateEnd}.xlsx`;
+            }
+            
+            XLSX.writeFile(wb, filename);
+            window.showToast("Rapport Excel généré !", "success");
+        };
 
         window.exportRegistry = function(regId) {
             const reg = registres.find(r => r.id === regId);

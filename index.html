@@ -5013,8 +5013,7 @@
                     const name = (p.designation || '').toUpperCase();
                     const isExclu = name.includes('EPS') || name.includes('FLACON STÉR') || name.includes('FLACON STER') || name.includes('FLACONS ST');
                     if (!isExclu) {
-                        const qt = parseInt(p.totalFlacons) || parseInt(p.qtyFinal) || 0;
-                        totalUnits += qt;
+                        totalUnits++;
                     }
                 });
 
@@ -6233,14 +6232,14 @@
                 const name = (p.designation || '').toUpperCase();
                 const isExclu = name.includes('EPS') || name.includes('FLACON STÉR') || name.includes('FLACON STER') || name.includes('FLACONS ST');
                 if (!isExclu) {
-                    totalUnits += (parseInt(p.totalFlacons) || parseInt(p.qtyFinal) || 0);
+                    totalUnits++;
                 }
             });
             
             data.push({}); // Empty row
             data.push({
-                "Désignation / Milieu": "TOTAL MC PRÉPARÉS",
-                "Quantité / Flacons": totalUnits + " Unités"
+                "Désignation / Milieu": "NOMBRE DE PRÉPARATIONS MC",
+                "Quantité / Flacons": totalUnits + " fois (lots)"
             });
 
             const ws = XLSX.utils.json_to_sheet(data);

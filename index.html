@@ -5008,13 +5008,24 @@
                            <button onclick="event.stopPropagation(); window.acknowledgeExpiredPreps();" style="background:#dc2626; color:white; border:none; padding:7px 14px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0;">✅ OK, J'AI VU</button>
                        </div>` : '';
 
+                let totalUnits = 0;
+                allFiltered.forEach(p => {
+                    const name = (p.designation || '').toUpperCase();
+                    const isExclu = name.includes('EPS') || name.includes('FLACON STÉR') || name.includes('FLACON STER') || name.includes('FLACONS ST');
+                    if (!isExclu) {
+                        const qt = parseInt(p.totalFlacons) || parseInt(p.qtyFinal) || 0;
+                        totalUnits += qt;
+                    }
+                });
+
                 prepFilterBar.innerHTML = `
                     ${alertBanner}
-                    <div style="display:flex; gap:6px; flex-wrap:wrap; padding:0 20px 12px;">
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; padding:0 20px 12px; align-items:center;">
                         ${countExpired > 0 ? `<button onclick="window.prepExpiryFilter='expired'; render();" style="background:${activeFilter==='expired'?'rgba(239,68,68,0.9)':'rgba(239,68,68,0.1)'}; color:${activeFilter==='expired'?'white':'#ef4444'}; border:1.5px solid rgba(239,68,68,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🔴 Périmés (${countExpired})</button>` : ''}
                         ${countSoon  > 0 ? `<button onclick="window.prepExpiryFilter='soon';    render();" style="background:${activeFilter==='soon'   ?'rgba(245,158,11,0.9)':'rgba(245,158,11,0.1)'}; color:${activeFilter==='soon'   ?'white':'#d97706'}; border:1.5px solid rgba(245,158,11,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">⚠️ Bientôt (${countSoon})</button>` : ''}
                         <button onclick="window.prepExpiryFilter='valid'; render();" style="background:${activeFilter==='valid'?'var(--success)':'rgba(34,197,94,0.08)'}; color:${activeFilter==='valid'?'white':'var(--success)'}; border:1.5px solid rgba(34,197,94,0.25); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">✅ Valides (${countValid})</button>
                         <button onclick="window.prepExpiryFilter='all';   render();" style="background:${activeFilter==='all'  ?'var(--text-main)':'rgba(0,0,0,0.05)'}; color:${activeFilter==='all'  ?'white':'var(--text-dim)'}; border:1.5px solid rgba(0,0,0,0.1); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 Tous (${allFiltered.length})</button>
+                        <div style="margin-left:auto; background:rgba(16,185,129,0.1); border:1.5px solid #10b981; padding:6px 12px; border-radius:10px; color:#10b981; font-weight:900; font-size:0.7rem;">🧫 TOTAL MC = ${totalUnits}</div>
                     </div>`;
 
                 // Filtrage selon le filtre actif
@@ -6216,6 +6227,21 @@
                 "Code": p.code || "",
                 "Boite": p.boite || ""
             }));
+
+            let totalUnits = 0;
+            window.currentFilteredPreps.forEach(p => {
+                const name = (p.designation || '').toUpperCase();
+                const isExclu = name.includes('EPS') || name.includes('FLACON STÉR') || name.includes('FLACON STER') || name.includes('FLACONS ST');
+                if (!isExclu) {
+                    totalUnits += (parseInt(p.totalFlacons) || parseInt(p.qtyFinal) || 0);
+                }
+            });
+            
+            data.push({}); // Empty row
+            data.push({
+                "Désignation / Milieu": "TOTAL MC PRÉPARÉS",
+                "Quantité / Flacons": totalUnits + " Unités"
+            });
 
             const ws = XLSX.utils.json_to_sheet(data);
             

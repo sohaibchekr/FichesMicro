@@ -2818,6 +2818,18 @@
         } catch(e) {}
 
         // ===========================
+        // FORMAT DATE
+        // ===========================
+        window.formatStringToDate = function(val, fallback = '') {
+            if (!val) return fallback;
+            if (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const parts = val.split('-');
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return val;
+        };
+
+        // ===========================
         // TOAST + RÉSEAU
         // ===========================
         window.showToast = function(msg, type = 'info', duration = 3000) {
@@ -5559,8 +5571,8 @@
                     
                     return `
                         <div style="background:#ffffff; border-radius:24px; border:1px solid var(--glass-border); margin-bottom:20px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
-                            <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.01);">
-                                <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(0,0,0,0.01);">
+                                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                                     ${isSelectionMode ? `
                                         <div onclick="window.toggleItemSelection('reg:${reg.id}', 'registres_config', event); render();" 
                                              style="width:24px; height:24px; border:2px solid ${selectedFiches.has('reg:'+reg.id) ? '#ef4444' : 'rgba(255,255,255,0.2)'}; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#ef4444; font-weight:bold; background:${selectedFiches.has('reg:'+reg.id) ? 'rgba(239, 68, 68, 0.1)' : 'transparent'};">
@@ -5573,7 +5585,7 @@
                                         <div style="font-size:0.55rem; color:var(--text-dim); font-weight:700;">${entries.length} LIGNES</div>
                                     </div>
                                 </div>
-                                <div style="display:flex; gap:8px;">
+                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
                                     <button onclick="window.importRegistry('${reg.id}')" style="background:rgba(59, 130, 246, 0.1); color:#3b82f6; border:1px solid #3b82f6; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">📤 IMPORT</button>
                                     <button onclick="window.exportRegistry('${reg.id}')" style="background:rgba(34, 197, 94, 0.1); color:var(--success); border:1px solid var(--success); padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">📥 EXCEL</button>
                                     <button onclick="window.openEntryModal('${reg.id}')" style="background:var(--success); color:white; border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.7rem; cursor:pointer;">+ LIGNE</button>
@@ -5957,7 +5969,10 @@
                     document.getElementById('regName').value = r.name || '';
                     document.getElementById('regIcon').value = r.icon || '📓';
                     (r.columns || []).forEach(c => {
-                        window.addRegColumn(c.name, c.type, c.options || '');
+                        const colName = typeof c === 'string' ? c : c.name;
+                        const colType = typeof c === 'string' ? 'text' : (c.type || 'text');
+                        const colOpt = typeof c === 'string' ? '' : (c.options || '');
+                        window.addRegColumn(colName, colType, colOpt);
                     });
                 }
             } else {
@@ -6073,7 +6088,16 @@
                     });
                     inputHtml += `</div>`;
                 } else if (colType === 'date') {
-                    const finalVal = val || new Date().toISOString().split('T')[0];
+                    let formattedDate = val;
+                    if (formattedDate && typeof formattedDate === 'string' && formattedDate.includes('/')) {
+                        const p = formattedDate.split('/');
+                        if (p.length === 3) {
+                            let y = p[2], m = p[1].padStart(2, '0'), d = p[0].padStart(2, '0');
+                            if (y.length === 2) y = '20' + y;
+                            if (y.length === 4) formattedDate = `${y}-${m}-${d}`;
+                        }
+                    }
+                    const finalVal = formattedDate || new Date().toISOString().split('T')[0];
                     inputHtml = `<input type="date" class="form-input entry-val" data-col="${colName}" value="${finalVal}" onfocus="this.select()">`;
                 } else if (colType === 'time') {
                     const now = new Date();
@@ -6353,6 +6377,13 @@
                                         // Corriger le décalage de fuseau horaire potentiel pour avoir la date locale
                                         const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
                                         val = offsetDate.toISOString().split('T')[0];
+                                    } else if (typeof val === 'string' && val.includes('/')) {
+                                        const p = val.split('/');
+                                        if (p.length === 3) {
+                                            let y = p[2], m = p[1].padStart(2, '0'), d = p[0].padStart(2, '0');
+                                            if (y.length === 2) y = '20' + y;
+                                            if (y.length === 4) val = `${y}-${m}-${d}`;
+                                        }
                                     }
                                     entryData[colName] = val;
                                 }
@@ -6438,10 +6469,14 @@
                                     let val = normalizedRow[cleanColName];
                                     if (val instanceof Date) {
                                         const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
-                                        const j = String(offsetDate.getDate()).padStart(2, '0');
-                                        const m = String(offsetDate.getMonth() + 1).padStart(2, '0');
-                                        const a = offsetDate.getFullYear();
-                                        val = `${j}/${m}/${a}`;
+                                        val = offsetDate.toISOString().split('T')[0];
+                                    } else if (typeof val === 'string' && val.includes('/')) {
+                                        const p = val.split('/');
+                                        if (p.length === 3) {
+                                            let y = p[2], m = p[1].padStart(2, '0'), d = p[0].padStart(2, '0');
+                                            if (y.length === 2) y = '20' + y;
+                                            if (y.length === 4) val = `${y}-${m}-${d}`;
+                                        }
                                     }
                                     entryData[colName] = val;
                                 }

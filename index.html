@@ -2597,6 +2597,23 @@
                     <label>✅ Critères d'acceptation</label>
                     <textarea id="fertCriteres" class="form-input" style="height:70px; resize:none;" placeholder="Ex: Croissance confluente après 48h à 35°C, absence d'inhibition..."></textarea>
                 </div>
+                
+                <!-- CONSOMMABLES (Tubes & Flacons) -->
+                <div style="margin:20px 0 10px; border-top:2px dashed rgba(59,130,246,0.25); padding-top:15px;">
+                    <div style="font-size:0.75rem; font-weight:900; color:#3b82f6; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">📦 Consommables Estimés</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group" style="margin:0;">
+                            <label>🧪 Nombre de tubes (Dilutions, Stérilité...)</label>
+                            <input type="text" id="fertNbTubes" class="form-input" placeholder="Ex: 15 tubes pH7 + 5 vides">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label>🍼 Nombre de flacons / boîtes</label>
+                            <input type="text" id="fertNbFlacons" class="form-input" placeholder="Ex: 2 flacons 190mL (20 boîtes)">
+                        </div>
+                    </div>
+                    <button type="button" onclick="window.autoCalcConsO()" style="margin-top:8px; width:100%; padding:10px; background:rgba(59,130,246,0.1); border:1px dashed #3b82f6; color:#3b82f6; border-radius:10px; font-size:0.7rem; font-weight:800; cursor:pointer;">🧮 CALCULER AUTO SELON SOUCHES (4 boîtes/souche + Dilutions)</button>
+                </div>
+
                 <div class="form-group">
                     <label>📝 Observation / Notes</label>
                     <textarea id="fertObs" class="form-input" style="height:60px; resize:none;" placeholder="Remarques complémentaires..."></textarea>
@@ -8427,8 +8444,17 @@
                 return;
             }
 
-            container.innerHTML = filtered.map(f => {
-                const souches = (f.souches || []).map(s => `<span style="background:rgba(124,58,237,0.1); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:3px 10px; border-radius:20px; font-size:0.65rem; font-weight:800;">${s}</span>`).join('');
+            const recapHtml = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:rgba(59,130,246,0.05); padding:10px; border-radius:10px; border:1px solid rgba(59,130,246,0.2);">
+                <div style="font-size:0.7rem; color:#3b82f6; font-weight:800;">Cochez les milieux ci-dessous pour le rapport global</div>
+                <button onclick="window.generateFertGlobalRecap()" style="background:linear-gradient(to right, #3b82f6, #2563eb); color:white; padding:8px 15px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📊 Résumé Consommables</button>
+            </div>`;
+
+            const cardsHtml = filtered.map(f => {
+                const souches = (f.souches || []).map(s => {
+                    const mcfTxt = (f.mcfMap && f.mcfMap[s]) ? ` &nbsp;|&nbsp; <span style="opacity:0.8;">${f.mcfMap[s]} McF</span>` : '';
+                    return `<span style="background:rgba(124,58,237,0.1); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:3px 10px; border-radius:20px; font-size:0.65rem; font-weight:800;">${s}${mcfTxt}</span>`;
+                }).join('');
 
                 // Schéma protocole
                 const steps = (f.steps || []);
@@ -8449,8 +8475,11 @@
                 }
 
                 return `
-                <div class="fiche-card" style="cursor:default; border-left:4px solid var(--success);">
-                    <div class="card-header">
+                <div class="fiche-card" style="cursor:default; border-left:4px solid var(--success); position:relative;">
+                    <div style="position:absolute; top:20px; left:12px;">
+                        <input type="checkbox" class="fert-card-chk" value="${f.id}" style="transform:scale(1.4); cursor:pointer;">
+                    </div>
+                    <div class="card-header" style="padding-left:30px;">
                         <div>
                             <div class="designation" style="font-size:1.05rem;">${f.nom || 'MC sans nom'}</div>
                             ${f.code ? `<div style="font-size:0.65rem; color:var(--text-dim); margin-top:2px;">📖 ${f.code}${f.fourn ? ' — ' + f.fourn : ''}</div>` : ''}
@@ -8479,20 +8508,33 @@
                             ${f.inhDilution ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🔬 ${f.inhDilution}</span>` : ''}
                             ${f.inhUfc ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🦠 ${f.inhUfc}</span>` : ''}
                         </div>
-                        ${(f.inhSouches && f.inhSouches.length > 0) ? `<div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:6px;">${f.inhSouches.map(s=>`<span style="background:rgba(239,68,68,0.1); color:#dc2626; border:1px solid rgba(239,68,68,0.25); padding:3px 10px; border-radius:20px; font-size:0.6rem; font-weight:800;">${s}</span>`).join('')}</div>` : ''}
+                        ${(f.inhSouches && f.inhSouches.length > 0) ? `<div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:6px;">${f.inhSouches.map(s=> {
+                            const mm = (f.mcfMap && f.mcfMap[s]) ? ` | <span style="opacity:0.8;">${f.mcfMap[s]}</span>` : '';
+                            return `<span style="background:rgba(239,68,68,0.1); color:#dc2626; border:1px solid rgba(239,68,68,0.25); padding:3px 10px; border-radius:20px; font-size:0.6rem; font-weight:800;">${s}${mm}</span>`;
+                        }).join('')}</div>` : ''}
                     </div>` : ''}
 
                     <!-- Souches -->
-                    ${souches ? `<div><div style="font-size:0.55rem; color:var(--secondary); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">🦠 Souches</div><div style="display:flex; flex-wrap:wrap; gap:5px;">${souches}</div></div>` : ''}
+                    ${souches ? `<div><div style="font-size:0.55rem; color:var(--secondary); font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; margin-top:8px;">🦠 Souches</div><div style="display:flex; flex-wrap:wrap; gap:5px;">${souches}</div></div>` : ''}
+
+                    <!-- Consommables -->
+                    ${(f.nbTubes || f.nbFlacons) ? `
+                    <div style="background:rgba(59,130,246,0.06); border-radius:10px; padding:10px; border:1px solid rgba(59,130,246,0.15); margin-top:8px; font-size:0.7rem; color:#1e40af;">
+                        <span style="font-weight:900;">📦 Consommables :</span><br/>
+                        ${f.nbTubes ? `🔹 ${f.nbTubes}<br/>` : ''}
+                        ${f.nbFlacons ? `🔹 ${f.nbFlacons}` : ''}
+                    </div>` : ''}
 
                     <!-- Schéma protocole -->
                     ${schemaHtml}
 
                     <!-- Critères + Obs -->
-                    ${f.criteres ? `<div style="background:rgba(5,150,105,0.06); border-radius:10px; padding:10px; border:1px solid rgba(5,150,105,0.15); font-size:0.75rem; color:#065f46;"><span style="font-weight:800;">✅ Critères :</span> ${f.criteres}</div>` : ''}
-                    ${f.obs ? `<div style="background:rgba(251,191,36,0.06); border-radius:10px; padding:10px; border:1px solid rgba(251,191,36,0.15); font-size:0.75rem; color:#92400e; font-style:italic;">📝 ${f.obs}</div>` : ''}
+                    ${f.criteres ? `<div style="background:rgba(5,150,105,0.06); border-radius:10px; padding:10px; border:1px solid rgba(5,150,105,0.15); font-size:0.75rem; color:#065f46; margin-top:6px;"><span style="font-weight:800;">✅ Critères :</span> ${f.criteres}</div>` : ''}
+                    ${f.obs ? `<div style="background:rgba(251,191,36,0.06); border-radius:10px; padding:10px; border:1px solid rgba(251,191,36,0.15); font-size:0.75rem; color:#92400e; font-style:italic; margin-top:6px;">📝 ${f.obs}</div>` : ''}
                 </div>`;
             }).join('');
+            
+            container.innerHTML = recapHtml + `<div style="display:flex; flex-direction:column; gap:12px;">${cardsHtml}</div>`;
         };
 
         window.autoCalcFertUfc = function() {
@@ -8596,6 +8638,8 @@
             document.getElementById('fertInhConcentration').value = f ? (f.inhConcentration || '') : '';
             document.getElementById('fertInhDilution').value = f ? (f.inhDilution || '') : '';
             document.getElementById('fertInhUfc').value = f ? (f.inhUfc || '') : '';
+            document.getElementById('fertNbTubes').value = f ? (f.nbTubes || '') : '';
+            document.getElementById('fertNbFlacons').value = f ? (f.nbFlacons || '') : '';
 
             const standardStrains = [
                 "Escherichia coli CIP53-126",
@@ -8613,27 +8657,35 @@
             // Souches fertilité (Catalogue + Custom)
             const catF = document.getElementById('fertSouchesCatalogue');
             catF.innerHTML = standardStrains.map(s => `
-                <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
-                    <input type="checkbox" class="fert-souche-chk" value="${s}" ${ (f && f.souches && f.souches.includes(s)) ? 'checked' : '' }> ${s}
-                </label>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer; flex:1;">
+                        <input type="checkbox" class="fert-souche-chk" value="${s}" ${ (f && f.souches && f.souches.includes(s)) ? 'checked' : '' }> 
+                        <span style="font-size:0.65rem;">${s}</span>
+                    </label>
+                    <input type="text" class="form-input fert-souche-mcf" data-strain="${s}" value="${(f && f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : ''}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem;">
+                </div>
             `).join('');
             const sc = document.getElementById('fertSouchesContainer');
             sc.innerHTML = '';
             (f ? (f.souches || []) : []).forEach(s => {
-                if (!standardStrains.includes(s)) window.addFertSouche(s);
+                if (!standardStrains.includes(s)) window.addFertSouche(s, (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '');
             });
 
             // Souches inhibition (Catalogue + Custom)
             const catI = document.getElementById('fertInhSouchesCatalogue');
             catI.innerHTML = standardStrains.map(s => `
-                <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#ef4444;">
-                    <input type="checkbox" class="fert-inh-souche-chk" value="${s}" ${ (f && f.inhSouches && f.inhSouches.includes(s)) ? 'checked' : '' }> ${s}
-                </label>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#ef4444; flex:1;">
+                        <input type="checkbox" class="fert-inh-souche-chk" value="${s}" ${ (f && f.inhSouches && f.inhSouches.includes(s)) ? 'checked' : '' }> 
+                        <span style="font-size:0.65rem;">${s}</span>
+                    </label>
+                    <input type="text" class="form-input fert-inh-souche-mcf" data-strain="${s}" value="${(f && f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : ''}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(239,68,68,0.4);">
+                </div>
             `).join('');
             const si = document.getElementById('fertInhSouchesContainer');
             si.innerHTML = '';
             (f ? (f.inhSouches || []) : []).forEach(s => {
-                if (!standardStrains.includes(s)) window.addFertInhSouche(s);
+                if (!standardStrains.includes(s)) window.addFertInhSouche(s, (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '');
             });
 
             // Steps fertilité
@@ -8651,21 +8703,23 @@
         };
 
         // Helper : ajouter souche fertilité
-        window.addFertSouche = function(val = '') {
+        window.addFertSouche = function(val = '', mcf = '') {
             const c = document.getElementById('fertSouchesContainer');
             const div = document.createElement('div');
             div.style = 'display:flex; gap:8px; align-items:center;';
-            div.innerHTML = `<input type="text" class="form-input fert-souche" value="${val}" list="fertSoucheList" placeholder="Ex: E.coli ATCC 25922..." style="flex:1; margin:0;">
+            div.innerHTML = `<input type="text" class="form-input fert-souche" value="${val}" list="fertSoucheList" placeholder="Ex: E.coli ATCC 25922..." style="flex:2; margin:0;">
+                <input type="text" class="form-input fert-souche-mcf-custom" value="${mcf}" placeholder="McF" style="flex:1; margin:0;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;">✕</button>`;
             c.appendChild(div);
         };
 
         // Helper : ajouter souche inhibition
-        window.addFertInhSouche = function(val = '') {
+        window.addFertInhSouche = function(val = '', mcf = '') {
             const c = document.getElementById('fertInhSouchesContainer');
             const div = document.createElement('div');
             div.style = 'display:flex; gap:8px; align-items:center;';
-            div.innerHTML = `<input type="text" class="form-input fert-inh-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Staph. aureus ATCC 6538 (inhé)..." style="flex:1; margin:0; border-color:rgba(239,68,68,0.4);">
+            div.innerHTML = `<input type="text" class="form-input fert-inh-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Staph. aureus ATCC 6538..." style="flex:2; margin:0; border-color:rgba(239,68,68,0.4);">
+                <input type="text" class="form-input fert-inh-souche-mcf-custom" value="${mcf}" placeholder="McF" style="flex:1; margin:0; border-color:rgba(239,68,68,0.4);">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;">✕</button>`;
             c.appendChild(div);
         };
@@ -8698,6 +8752,34 @@
             } else { resultStr = `${Math.round(res)} UFC/mL`; }
             const cur = document.getElementById('fertInhUfc').value;
             if (!cur || cur.includes('UFC/mL')) document.getElementById('fertInhUfc').value = resultStr;
+        };
+
+        // AutoCalc des consommables
+        window.autoCalcConsO = function() {
+            const sChk = Array.from(document.querySelectorAll('.fert-souche-chk:checked')).map(i => i.value);
+            const sInp = Array.from(document.querySelectorAll('.fert-souche')).map(i => i.value.trim()).filter(Boolean);
+            const souches = [...new Set([...sChk, ...sInp])];
+
+            if (souches.length === 0) {
+                window.showToast("Cochez ou ajoutez des souches d'abord.", "info");
+                return;
+            }
+
+            let nbBoites = souches.length * 4;
+            let nbFlacons = Math.ceil(nbBoites / 10);
+            
+            let nbTubes = 0;
+            souches.forEach(s => {
+                const nom = s.toLowerCase();
+                if (nom.includes('candida') || nom.includes('aspergillus') || nom.includes('saccharomyces')) {
+                    nbTubes += 4; // Levures/Moisissures
+                } else {
+                    nbTubes += 5; // Souches classiques
+                }
+            });
+
+            document.getElementById('fertNbTubes').value = `${nbTubes} tubes de dilution ph7 (9mL) + ... tubes vides pour stérilité`;
+            document.getElementById('fertNbFlacons').value = `${nbFlacons} flacon(s) 190mL (~${nbBoites} boîtes)`;
         };
 
         // Helper : ajouter étape protocole fertilité
@@ -8736,12 +8818,38 @@
             e.preventDefault();
             const id = document.getElementById('fertEditId').value;
             
-            const sChk = Array.from(document.querySelectorAll('.fert-souche-chk:checked')).map(i => i.value);
-            const sInp = Array.from(document.querySelectorAll('.fert-souche')).map(i => i.value.trim()).filter(Boolean);
+            const mcfMap = {};
+
+            const sChkNodes = document.querySelectorAll('.fert-souche-chk:checked');
+            const sChk = Array.from(sChkNodes).map(chk => {
+                const sName = chk.value;
+                const mcfVal = chk.parentElement.parentElement.querySelector('.fert-souche-mcf').value.trim();
+                if (mcfVal) mcfMap[sName] = mcfVal;
+                return sName;
+            });
+            const customContainers = document.querySelectorAll('#fertSouchesContainer > div');
+            const sInp = Array.from(customContainers).map(div => {
+                const sName = div.querySelector('.fert-souche').value.trim();
+                const mcfVal = div.querySelector('.fert-souche-mcf-custom').value.trim();
+                if (sName && mcfVal) mcfMap[sName] = mcfVal;
+                return sName;
+            }).filter(Boolean);
             const souches = [...new Set([...sChk, ...sInp])];
 
-            const iChk = Array.from(document.querySelectorAll('.fert-inh-souche-chk:checked')).map(i => i.value);
-            const iInp = Array.from(document.querySelectorAll('.fert-inh-souche')).map(i => i.value.trim()).filter(Boolean);
+            const iChkNodes = document.querySelectorAll('.fert-inh-souche-chk:checked');
+            const iChk = Array.from(iChkNodes).map(chk => {
+                let sName = chk.value;
+                let mcfVal = chk.parentElement.parentElement.querySelector('.fert-inh-souche-mcf').value.trim();
+                if (mcfVal) mcfMap[sName] = mcfVal;
+                return sName;
+            });
+            const customInhCont = document.querySelectorAll('#fertInhSouchesContainer > div');
+            const iInp = Array.from(customInhCont).map(div => {
+                let sName = div.querySelector('.fert-inh-souche').value.trim();
+                let mcfVal = div.querySelector('.fert-inh-souche-mcf-custom').value.trim();
+                if (sName && mcfVal) mcfMap[sName] = mcfVal;
+                return sName;
+            }).filter(Boolean);
             const inhSouches = [...new Set([...iChk, ...iInp])];
             
             const steps = Array.from(document.querySelectorAll('.fert-step')).map(i => i.value.trim()).filter(Boolean);
@@ -8759,7 +8867,9 @@
                 inhConcentration: document.getElementById('fertInhConcentration').value.trim(),
                 inhDilution: document.getElementById('fertInhDilution').value.trim(),
                 inhUfc: document.getElementById('fertInhUfc').value.trim(),
-                souches, inhSouches, steps, inhSteps,
+                nbTubes: document.getElementById('fertNbTubes').value.trim(),
+                nbFlacons: document.getElementById('fertNbFlacons').value.trim(),
+                souches, inhSouches, steps, inhSteps, mcfMap,
                 updatedAt: Date.now()
             };
             try {
@@ -8783,7 +8893,131 @@
             }
         };
 
-        // ---- Génération PDF ----
+        // Convertisseur McF -> UFC/mL pour le PDF (notation ASCII compatible jsPDF)
+        window._mcfToUfcString = function(concStr) {
+            if (!concStr) return '-';
+            const numMatch = String(concStr).replace(',', '.').match(/([0-9]*\.?[0-9]+)/);
+            if (!numMatch) return '-';
+            const val = parseFloat(numMatch[1]);
+            if (val > 10) return '-';
+            let res = val * 3e8;
+            if (res <= 0) return '-';
+            const parts = res.toExponential(1).split('e');
+            const num = parts[0].replace('.', ',');
+            const exp = parseInt(parts[1], 10);
+            return `${num} x 10^${exp} UFC/mL`;
+        };
+
+        // ---- Génération PDF RECAPITULATIF ----
+        window.generateFertGlobalRecap = function() {
+            const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
+            if (checkedIds.length === 0) {
+                window.showToast("Cochez au moins un MC pour le rapport !", "error");
+                return;
+            }
+            
+            const selectedFiches = checkedIds.map(id => fertiliteData.find(f => f.id === id)).filter(Boolean);
+            
+            let allStrainsMap = {}; 
+            let recapMC = []; 
+            let totalBoites = 0;
+            let totalFlacons = 0;
+            
+            selectedFiches.forEach(f => {
+                let mStrainsCount = f.souches ? f.souches.length : 0;
+                let boites = mStrainsCount * 4;
+                let flacons = Math.ceil(boites / 10);
+                totalBoites += boites;
+                totalFlacons += flacons;
+                recapMC.push({
+                    nom: f.nom,
+                    souchesCount: mStrainsCount,
+                    boites: boites,
+                    flacons: flacons
+                });
+                
+                (f.souches || []).forEach(s => { allStrainsMap[s] = true; });
+                (f.inhSouches || []).forEach(s => { allStrainsMap[s] = true; });
+            });
+            
+            let uniqueStrains = Object.keys(allStrainsMap);
+            let totalTubes = 0;
+            let strainsData = uniqueStrains.map(s => {
+                const sn = s.toLowerCase();
+                let tubes = 5;
+                if (sn.includes('candida') || sn.includes('aspergillus') || sn.includes('saccharomyces')) {
+                    tubes = 4;
+                }
+                totalTubes += tubes;
+                
+                let _mcf = '—';
+                let _ufc = '—';
+                for(const f of selectedFiches) {
+                    if (f.mcfMap && f.mcfMap[s]) { 
+                        _mcf = f.mcfMap[s] + ' McF'; 
+                        _ufc = window._mcfToUfcString(f.mcfMap[s]);
+                        break; 
+                    }
+                }
+
+                return [s, _mcf, _ufc, tubes + ' tubes (pH 7)'];
+            });
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('RAPPORT RECAPITULATIF : FERTILITE', 15, 20);
+            doc.setFontSize(8); doc.setTextColor(150,150,150); doc.setFont('helvetica', 'normal');
+            doc.text(`Imprime le : ${new Date().toLocaleString('fr-FR')}`, 15, 26);
+            
+            doc.setFontSize(10); doc.setTextColor(0,0,0); doc.setFont('helvetica', 'bold');
+            doc.text('1. PREPARATION DES MILIEUX (Consommables par MC)', 15, 36);
+            doc.autoTable({
+                startY: 40,
+                head: [['Milieu de Culture', 'Nombre de Souches', 'Boites de Petri', 'Flacons (190mL)']],
+                body: recapMC.map(r => [r.nom, r.souchesCount, r.boites, r.flacons]),
+                theme: 'grid',
+                headStyles: { fillColor: [40, 40, 40], textColor: 255 }
+            });
+            
+            let y = doc.lastAutoTable.finalY + 12;
+            
+            doc.setFont('helvetica', 'bold');
+            doc.text('2. PREPARATION DES SOUCHES UNIQUES (Consommables partages - Aucun doublon)', 15, y);
+            
+            doc.autoTable({
+                startY: y + 5,
+                head: [['Souche Unique', 'Concentration (McF)', 'Equiv. UFC/mL', 'Tubes pH 7 necessaires']],
+                body: strainsData,
+                theme: 'grid',
+                headStyles: { fillColor: [40, 40, 40], textColor: 255 }
+            });
+            
+            y = doc.lastAutoTable.finalY + 12;
+            
+            // Totaux en grand rouge
+            doc.setFontSize(11); doc.setTextColor(220, 38, 38); doc.setFont('helvetica', 'bold');
+            doc.text('TOTAUX GENERAUX', 15, y); y += 7;
+            doc.autoTable({
+                startY: y,
+                head: [['Consommable', 'Quantite Totale']],
+                body: [
+                    ['Boites de Petri (toutes MC confondues)', totalBoites + ' boites'],
+                    ['Flacons 190mL necessaires', totalFlacons + ' flacon(s)'],
+                    ['Tubes de dilution pH 7 (9mL)', totalTubes + ' tubes (sans doublon souches)'],
+                ],
+                theme: 'grid',
+                headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 10, cellPadding: 3, fontStyle: 'bold' },
+                columnStyles: { 1: { halign: 'center' } }
+            });
+            
+            doc.save('Recap_Global_Fertilite.pdf');
+        };
+
+        // ---- Génération PDF Fiche Souche ----
         window.generateFertilitePDF = function(id) {
             const f = fertiliteData.find(x => x.id === id);
             if (!f) return;
@@ -8816,8 +9050,11 @@
             if (f.souches && f.souches.length > 0) {
                 doc.autoTable({
                     startY: y,
-                    head: [['Souches de Fertilité', 'Remarque']],
-                    body: f.souches.map(s => [s, '']),
+                    head: [['Souches de Fertilité', 'Concentration (McF)', 'Equiv. UFC/mL', 'Remarque']],
+                    body: f.souches.map(s => {
+                        let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
+                        return [s, mcf ? mcf + ' McF' : '—', window._mcfToUfcString(mcf), ''];
+                    }),
                     theme: 'grid',
                     headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0], fontSize: 8 },
                     styles: { fontSize: 8, cellPadding: 1.5, lineColor: [0, 0, 0], textColor: 0 }
@@ -8844,8 +9081,11 @@
                 y = doc.lastAutoTable.finalY + 4;
                 if (f.inhSouches && f.inhSouches.length > 0) {
                     doc.autoTable({
-                        startY: y, head: [['Souches Inhérees', 'Remarque']],
-                        body: f.inhSouches.map(s => [s, '']), theme: 'grid',
+                        startY: y, head: [['Souches Inhérees', 'Concentration (McF)', 'Equiv. UFC/mL', 'Remarque']],
+                        body: f.inhSouches.map(s => {
+                            let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
+                            return [s, mcf ? mcf + ' McF' : '—', window._mcfToUfcString(mcf), ''];
+                        }), theme: 'grid',
                         headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
                         styles: { fontSize: 8, cellPadding: 1.5, lineColor: [0,0,0], textColor: 0 }
                     });
@@ -8871,6 +9111,20 @@
                     });
                     y += 5;
                 }
+            }
+            
+            // Consommables (Tubes & Flacons)
+            if (f.nbTubes || f.nbFlacons) {
+                if (y > 260) { doc.addPage(); y = 20; }
+                doc.autoTable({
+                    startY: y,
+                    head: [['Consommables : Tubes (Dilutions, Stérilité)', 'Consommables : Flacons & Boîtes']],
+                    body: [[f.nbTubes || '—', f.nbFlacons || '—']],
+                    theme: 'grid',
+                    headStyles: { fillColor: [230, 240, 255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
+                    styles: { fontSize: 8, cellPadding: 2, lineColor: [0, 0, 0], textColor: 0 }
+                });
+                y = doc.lastAutoTable.finalY + 8;
             }
 
             // Schéma protocole (noir & blanc)

@@ -2489,6 +2489,26 @@
         </div>
     </div>
 
+    <!-- Plan de Travail Modal -->
+    <div id="planTravailModalOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width:800px; width:90%;">
+            <button class="close-modal" onclick="window.closeModal('planTravailModalOverlay')">✕</button>
+            <h2 style="margin-bottom:15px; color:#1e40af; font-size:1.3rem; font-weight:800;">📝 Mon Plan de Travail</h2>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:0.8rem; font-weight:800; color:#374151;">📌 Titre du document (affiché en haut du PDF)</label>
+                <input type="text" id="planTravailTitle" class="form-input" placeholder="Ex : PLAN DE DEMARRAGE FERTILITE - LUNDI 07/08" style="font-weight:700; font-size:0.95rem;">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:0.8rem; font-weight:800; color:#374151;">📋 Corps du document (votre texte libre, une ligne = une entrée)</label>
+                <textarea id="planTravailCustomText" style="width:100%; height:280px; resize:vertical; padding:15px; border-radius:12px; border:1px solid var(--glass-border); font-family:inherit; font-size:0.9rem;" placeholder="Exemple :&#10;1) Sortir les milieux du frigo&#10;2) Préparer les tubes de dilution pH 7&#10;3) Réhydrater la souche..."></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button type="button" onclick="window.closeModal('planTravailModalOverlay')" style="background:#f1f5f9; color:#475569; padding:10px 20px; border-radius:8px; font-weight:800; border:none; cursor:pointer;">Annuler</button>
+                <button type="button" onclick="window.generateFertPlanTravailPdf()" style="background:#3b82f6; color:white; padding:10px 20px; border-radius:8px; font-weight:800; border:none; cursor:pointer; box-shadow:0 4px 10px rgba(59,130,246,0.2);">🖨️ Imprimer la Fiche</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Fertilité Modal -->
     <div id="fertiliteModalOverlay" class="modal-overlay">
         <div class="modal-content" style="max-width:600px;">
@@ -4025,7 +4045,7 @@
             activeTouchBtn.style.opacity = '0.7';
         };
 
-        window.onCalcTabMove = function(e) {
+        window.onCalcTabTouchMove = function(e) {
             // Touch move tracking can be simple or empty
         };
 
@@ -8445,9 +8465,12 @@
             }
 
             const recapHtml = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:rgba(59,130,246,0.05); padding:10px; border-radius:10px; border:1px solid rgba(59,130,246,0.2);">
-                <div style="font-size:0.7rem; color:#3b82f6; font-weight:800;">Cochez les milieux ci-dessous pour le rapport global</div>
-                <button onclick="window.generateFertGlobalRecap()" style="background:linear-gradient(to right, #3b82f6, #2563eb); color:white; padding:8px 15px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📊 Résumé Consommables</button>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; background:rgba(59,130,246,0.05); padding:10px; border-radius:10px; border:1px solid rgba(59,130,246,0.2);">
+                <div style="font-size:0.75rem; color:#1e40af; font-weight:800;">Cochez les milieux et choisissez votre document :</div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="window.openPlanTravailModal()" style="flex:1; background:transparent; color:#3b82f6; border:2px solid #3b82f6; padding:8px 10px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer;">📝 Plan de Travail (Texte Libre)</button>
+                    <button onclick="window.generateFertGlobalRecap()" style="flex:1; background:linear-gradient(to right, #3b82f6, #2563eb); color:white; padding:8px 10px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📊 Résumé Consommables</button>
+                </div>
             </div>`;
 
             const cardsHtml = filtered.map(f => {
@@ -8578,9 +8601,55 @@
             }
 
             const currentUfc = document.getElementById('fertUfc').value;
-            // Ne pas écraser si l'utilisateur a déjà modifié manuellement et que ça ne correspond pas au format généré
             if (!currentUfc || currentUfc.includes('UFC/mL')) {
                 document.getElementById('fertUfc').value = resultStr;
+            }
+        };
+
+        window.autoCalcInhUfc = function() {
+            let concStr = document.getElementById('fertInhConcentration').value.toLowerCase().replace(',', '.');
+            if (!concStr) {
+                concStr = document.getElementById('fertConcentration').value.toLowerCase().replace(',', '.');
+            }
+            const dilStr = document.getElementById('fertInhDilution').value.toLowerCase();
+            if (!concStr) return;
+            
+            let mcf = null;
+            const numMatch = concStr.match(/([0-9]*\.?[0-9]+)/);
+            if (numMatch) {
+               const val = parseFloat(numMatch[1]);
+               if (val <= 10) mcf = val;
+            }
+            if (mcf === null) return; 
+
+            let dilMult = 1; 
+            if (dilStr) {
+                 let dExpMatch = dilStr.match(/10\s*[\^-]*\s*([0-9]+)/);
+                 if (dExpMatch) {
+                    dilMult = Math.pow(10, -(parseInt(dExpMatch[1], 10)));
+                 } else {
+                    let dFrac = dilStr.match(/1\/([0-9]+)/);
+                    if (dFrac) dilMult = 1 / parseInt(dFrac[1], 10);
+                 }
+            }
+            let res = (mcf * 3e8) * dilMult;
+            if (res <= 0) return;
+            
+            let resultStr = "";
+            if (res >= 10000) {
+                const parts = res.toExponential(2).split('e');
+                const num = parts[0].replace('.', ',');
+                const exp = parseInt(parts[1], 10);
+                const superscripts = {'0':'⁰', '1':'¹', '2':'²', '3':'³', '4':'⁴', '5':'⁵', '6':'⁶', '7':'⁷', '8':'⁸', '9':'⁹', '+':'⁺', '-': '⁻'};
+                const expStr = String(exp).split('').map(char => superscripts[char] || char).join('');
+                resultStr = `${num} × 10${expStr} UFC/mL`;
+            } else {
+                resultStr = `${Math.round(res)} UFC/mL`;
+            }
+
+            const currentUfc = document.getElementById('fertInhUfc').value;
+            if (!currentUfc || currentUfc.includes('UFC/mL')) {
+                document.getElementById('fertInhUfc').value = resultStr;
             }
         };
 
@@ -8603,15 +8672,20 @@
 
         // MAJ dynamique des listes selon l'historique
         window.updateFertDatalists = function() {
-            if (!fertiliteData || !fertiliteData.length) return;
-            const extract = (key) => [...new Set(fertiliteData.map(d => d[key]).filter(Boolean))];
-            const extractArr = (key) => [...new Set(fertiliteData.flatMap(d => d[key] || []).filter(Boolean))];
+            if (!fertiliteData) return;
+            const extract = (key) => [...new Set((fertiliteData || []).map(d => d[key]).filter(Boolean))];
+            const extractArr = (key) => [...new Set((fertiliteData || []).flatMap(d => d[key] || []).filter(Boolean))];
             
             document.getElementById('fertNomList').innerHTML = extract('nom').map(v => `<option value="${v}">`).join('');
             document.getElementById('fertConcentrationList').innerHTML = extract('concentration').map(v => `<option value="${v}">`).join('');
-            document.getElementById('fertDilutionList').innerHTML = extract('dilution').map(v => `<option value="${v}">`).join('');
+            
+            const stdDil = ['10^-1','10^-2','10^-3','10^-4','10^-5','10^-6'];
+            const allDilF = [...new Set([...stdDil, ...extract('dilution')])];
+            const allDilI = [...new Set([...stdDil, ...extract('inhDilution')])];
+
+            document.getElementById('fertDilutionList').innerHTML = allDilF.map(v => `<option value="${v}">`).join('');
             document.getElementById('fertInhConcentrationList').innerHTML = extract('inhConcentration').map(v => `<option value="${v}">`).join('');
-            document.getElementById('fertInhDilutionList').innerHTML = extract('inhDilution').map(v => `<option value="${v}">`).join('');
+            document.getElementById('fertInhDilutionList').innerHTML = allDilI.map(v => `<option value="${v}">`).join('');
             
             document.getElementById('fertSoucheList').innerHTML = extractArr('souches').map(v => `<option value="${v}">`).join('');
             document.getElementById('fertInhSoucheList').innerHTML = extractArr('inhSouches').map(v => `<option value="${v}">`).join('');
@@ -8969,17 +9043,18 @@
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(16);
             doc.text('RAPPORT RECAPITULATIF : FERTILITE', 15, 20);
-            doc.setFontSize(8); doc.setTextColor(150,150,150); doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8); doc.setTextColor(0,0,0); doc.setFont('helvetica', 'normal');
             doc.text(`Imprime le : ${new Date().toLocaleString('fr-FR')}`, 15, 26);
             
             doc.setFontSize(10); doc.setTextColor(0,0,0); doc.setFont('helvetica', 'bold');
             doc.text('1. PREPARATION DES MILIEUX (Consommables par MC)', 15, 36);
             doc.autoTable({
                 startY: 40,
-                head: [['Milieu de Culture', 'Nombre de Souches', 'Boites de Petri', 'Flacons (190mL)']],
+                head: [['Milieu de Culture', 'Nb Souches', 'Boites de Petri', 'Flacons (190mL)']],
                 body: recapMC.map(r => [r.nom, r.souchesCount, r.boites, r.flacons]),
                 theme: 'grid',
-                headStyles: { fillColor: [40, 40, 40], textColor: 255 }
+                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0] },
+                styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 }
             });
             
             let y = doc.lastAutoTable.finalY + 12;
@@ -8989,16 +9064,16 @@
             
             doc.autoTable({
                 startY: y + 5,
-                head: [['Souche Unique', 'Concentration (McF)', 'Equiv. UFC/mL', 'Tubes pH 7 necessaires']],
+                head: [['Souche Unique', 'Conc. (McF)', 'Equiv. UFC/mL', 'Tubes pH7 (9mL)']],
                 body: strainsData,
                 theme: 'grid',
-                headStyles: { fillColor: [40, 40, 40], textColor: 255 }
+                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0] },
+                styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 }
             });
             
             y = doc.lastAutoTable.finalY + 12;
             
-            // Totaux en grand rouge
-            doc.setFontSize(11); doc.setTextColor(220, 38, 38); doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11); doc.setTextColor(0,0,0); doc.setFont('helvetica', 'bold');
             doc.text('TOTAUX GENERAUX', 15, y); y += 7;
             doc.autoTable({
                 startY: y,
@@ -9009,12 +9084,75 @@
                     ['Tubes de dilution pH 7 (9mL)', totalTubes + ' tubes (sans doublon souches)'],
                 ],
                 theme: 'grid',
-                headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
-                styles: { fontSize: 10, cellPadding: 3, fontStyle: 'bold' },
+                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0] },
+                styles: { fontSize: 10, cellPadding: 3, lineColor: [0,0,0], textColor: 0 },
                 columnStyles: { 1: { halign: 'center' } }
             });
             
             doc.save('Recap_Global_Fertilite.pdf');
+        };
+
+        // ---- Génération PDF PLAN DE TRAVAIL (Libre) ----
+        window.openPlanTravailModal = function() {
+            document.getElementById('planTravailModalOverlay').classList.add('active');
+            document.getElementById('planTravailTitle').value = localStorage.getItem('micro_fert_plan_title') || '';
+            document.getElementById('planTravailCustomText').value = localStorage.getItem('micro_fert_plan_memo') || '';
+        };
+
+        window.generateFertPlanTravailPdf = function() {
+            const titre = document.getElementById('planTravailTitle').value.trim();
+            const text = document.getElementById('planTravailCustomText').value;
+            localStorage.setItem('micro_fert_plan_title', titre);
+            localStorage.setItem('micro_fert_plan_memo', text);
+            
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (!titre && lines.length === 0) {
+                window.showToast("Veuillez saisir un titre ou du contenu !", "error");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            let y = 20;
+
+            const cU = (str) => {
+                if (!str) return '';
+                const map = {'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','⁺':'+','⁻':'-'};
+                let s = String(str);
+                Object.keys(map).forEach(k => { s = s.split(k).join('^' + map[k]); });
+                return s.replace(/×/g, 'x');
+            };
+
+            doc.setTextColor(0, 0, 0);
+
+            // Titre du document (choisi par l'utilisateur)
+            if (titre) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(15);
+                const titreLines = doc.splitTextToSize(cU(titre), pageWidth - 30);
+                doc.text(titreLines, pageWidth / 2, y, { align: 'center' });
+                y += titreLines.length * 8 + 4;
+                doc.setLineWidth(0.5);
+                doc.setDrawColor(0, 0, 0);
+                doc.line(15, y, pageWidth - 15, y);
+                y += 8;
+            }
+            
+            // Corps : chaque ligne comme saisie
+            lines.forEach((line) => {
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(11);
+                const cleanLine = cU(line);
+                const splitText = doc.splitTextToSize(cleanLine, pageWidth - 30);
+                doc.text(splitText, 15, y);
+                y += splitText.length * 6 + 4;
+            });
+
+            const safeName = titre ? titre.replace(/[^a-z0-9]/gi, '_').substring(0, 40) : 'Plan_De_Travail';
+            doc.save(safeName + '.pdf');
         };
 
         // ---- Génération PDF Fiche Souche ----
@@ -9025,6 +9163,14 @@
             const doc = new jsPDF({ unit: 'mm', format: 'a4' });
             const pageWidth = doc.internal.pageSize.getWidth();
             let y = 20;
+
+            const cU = (str) => {
+                if (!str) return '—';
+                const map = {'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','⁺':'+','⁻':'-'};
+                let s = String(str);
+                Object.keys(map).forEach(k => { s = s.split(k).join('^' + map[k]); });
+                return s.replace(/×/g, 'x');
+            };
 
             // En-tête
             doc.setTextColor(0, 0, 0); // Texte noir
@@ -9039,9 +9185,9 @@
             doc.autoTable({
                 startY: y,
                 head: [['Duree d\'incubation', 'Temperature', 'Concentration', 'Dilution', 'UFC Attendus']],
-                body: [[f.incubDuree || '—', f.incubTemp || '—', f.concentration || '—', f.dilution || '—', f.ufc || '—']],
+                body: [[f.incubDuree || '-', f.incubTemp || '-', cU(f.concentration), cU(f.dilution), cU(f.ufc)]],
                 theme: 'grid',
-                headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
+                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
                 styles: { fontSize: 9, cellPadding: 4, lineColor: [0, 0, 0], textColor: 0 }
             });
             y = doc.lastAutoTable.finalY + 8;
@@ -9050,13 +9196,13 @@
             if (f.souches && f.souches.length > 0) {
                 doc.autoTable({
                     startY: y,
-                    head: [['Souches de Fertilité', 'Concentration (McF)', 'Equiv. UFC/mL', 'Remarque']],
+                    head: [['Souches de Fertilite', 'Conc. (McF)', 'Equiv. UFC/mL', 'Remarque']],
                     body: f.souches.map(s => {
                         let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
-                        return [s, mcf ? mcf + ' McF' : '—', window._mcfToUfcString(mcf), ''];
+                        return [s, mcf ? mcf + ' McF' : '-', window._mcfToUfcString(mcf), ''];
                     }),
                     theme: 'grid',
-                    headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0], fontSize: 8 },
+                    headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0], fontSize: 8 },
                     styles: { fontSize: 8, cellPadding: 1.5, lineColor: [0, 0, 0], textColor: 0 }
                 });
                 y = doc.lastAutoTable.finalY + 6;
@@ -9073,20 +9219,20 @@
                 doc.autoTable({
                     startY: y,
                     head: [['Concentration (Inh.)', 'Dilution (Inh.)', 'UFC Attendus (Inh.)']],
-                    body: [[f.inhConcentration || '—', f.inhDilution || '—', f.inhUfc || '—']],
+                    body: [[cU(f.inhConcentration), cU(f.inhDilution), cU(f.inhUfc)]],
                     theme: 'grid',
-                    headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
+                    headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
                     styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 }
                 });
                 y = doc.lastAutoTable.finalY + 4;
                 if (f.inhSouches && f.inhSouches.length > 0) {
                     doc.autoTable({
-                        startY: y, head: [['Souches Inhérees', 'Concentration (McF)', 'Equiv. UFC/mL', 'Remarque']],
+                        startY: y, head: [['Souches Inh.', 'Conc. (McF)', 'Equiv. UFC/mL', 'Remarque']],
                         body: f.inhSouches.map(s => {
                             let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
-                            return [s, mcf ? mcf + ' McF' : '—', window._mcfToUfcString(mcf), ''];
+                            return [s, mcf ? mcf + ' McF' : '-', window._mcfToUfcString(mcf), ''];
                         }), theme: 'grid',
-                        headStyles: { fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
+                        headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
                         styles: { fontSize: 8, cellPadding: 1.5, lineColor: [0,0,0], textColor: 0 }
                     });
                     y = doc.lastAutoTable.finalY + 4;
@@ -9102,7 +9248,7 @@
                         doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
                         doc.text(String(i + 1), 18, y - 0.2, { align: 'center' });
                         doc.setTextColor(0,0,0); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-                        const lines = doc.splitTextToSize(step, pageWidth - 40);
+                        const lines = doc.splitTextToSize(cU(step), pageWidth - 40);
                         const boxH = lines.length * 5 + 4;
                         doc.setDrawColor(0,0,0); doc.setLineWidth(0.3);
                         doc.rect(24, y - 4, pageWidth - 39, boxH, 'D');
@@ -9118,10 +9264,10 @@
                 if (y > 260) { doc.addPage(); y = 20; }
                 doc.autoTable({
                     startY: y,
-                    head: [['Consommables : Tubes (Dilutions, Stérilité)', 'Consommables : Flacons & Boîtes']],
-                    body: [[f.nbTubes || '—', f.nbFlacons || '—']],
+                    head: [['Consommables : Tubes (Dilutions, Sterilite)', 'Consommables : Flacons & Boites']],
+                    body: [[f.nbTubes || '-', f.nbFlacons || '-']],
                     theme: 'grid',
-                    headStyles: { fillColor: [230, 240, 255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
+                    headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
                     styles: { fontSize: 8, cellPadding: 2, lineColor: [0, 0, 0], textColor: 0 }
                 });
                 y = doc.lastAutoTable.finalY + 8;
@@ -9147,7 +9293,7 @@
                     doc.setFont('helvetica', 'normal');
                     doc.setFontSize(9);
                     // Encadré étape
-                    const lines = doc.splitTextToSize(step, pageWidth - 40);
+                    const lines = doc.splitTextToSize(cU(step), pageWidth - 40);
                     const boxH = lines.length * 5 + 4;
                     doc.setDrawColor(0, 0, 0);
                     doc.setLineWidth(0.3);

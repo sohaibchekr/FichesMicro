@@ -8745,12 +8745,21 @@
             document.getElementById('fertInhStepList').innerHTML = extractArr('inhSteps').map(v => `<option value="${v}">`).join('');
         };
 
+        window._getGlobalMcf = function(s) {
+            if (!s) return '';
+            try { const g = JSON.parse(localStorage.getItem('fertGlobalMcf') || '{}'); return g[s] || ''; } catch(e){return '';}
+        };
+
         // ---- Modal : Ouvrir ----
         window.openFertiliteModal = function(id = null) {
             const f = id ? fertiliteData.find(x => x.id === id) : null;
             document.getElementById('fertEditId').value = id || '';
             document.getElementById('fertiliteModalTitle').innerText = id ? '✏️ Modifier MC — Fertilité' : 'Nouveau MC — Fertilité';
             document.getElementById('deleteFertBtn').style.display = id ? 'block' : 'none';
+
+            let globalMcf = {};
+            try { globalMcf = JSON.parse(localStorage.getItem('fertGlobalMcf') || '{}'); } catch(e){}
+            const getMcf = (s) => (f && f.mcfMap && f.mcfMap[s] !== undefined && f.mcfMap[s] !== '') ? f.mcfMap[s] : (globalMcf[s] || '');
 
             // Checkboxes parameters
             const hasInhBackup = (f && ((f.inhSouches && f.inhSouches.length > 0) || f.inhConcentration || f.inhDilution || f.inhUfc || (f.inhSteps && f.inhSteps.length > 0)));
@@ -8803,13 +8812,13 @@
                         <input type="checkbox" class="fert-souche-chk" value="${s}" ${ (f && f.souches && f.souches.includes(s)) ? 'checked' : '' }> 
                         <span style="font-size:0.65rem;">${s}</span>
                     </label>
-                    <input type="text" class="form-input fert-souche-mcf" data-strain="${s}" value="${(f && f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : ''}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem;">
+                    <input type="text" class="form-input fert-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem;">
                 </div>
             `).join('');
             const sc = document.getElementById('fertSouchesContainer');
             sc.innerHTML = '';
             (f ? (f.souches || []) : []).forEach(s => {
-                if (!standardStrains.includes(s)) window.addFertSouche(s, (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '');
+                if (!standardStrains.includes(s)) window.addFertSouche(s, getMcf(s));
             });
 
             // Souches indication
@@ -8820,13 +8829,13 @@
                         <input type="checkbox" class="fert-ind-souche-chk" value="${s}" ${ (f && f.indSouches && f.indSouches.includes(s)) ? 'checked' : '' }> 
                         <span style="font-size:0.65rem;">${s}</span>
                     </label>
-                    <input type="text" class="form-input fert-ind-souche-mcf" data-strain="${s}" value="${(f && f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : ''}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(217,119,6,0.4);">
+                    <input type="text" class="form-input fert-ind-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(217,119,6,0.4);">
                 </div>
             `).join('');
             const sind = document.getElementById('fertIndSouchesContainer');
             sind.innerHTML = '';
             (f ? (f.indSouches || []) : []).forEach(s => {
-                if (!standardStrains.includes(s)) window.addFertIndSouche(s, (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '');
+                if (!standardStrains.includes(s)) window.addFertIndSouche(s, getMcf(s));
             });
 
             // Souches inhibition
@@ -8837,13 +8846,13 @@
                         <input type="checkbox" class="fert-inh-souche-chk" value="${s}" ${ (f && f.inhSouches && f.inhSouches.includes(s)) ? 'checked' : '' }> 
                         <span style="font-size:0.65rem;">${s}</span>
                     </label>
-                    <input type="text" class="form-input fert-inh-souche-mcf" data-strain="${s}" value="${(f && f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : ''}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(239,68,68,0.4);">
+                    <input type="text" class="form-input fert-inh-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(239,68,68,0.4);">
                 </div>
             `).join('');
             const si = document.getElementById('fertInhSouchesContainer');
             si.innerHTML = '';
             (f ? (f.inhSouches || []) : []).forEach(s => {
-                if (!standardStrains.includes(s)) window.addFertInhSouche(s, (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '');
+                if (!standardStrains.includes(s)) window.addFertInhSouche(s, getMcf(s));
             });
 
             // Steps fertilité
@@ -8870,7 +8879,7 @@
             const c = document.getElementById('fertSouchesContainer');
             const div = document.createElement('div');
             div.style = 'display:flex; gap:8px; align-items:center;';
-            div.innerHTML = `<input type="text" class="form-input fert-souche" value="${val}" list="fertSoucheList" placeholder="Ex: E.coli ATCC 25922..." style="flex:2; margin:0;">
+            div.innerHTML = `<input type="text" class="form-input fert-souche" value="${val}" list="fertSoucheList" placeholder="Ex: E.coli ATCC 25922..." style="flex:2; margin:0;" oninput="const mcf = window._getGlobalMcf(this.value); if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
                 <input type="text" class="form-input fert-souche-mcf-custom" value="${mcf}" placeholder="McF" style="flex:1; margin:0;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;">✕</button>`;
             c.appendChild(div);
@@ -8881,7 +8890,7 @@
             const c = document.getElementById('fertInhSouchesContainer');
             const div = document.createElement('div');
             div.style = 'display:flex; gap:8px; align-items:center;';
-            div.innerHTML = `<input type="text" class="form-input fert-inh-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Staph. aureus ATCC 6538..." style="flex:2; margin:0; border-color:rgba(239,68,68,0.4);">
+            div.innerHTML = `<input type="text" class="form-input fert-inh-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Staph. aureus ATCC 6538..." style="flex:2; margin:0; border-color:rgba(239,68,68,0.4);" oninput="const mcf = window._getGlobalMcf(this.value); if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
                 <input type="text" class="form-input fert-inh-souche-mcf-custom" value="${mcf}" placeholder="McF" style="flex:1; margin:0; border-color:rgba(239,68,68,0.4);">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;">✕</button>`;
             c.appendChild(div);
@@ -8892,7 +8901,7 @@
             const c = document.getElementById('fertIndSouchesContainer');
             const div = document.createElement('div');
             div.style = 'display:flex; gap:8px; align-items:center;';
-            div.innerHTML = `<input type="text" class="form-input fert-ind-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Souche Ind..." style="flex:2; margin:0; border-color:rgba(217,119,6,0.4);">
+            div.innerHTML = `<input type="text" class="form-input fert-ind-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Souche Ind..." style="flex:2; margin:0; border-color:rgba(217,119,6,0.4);" oninput="const mcf = window._getGlobalMcf(this.value); if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
                 <input type="text" class="form-input fert-ind-souche-mcf-custom" value="${mcf}" placeholder="McF" style="flex:1; margin:0; border-color:rgba(217,119,6,0.4);">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#d97706; font-size:1.1rem; cursor:pointer;">✕</button>`;
             c.appendChild(div);
@@ -8989,15 +8998,19 @@
             
             const mcfMap = {};
 
-            const sChkNodes = document.querySelectorAll('.fert-souche-chk:checked');
-            const sChk = Array.from(sChkNodes).map(chk => {
-                const sName = chk.value;
-                const mcfVal = chk.parentElement.parentElement.querySelector('.fert-souche-mcf').value.trim();
-                if (mcfVal) mcfMap[sName] = mcfVal;
-                return sName;
+            // Collecter TOUS les McF (cochés ou non) pour l'apprentissage global
+            document.querySelectorAll('.fert-souche-mcf').forEach(inp => {
+                if (inp.value.trim() && inp.dataset.strain) mcfMap[inp.dataset.strain] = inp.value.trim();
             });
-            const customContainers = document.querySelectorAll('#fertSouchesContainer > div');
-            const sInp = Array.from(customContainers).map(div => {
+            document.querySelectorAll('.fert-ind-souche-mcf').forEach(inp => {
+                if (inp.value.trim() && inp.dataset.strain) mcfMap[inp.dataset.strain] = inp.value.trim();
+            });
+            document.querySelectorAll('.fert-inh-souche-mcf').forEach(inp => {
+                if (inp.value.trim() && inp.dataset.strain) mcfMap[inp.dataset.strain] = inp.value.trim();
+            });
+
+            const sChk = Array.from(document.querySelectorAll('.fert-souche-chk:checked')).map(chk => chk.value);
+            const sInp = Array.from(document.querySelectorAll('#fertSouchesContainer > div')).map(div => {
                 const sName = div.querySelector('.fert-souche').value.trim();
                 const mcfVal = div.querySelector('.fert-souche-mcf-custom').value.trim();
                 if (sName && mcfVal) mcfMap[sName] = mcfVal;
@@ -9005,15 +9018,8 @@
             }).filter(Boolean);
             const souches = [...new Set([...sChk, ...sInp])];
 
-            const iChkNodes = document.querySelectorAll('.fert-inh-souche-chk:checked');
-            const iChk = Array.from(iChkNodes).map(chk => {
-                let sName = chk.value;
-                let mcfVal = chk.parentElement.parentElement.querySelector('.fert-inh-souche-mcf').value.trim();
-                if (mcfVal) mcfMap[sName] = mcfVal;
-                return sName;
-            });
-            const customInhCont = document.querySelectorAll('#fertInhSouchesContainer > div');
-            const iInp = Array.from(customInhCont).map(div => {
+            const iChk = Array.from(document.querySelectorAll('.fert-inh-souche-chk:checked')).map(chk => chk.value);
+            const iInp = Array.from(document.querySelectorAll('#fertInhSouchesContainer > div')).map(div => {
                 let sName = div.querySelector('.fert-inh-souche').value.trim();
                 let mcfVal = div.querySelector('.fert-inh-souche-mcf-custom').value.trim();
                 if (sName && mcfVal) mcfMap[sName] = mcfVal;
@@ -9021,15 +9027,8 @@
             }).filter(Boolean);
             const inhSouches = [...new Set([...iChk, ...iInp])];
 
-            const indChkNodes = document.querySelectorAll('.fert-ind-souche-chk:checked');
-            const indChk = Array.from(indChkNodes).map(chk => {
-                let sName = chk.value;
-                let mcfVal = chk.parentElement.parentElement.querySelector('.fert-ind-souche-mcf').value.trim();
-                if (mcfVal) mcfMap[sName] = mcfVal;
-                return sName;
-            });
-            const customIndCont = document.querySelectorAll('#fertIndSouchesContainer > div');
-            const indInp = Array.from(customIndCont).map(div => {
+            const indChk = Array.from(document.querySelectorAll('.fert-ind-souche-chk:checked')).map(chk => chk.value);
+            const indInp = Array.from(document.querySelectorAll('#fertIndSouchesContainer > div')).map(div => {
                 let sName = div.querySelector('.fert-ind-souche').value.trim();
                 let mcfVal = div.querySelector('.fert-ind-souche-mcf-custom').value.trim();
                 if (sName && mcfVal) mcfMap[sName] = mcfVal;
@@ -9067,6 +9066,13 @@
             try {
                 if (id) window.db.collection(FERTILITE_COL).doc(id).update(data);
                 else window.db.collection(FERTILITE_COL).add(data);
+
+                // Sauvegarde mémoire globale McF
+                let globalMcf = {};
+                try { globalMcf = JSON.parse(localStorage.getItem('fertGlobalMcf') || '{}'); } catch(e){}
+                for (const k in mcfMap) { if (mcfMap[k]) globalMcf[k] = mcfMap[k]; }
+                localStorage.setItem('fertGlobalMcf', JSON.stringify(globalMcf));
+
                 window.showToast('✅ Fiche fertilité enregistrée !', 'success');
             } catch(err) {
                 window.showToast('❌ Erreur : ' + err.message, 'error', 5000);

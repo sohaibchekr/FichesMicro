@@ -8949,18 +8949,19 @@
 
 
 
-        // AutoCalc des consommables
+        // AutoCalc des consommables — uniquement les souches cochées (checkboxes)
         window.autoCalcConsO = function() {
+            // Catalogue : uniquement les cases COCHÉES (pas celles avec McF rempli seulement)
             const sChk = Array.from(document.querySelectorAll('.fert-souche-chk:checked')).map(i => i.value);
-            const sInp = Array.from(document.querySelectorAll('.fert-souche')).map(i => i.value.trim()).filter(Boolean);
-            
             const iChk = Array.from(document.querySelectorAll('.fert-inh-souche-chk:checked')).map(i => i.value);
-            const iInp = Array.from(document.querySelectorAll('.fert-inh-souche')).map(i => i.value.trim()).filter(Boolean);
-            
             const indChk = Array.from(document.querySelectorAll('.fert-ind-souche-chk:checked')).map(i => i.value);
+
+            // Souches personnalisées saisies manuellement dans les champs texte
+            const sInp = Array.from(document.querySelectorAll('.fert-souche')).map(i => i.value.trim()).filter(Boolean);
+            const iInp = Array.from(document.querySelectorAll('.fert-inh-souche')).map(i => i.value.trim()).filter(Boolean);
             const indInp = Array.from(document.querySelectorAll('.fert-ind-souche')).map(i => i.value.trim()).filter(Boolean);
-            
-            const souches = [...new Set([...sChk, ...sInp, ...iChk, ...iInp, ...indChk, ...indInp])];
+
+            const souches = [...new Set([...sChk, ...iChk, ...indChk, ...sInp, ...iInp, ...indInp])];
 
             if (souches.length === 0) {
                 window.showToast("Cochez ou ajoutez des souches d'abord.", "info");

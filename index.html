@@ -2558,27 +2558,26 @@
                     <label>🧫 Désignation / Milieu de Culture (MC)</label>
                     <input type="text" id="fertNom" class="form-input" required placeholder="Ex: TSA, Gélose Columbia, PCA..." list="fertNomList">
                 </div>
-                <!-- INCUBATION -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                    <div class="form-group" style="margin:0;">
-                        <label>⏱️ Durée d'incubation</label>
-                        <input type="text" id="fertIncubDuree" class="form-input" placeholder="Ex: 24H, 48H, 3-5j..." list="fertIncubDureeList">
-                        <datalist id="fertIncubDureeList">
-                            <option value="24H"></option>
-                            <option value="48H"></option>
-                            <option value="72H"></option>
-                            <option value="3-5j"></option>
-                        </datalist>
+                <!-- INCUBATION DYNAMIQUE -->
+                <div style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.2); border-radius:12px; padding:12px; margin-bottom:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span style="font-size:0.7rem; font-weight:900; color:#0369a1; text-transform:uppercase; letter-spacing:0.5px;">⏱️ Conditions d'incubation</span>
+                        <button type="button" onclick="window.addFertIncubRow()" style="background:#0ea5e9; color:white; border:none; border-radius:8px; padding:5px 12px; font-size:0.65rem; font-weight:800; cursor:pointer;">+ Ajouter</button>
                     </div>
-                    <div class="form-group" style="margin:0;">
-                        <label>🌡️ Température</label>
-                        <input type="text" id="fertIncubTemp" class="form-input" placeholder="Ex: 20-25°C, 30-35°C..." list="fertIncubTempList">
-                        <datalist id="fertIncubTempList">
-                            <option value="20-25°C"></option>
-                            <option value="30-35°C"></option>
-                            <option value="42.5°C"></option>
-                        </datalist>
-                    </div>
+                    <div id="fertIncubContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+                    <datalist id="fertIncubDureeList">
+                        <option value="24H"></option>
+                        <option value="48H"></option>
+                        <option value="72H"></option>
+                        <option value="3-5j"></option>
+                        <option value="5-7j"></option>
+                    </datalist>
+                    <datalist id="fertIncubTempList">
+                        <option value="20-25°C"></option>
+                        <option value="30-35°C"></option>
+                        <option value="42.5°C"></option>
+                        <option value="36-38°C"></option>
+                    </datalist>
                 </div>
 
                 <!-- SELECTION DES PARAMETRES -->
@@ -2600,18 +2599,50 @@
                 <!-- ===== SECTION FERTILITE ===== -->
                 <div id="sectionFertilite" style="border:2px solid rgba(5,150,105,0.25); border-radius:14px; padding:14px; margin-bottom:12px;">
                     <div style="font-size:0.75rem; font-weight:900; color:#059669; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">✅ FERTILITÉ</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <div class="form-group" style="margin:0;">
-                            <label>🧪 Concentration</label>
-                            <input type="text" id="fertConcentration" class="form-input" placeholder="Ex: 0.5 McF..." oninput="window.autoCalcFertUfc()" list="fertConcentrationList">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:var(--text-main); margin-bottom:8px;">💧 VOL. DILUANT (mL/tube)</div>
+                            <input type="number" id="fertVolDiluant" class="form-input" placeholder="9.9" value="9" step="0.1" min="0" oninput="window.autoCalcFertUfc();window.autoCalcFertUfcLev();window.updateAllSouchesResults();" style="font-size:1rem; font-weight:700; text-align:center;">
                         </div>
-                        <div class="form-group" style="margin:0;">
-                            <label>🔬 Dilution</label>
-                            <input type="text" id="fertDilution" class="form-input" placeholder="Ex: 10^-4" oninput="window.autoCalcFertUfc()" list="fertDilutionList">
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:var(--text-main); margin-bottom:8px;">🔬 VOL. PRISE (mL)</div>
+                            <input type="number" id="fertVolPrise" class="form-input" placeholder="0.1" value="0.1" step="0.1" min="0" oninput="window.autoCalcFertUfc();window.autoCalcFertUfcLev();window.updateAllSouchesResults();" style="font-size:1rem; font-weight:700; text-align:center;">
                         </div>
-                        <div class="form-group" style="margin:0;">
-                            <label>🦠 UFC Attendus</label>
-                            <input type="text" id="fertUfc" class="form-input" placeholder="Calculé auto...">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:var(--text-main); margin-bottom:8px;">🦠 BACTÉRIES</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>🧪 Conc.</label>
+                                    <input type="text" id="fertConcentration" class="form-input" placeholder="0.5 McF..." list="fertConcentrationList" oninput="window.autoCalcFertUfc()">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>🔬 Dilution</label>
+                                    <input type="text" id="fertDilution" class="form-input" placeholder="10^-4" list="fertDilutionList" oninput="window.autoCalcFertUfc()">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:8px 0 0 0;">
+                                <label>📊 UFC Attendus</label>
+                                <input type="text" id="fertUfc" class="form-input" placeholder="Ex: 50 - 100 UFC/mL">
+                            </div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:var(--text-main); margin-bottom:8px;">🍄 LEVURES / MOISISSURES</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>🧪 Conc.</label>
+                                    <input type="text" id="fertConcentrationLev" class="form-input" placeholder="0.5 McF..." list="fertConcentrationList" oninput="window.autoCalcFertUfcLev()">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>🔬 Dilution</label>
+                                    <input type="text" id="fertDilutionLev" class="form-input" placeholder="10^-3" list="fertDilutionList" oninput="window.autoCalcFertUfcLev()">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:8px 0 0 0;">
+                                <label>📊 UFC Attendus</label>
+                                <input type="text" id="fertUfcLev" class="form-input" placeholder="Ex: 9000 UFC/mL">
+                            </div>
                         </div>
                     </div>
                     <!-- Souches Fertilité -->
@@ -2632,18 +2663,50 @@
                 <!-- ===== SECTION INDICATION ===== -->
                 <div id="sectionIndication" style="display:none; border:2px solid rgba(217,119,6,0.25); border-radius:14px; padding:14px; margin-bottom:12px;">
                     <div style="font-size:0.75rem; font-weight:900; color:#d97706; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">🔶 INDICATION</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <div class="form-group" style="margin:0;">
-                            <label>🧪 Conc. (Ind.)</label>
-                            <input type="text" id="fertIndConcentration" class="form-input" placeholder="Ex: 0.5 McF..." oninput="window.autoCalcIndUfc()" list="fertConcentrationList">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:#d97706; margin-bottom:8px;">💧 VOL. DILUANT (mL/tube)</div>
+                            <input type="number" id="fertIndVolDiluant" class="form-input" placeholder="9.9" value="9.9" step="0.1" min="0" oninput="window.autoCalcIndUfc();window.autoCalcIndUfcLev();" style="font-size:1rem; font-weight:700; text-align:center;">
                         </div>
-                        <div class="form-group" style="margin:0;">
-                            <label>🔬 Dilution (Ind.)</label>
-                            <input type="text" id="fertIndDilution" class="form-input" placeholder="Ex: 10^-4" oninput="window.autoCalcIndUfc()" list="fertDilutionList">
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:#d97706; margin-bottom:8px;">🔬 VOL. PRISE (mL)</div>
+                            <input type="number" id="fertIndVolPrise" class="form-input" placeholder="0.1" value="0.1" step="0.1" min="0" oninput="window.autoCalcIndUfc();window.autoCalcIndUfcLev();" style="font-size:1rem; font-weight:700; text-align:center;">
                         </div>
-                        <div class="form-group" style="margin:0;">
-                            <label>🦠 UFC Ind. Attendus</label>
-                            <input type="text" id="fertIndUfc" class="form-input" placeholder="Calculé auto..." style="background:rgba(217,119,6,0.03);">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:#d97706; margin-bottom:8px;">🦠 BACTÉRIES</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>🧪 Conc.</label>
+                                    <input type="text" id="fertIndConcentration" class="form-input" placeholder="0.5 McF..." list="fertConcentrationList" oninput="window.autoCalcIndUfc()">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>🔬 Dilution</label>
+                                    <input type="text" id="fertIndDilution" class="form-input" placeholder="10^-4" list="fertDilutionList" oninput="window.autoCalcIndUfc()">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:8px 0 0 0;">
+                                <label>📊 UFC Attendus</label>
+                                <input type="text" id="fertIndUfc" class="form-input" placeholder="Ex: 50 - 100..." style="background:rgba(217,119,6,0.03);">
+                            </div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:#d97706; margin-bottom:8px;">🍄 LEVURES / MOISISSURES</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>🧪 Conc.</label>
+                                    <input type="text" id="fertIndConcentrationLev" class="form-input" placeholder="0.5 McF..." list="fertConcentrationList" oninput="window.autoCalcIndUfcLev()">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>🔬 Dilution</label>
+                                    <input type="text" id="fertIndDilutionLev" class="form-input" placeholder="10^-3" list="fertDilutionList" oninput="window.autoCalcIndUfcLev()">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:8px 0 0 0;">
+                                <label>📊 UFC Attendus</label>
+                                <input type="text" id="fertIndUfcLev" class="form-input" placeholder="Ex: 50 - 100..." style="background:rgba(217,119,6,0.03);">
+                            </div>
                         </div>
                     </div>
                     <!-- Souches Indication -->
@@ -2664,18 +2727,40 @@
                 <!-- ===== SECTION INHIBITION ===== -->
                 <div id="sectionInhibition" style="display:none; border:2px solid rgba(239,68,68,0.25); border-radius:14px; padding:14px; margin-bottom:12px;">
                     <div style="font-size:0.75rem; font-weight:900; color:#ef4444; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">🚫 INHIBITION</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <div class="form-group" style="margin:0;">
-                            <label>🧪 Conc. (Inh.)</label>
-                            <input type="text" id="fertInhConcentration" class="form-input" placeholder="Ex: 0.5 McF..." oninput="window.autoCalcInhUfc()" list="fertInhConcentrationList">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:#ef4444; margin-bottom:8px;">🦠 BACTÉRIES</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>🧪 Conc.</label>
+                                    <input type="text" id="fertInhConcentration" class="form-input" placeholder="0.5 McF..." list="fertInhConcentrationList" oninput="window.autoCalcInhUfc()">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>🔬 Dilution</label>
+                                    <input type="text" id="fertInhDilution" class="form-input" placeholder="10^-4" list="fertInhDilutionList" oninput="window.autoCalcInhUfc()">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:8px 0 0 0;">
+                                <label>📊 UFC Attendus</label>
+                                <input type="text" id="fertInhUfc" class="form-input" placeholder="Ex: >100..." style="background:rgba(239,68,68,0.03);">
+                            </div>
                         </div>
-                        <div class="form-group" style="margin:0;">
-                            <label>🔬 Dilution (Inh.)</label>
-                            <input type="text" id="fertInhDilution" class="form-input" placeholder="Ex: 10^-4" oninput="window.autoCalcInhUfc()" list="fertInhDilutionList">
-                        </div>
-                        <div class="form-group" style="margin:0;">
-                            <label>🦠 UFC Inh. Attendus</label>
-                            <input type="text" id="fertInhUfc" class="form-input" placeholder="Calculé auto..." style="background:rgba(239,68,68,0.03);">
+                        <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:0.65rem; font-weight:900; color:#ef4444; margin-bottom:8px;">🍄 LEVURES / MOISISSURES</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label>🧪 Conc.</label>
+                                    <input type="text" id="fertInhConcentrationLev" class="form-input" placeholder="0.5 McF..." list="fertInhConcentrationList" oninput="window.autoCalcInhUfcLev()">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label>🔬 Dilution</label>
+                                    <input type="text" id="fertInhDilutionLev" class="form-input" placeholder="10^-3" list="fertInhDilutionList" oninput="window.autoCalcInhUfcLev()">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:8px 0 0 0;">
+                                <label>📊 UFC Attendus</label>
+                                <input type="text" id="fertInhUfcLev" class="form-input" placeholder="Ex: >100..." style="background:rgba(239,68,68,0.03);">
+                            </div>
                         </div>
                     </div>
                     <!-- Souches Inhibition -->
@@ -8601,11 +8686,19 @@
 
                     <!-- Chips incubation + conc + dil + ufc -->
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        ${f.incubDuree ? `<span style="background:rgba(0,0,0,0.05); color:#374151; border:1px solid rgba(0,0,0,0.15); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">⏱ ${f.incubDuree}</span>` : ''}
-                        ${f.incubTemp ? `<span style="background:rgba(0,0,0,0.05); color:#374151; border:1px solid rgba(0,0,0,0.15); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🌡 ${f.incubTemp}</span>` : ''}
-                        ${f.concentration ? `<span style="background:rgba(124,58,237,0.08); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🧪 Fert. : ${f.concentration}</span>` : ''}
+                        ${(f.incubConditions && f.incubConditions.length > 0) ? f.incubConditions.map(c => `
+                            ${c.duree ? `<span style="background:rgba(0,0,0,0.05); color:#374151; border:1px solid rgba(0,0,0,0.15); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">⏱ ${c.duree}</span>` : ''}
+                            ${c.temp ? `<span style="background:rgba(0,0,0,0.05); color:#374151; border:1px solid rgba(0,0,0,0.15); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🌡 ${c.temp}</span>` : ''}
+                        `).join('') : `
+                            ${f.incubDuree ? `<span style="background:rgba(0,0,0,0.05); color:#374151; border:1px solid rgba(0,0,0,0.15); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">⏱ ${f.incubDuree}</span>` : ''}
+                            ${f.incubTemp ? `<span style="background:rgba(0,0,0,0.05); color:#374151; border:1px solid rgba(0,0,0,0.15); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🌡 ${f.incubTemp}</span>` : ''}
+                        `}
+                        ${f.concentration ? `<span style="background:rgba(124,58,237,0.08); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🦠 Conc. : ${f.concentration}</span>` : ''}
                         ${f.dilution ? `<span style="background:rgba(124,58,237,0.08); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🔬 Dil. : ${f.dilution}</span>` : ''}
-                        ${f.ufc ? `<span style="background:rgba(124,58,237,0.08); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🦠 UFC : ${f.ufc}</span>` : ''}
+                        ${f.ufc ? `<span style="background:rgba(124,58,237,0.08); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">📊 UFC(Bact) : ${f.ufc}</span>` : ''}
+                        ${f.concentrationLev ? `<span style="background:rgba(124,58,237,0.08); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🍄 Conc.(L) : ${f.concentrationLev}</span>` : ''}
+                        ${f.dilutionLev ? `<span style="background:rgba(124,58,237,0.08); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">🔬 Dil.(L) : ${f.dilutionLev}</span>` : ''}
+                        ${f.ufcLev ? `<span style="background:rgba(124,58,237,0.08); color:var(--secondary); border:1px solid rgba(124,58,237,0.2); padding:5px 12px; border-radius:10px; font-size:0.65rem; font-weight:800;">📊 UFC(Lev) : ${f.ufcLev}</span>` : ''}
                     </div>
 
                     <!-- Indication chips -->
@@ -8613,9 +8706,12 @@
                     <div style="background:rgba(217,119,6,0.04); border-radius:10px; padding:10px; border:1px solid rgba(217,119,6,0.15); margin-top:6px;">
                         <div style="font-size:0.55rem; color:#d97706; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">🔶 Indication</div>
                         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                            ${f.indConcentration ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🧪 ${f.indConcentration}</span>` : ''}
-                            ${f.indDilution ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🔬 ${f.indDilution}</span>` : ''}
-                            ${f.indUfc ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🦠 ${f.indUfc}</span>` : ''}
+                            ${f.indConcentration ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🦠 Conc. : ${f.indConcentration}</span>` : ''}
+                            ${f.indDilution ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🔬 Dil. : ${f.indDilution}</span>` : ''}
+                            ${f.indUfc ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">📊 UFC(Bact) : ${f.indUfc}</span>` : ''}
+                            ${f.indConcentrationLev ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🍄 Conc.(L) : ${f.indConcentrationLev}</span>` : ''}
+                            ${f.indDilutionLev ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🔬 Dil.(L) : ${f.indDilutionLev}</span>` : ''}
+                            ${f.indUfcLev ? `<span style="background:rgba(217,119,6,0.08); color:#b45309; border:1px solid rgba(217,119,6,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">📊 UFC(Lev) : ${f.indUfcLev}</span>` : ''}
                         </div>
                         ${(f.indSouches && f.indSouches.length > 0) ? `<div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:6px;">${f.indSouches.map(s=> {
                             const mm = (f.mcfMap && f.mcfMap[s]) ? ` | <span style="opacity:0.8;">${f.mcfMap[s]}</span>` : '';
@@ -8628,9 +8724,12 @@
                     <div style="background:rgba(239,68,68,0.04); border-radius:10px; padding:10px; border:1px solid rgba(239,68,68,0.15); margin-top:6px;">
                         <div style="font-size:0.55rem; color:#ef4444; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">🚫 Inhibition</div>
                         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                            ${f.inhConcentration ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🧪 ${f.inhConcentration}</span>` : ''}
-                            ${f.inhDilution ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🔬 ${f.inhDilution}</span>` : ''}
-                            ${f.inhUfc ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🦠 ${f.inhUfc}</span>` : ''}
+                            ${f.inhConcentration ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🦠 Conc. : ${f.inhConcentration}</span>` : ''}
+                            ${f.inhDilution ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🔬 Dil. : ${f.inhDilution}</span>` : ''}
+                            ${f.inhUfc ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">📊 UFC(Bact) : ${f.inhUfc}</span>` : ''}
+                            ${f.inhConcentrationLev ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🍄 Conc.(L) : ${f.inhConcentrationLev}</span>` : ''}
+                            ${f.inhDilutionLev ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">🔬 Dil.(L) : ${f.inhDilutionLev}</span>` : ''}
+                            ${f.inhUfcLev ? `<span style="background:rgba(239,68,68,0.08); color:#b91c1c; border:1px solid rgba(239,68,68,0.2); padding:4px 10px; border-radius:8px; font-size:0.6rem; font-weight:800;">📊 UFC(Lev) : ${f.inhUfcLev}</span>` : ''}
                         </div>
                         ${(f.inhSouches && f.inhSouches.length > 0) ? `<div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:6px;">${f.inhSouches.map(s=> {
                             const mm = (f.mcfMap && f.mcfMap[s]) ? ` | <span style="opacity:0.8;">${f.mcfMap[s]}</span>` : '';
@@ -8788,6 +8887,7 @@
             document.querySelectorAll(`input[data-strain="${strain}"]`).forEach(inp => {
                 if (inp.value !== val) inp.value = val;
             });
+            if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
 
         // ---- Modal : Ouvrir ----
@@ -8811,22 +8911,46 @@
             window.toggleFertSections();
 
             // Reset
+            document.getElementById('fertVolDiluant').value = f ? (f.volDiluant || '9') : '9';
+            document.getElementById('fertVolPrise').value = f ? (f.volPrise || '0.1') : '0.1';
             document.getElementById('fertNom').value = f ? (f.nom || '') : '';
             document.getElementById('fertConcentration').value = f ? (f.concentration || '') : '';
             document.getElementById('fertDilution').value = f ? (f.dilution || '') : '';
+            document.getElementById('fertConcentrationLev').value = f ? (f.concentrationLev || '') : '';
+            document.getElementById('fertDilutionLev').value = f ? (f.dilutionLev || '') : '';
             document.getElementById('fertUfc').value = f ? (f.ufc || '') : '';
-            document.getElementById('fertIncubDuree').value = f ? (f.incubDuree || '') : '';
-            document.getElementById('fertIncubTemp').value = f ? (f.incubTemp || '') : '';
+            document.getElementById('fertUfcLev').value = f ? (f.ufcLev || '') : '';
             document.getElementById('fertCriteres').value = f ? (f.criteres || '') : '';
             document.getElementById('fertObs').value = f ? (f.obs || '') : '';
+
+            // Charger les conditions d'incubation (dynamique)
+            const incubContainer = document.getElementById('fertIncubContainer');
+            incubContainer.innerHTML = '';
+            let incubConds = [];
+            if (f) {
+                if (f.incubConditions && f.incubConditions.length > 0) {
+                    incubConds = f.incubConditions;
+                } else if (f.incubDuree || f.incubTemp) {
+                    // rétrocompatibilité ancien format
+                    incubConds = [{ duree: f.incubDuree || '', temp: f.incubTemp || '' }];
+                }
+            }
+            if (incubConds.length === 0) incubConds = [{ duree: '', temp: '' }];
+            incubConds.forEach(c => window.addFertIncubRow(c.duree, c.temp));
             
             document.getElementById('fertIndConcentration').value = f ? (f.indConcentration || '') : '';
             document.getElementById('fertIndDilution').value = f ? (f.indDilution || '') : '';
+            document.getElementById('fertIndConcentrationLev').value = f ? (f.indConcentrationLev || '') : '';
+            document.getElementById('fertIndDilutionLev').value = f ? (f.indDilutionLev || '') : '';
             document.getElementById('fertIndUfc').value = f ? (f.indUfc || '') : '';
+            document.getElementById('fertIndUfcLev').value = f ? (f.indUfcLev || '') : '';
 
             document.getElementById('fertInhConcentration').value = f ? (f.inhConcentration || '') : '';
             document.getElementById('fertInhDilution').value = f ? (f.inhDilution || '') : '';
+            document.getElementById('fertInhConcentrationLev').value = f ? (f.inhConcentrationLev || '') : '';
+            document.getElementById('fertInhDilutionLev').value = f ? (f.inhDilutionLev || '') : '';
             document.getElementById('fertInhUfc').value = f ? (f.inhUfc || '') : '';
+            document.getElementById('fertInhUfcLev').value = f ? (f.inhUfcLev || '') : '';
             
             document.getElementById('fertNbTubes').value = f ? (f.nbTubes || '') : '';
             document.getElementById('fertNbFlacons').value = f ? (f.nbFlacons || '') : '';
@@ -8912,6 +9036,7 @@
 
             window.updateFertDatalists();
             window.openModal('fertiliteModalOverlay');
+            setTimeout(() => window.updateAllSouchesResults(), 100);
         };
 
         // Helper : ajouter souche fertilité
@@ -9032,6 +9157,23 @@
             steps.forEach((div, i) => { const badge = div.querySelector('div'); if (badge) badge.innerText = i + 1; });
         };
 
+        // Helper : ajouter condition d'incubation dynamique
+        window.addFertIncubRow = function(duree = '', temp = '') {
+            const container = document.getElementById('fertIncubContainer');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.style.display = 'grid';
+            div.style.gridTemplateColumns = '1fr 1fr auto';
+            div.style.gap = '8px';
+            div.style.alignItems = 'center';
+            div.innerHTML = `
+                <input type="text" class="form-input fert-incub-duree" value="${duree}" list="fertIncubDureeList" placeholder="Durée (ex: 48H)" style="margin:0; font-size:0.75rem;">
+                <input type="text" class="form-input fert-incub-temp" value="${temp}" list="fertIncubTempList" placeholder="Temp. (ex: 30-35°C)" style="margin:0; font-size:0.75rem;">
+                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;" title="Supprimer">✕</button>
+            `;
+            container.appendChild(div);
+        };
+
         // Sauvegarde
         document.getElementById('fertiliteForm').addEventListener('submit', e => {
             e.preventDefault();
@@ -9088,17 +9230,30 @@
                 hasInh: document.getElementById('chkInhibition').checked,
                 concentration: document.getElementById('fertConcentration').value.trim(),
                 dilution: document.getElementById('fertDilution').value.trim(),
+                concentrationLev: document.getElementById('fertConcentrationLev').value.trim(),
+                dilutionLev: document.getElementById('fertDilutionLev').value.trim(),
                 ufc: document.getElementById('fertUfc').value.trim(),
+                ufcLev: document.getElementById('fertUfcLev').value.trim(),
                 indConcentration: document.getElementById('fertIndConcentration').value.trim(),
                 indDilution: document.getElementById('fertIndDilution').value.trim(),
+                indConcentrationLev: document.getElementById('fertIndConcentrationLev').value.trim(),
+                indDilutionLev: document.getElementById('fertIndDilutionLev').value.trim(),
                 indUfc: document.getElementById('fertIndUfc').value.trim(),
-                incubDuree: document.getElementById('fertIncubDuree').value.trim(),
-                incubTemp: document.getElementById('fertIncubTemp').value.trim(),
+                indUfcLev: document.getElementById('fertIndUfcLev').value.trim(),
+                incubConditions: Array.from(document.querySelectorAll('#fertIncubContainer > div')).map(row => ({
+                    duree: row.querySelector('.fert-incub-duree').value.trim(),
+                    temp: row.querySelector('.fert-incub-temp').value.trim()
+                })).filter(c => c.duree || c.temp),
                 criteres: document.getElementById('fertCriteres').value.trim(),
                 obs: document.getElementById('fertObs').value.trim(),
                 inhConcentration: document.getElementById('fertInhConcentration').value.trim(),
                 inhDilution: document.getElementById('fertInhDilution').value.trim(),
+                inhConcentrationLev: document.getElementById('fertInhConcentrationLev').value.trim(),
+                inhDilutionLev: document.getElementById('fertInhDilutionLev').value.trim(),
                 inhUfc: document.getElementById('fertInhUfc').value.trim(),
+                inhUfcLev: document.getElementById('fertInhUfcLev').value.trim(),
+                volDiluant: document.getElementById('fertVolDiluant').value.trim(),
+                volPrise: document.getElementById('fertVolPrise').value.trim(),
                 nbTubes: document.getElementById('fertNbTubes').value.trim(),
                 nbFlacons: document.getElementById('fertNbFlacons').value.trim(),
                 souches, indSouches, inhSouches, steps, indSteps, inhSteps, mcfMap,
@@ -9141,10 +9296,150 @@
             if (val > 10) return '-';
             let res = val * 3e8;
             if (res <= 0) return '-';
-            const parts = res.toExponential(1).split('e');
-            const num = parts[0].replace('.', ',');
-            const exp = parseInt(parts[1], 10);
-            return `${num} x 10^${exp} UFC/mL`;
+            if (res >= 1000000) {
+                const parts = res.toExponential(1).split('e');
+                const num = parts[0].replace('.', ',');
+                const exp = parseInt(parts[1], 10);
+                return `${num} x 10^${exp} UFC/mL`;
+            }
+            return Math.round(res) + ' UFC/mL';
+        };
+
+        // Calcul automatique UFC à partir de concentration McF + dilution
+        window._calcUfc = function(concStr, dilStr) {
+            if (!concStr && !dilStr) return '';
+            const mStr = String(concStr || '').replace(',', '.');
+            const mMatch = mStr.match(/([0-9]*\.?[0-9]+)/);
+            if (!mMatch) return '';
+            const mcf = parseFloat(mMatch[1]);
+            // Base McF : 0.5 McF ~ 1.5x10^8 UFC/mL (standard)
+            let base = mcf * 3e8;
+            if (dilStr) {
+                const dStr = String(dilStr).replace(',', '.').replace('×', '*').replace('x', '*').replace('×', '*');
+                // Parse notations comme 10^-4, 10-4, 1e-4, e-4
+                const expMatch = dStr.match(/(?:10|\b1\b)?\^?\s*(-?\d+)|e\s*(-?\d+)|10\s*-\s*(\d+)/i);
+                if (expMatch) {
+                    const exp = parseInt(expMatch[1] || expMatch[2] || ('-' + expMatch[3]), 10);
+                    base = base * Math.pow(10, exp);
+                }
+            }
+            if (base <= 0 || isNaN(base)) return '';
+            if (base >= 1000000) {
+                const parts = base.toExponential(1).split('e');
+                const mantisse = parseFloat(parts[0]).toFixed(1).replace('.', ',');
+                const exp = parseInt(parts[1], 10);
+                return `${mantisse} x 10^${exp} UFC/mL`;
+            }
+            return Math.round(base) + ' UFC/mL';
+        };
+
+        window._calcFinalUfc = function(mcfStr, dilStr, volPriseStr, volDiluantStr) {
+            if (!mcfStr || !dilStr || !volPriseStr || !volDiluantStr) return '';
+            const mMatch = String(mcfStr).replace(',', '.').match(/([0-9]*\.?[0-9]+)/);
+            const vMatch = String(volPriseStr).replace(',', '.').match(/([0-9]*\.?[0-9]+)/);
+            const dMatch = String(volDiluantStr).replace(',', '.').match(/([0-9]*\.?[0-9]+)/);
+            if (!mMatch || !vMatch || !dMatch) return '';
+            const mcf = parseFloat(mMatch[1]);
+            const vp = parseFloat(vMatch[1]);
+            const vd = parseFloat(dMatch[1]);
+            if (vd === 0) return '';
+            let base = mcf * 3e8;
+
+            const dStr = String(dilStr).replace(',', '.').replace('×', '*').replace('x', '*').replace('×', '*');
+            const expMatch = dStr.match(/(?:10|\b1\b)?\^?\s*(-?\d+)|e\s*(-?\d+)|10\s*-\s*(\d+)/i);
+            if (expMatch) {
+                const exp = parseInt(expMatch[1] || expMatch[2] || ('-' + expMatch[3]), 10);
+                base = base * Math.pow(10, exp);
+            }
+            if (base <= 0 || isNaN(base)) return '';
+            const finalUfc = (base * vp) / vd;
+            
+            if (finalUfc >= 1000) {
+                // Si ça reste très grand (ex: erreur de saisie), on arrondit ou on garde format normal
+                return Math.round(finalUfc) + ' UFC';
+            }
+            return Math.round(finalUfc) + ' UFC';
+        };
+
+        window.updateAllSouchesResults = function() {
+            const volPrise = document.getElementById('fertVolPrise') ? document.getElementById('fertVolPrise').value : '0.1';
+            const volDiluant = document.getElementById('fertVolDiluant') ? document.getElementById('fertVolDiluant').value : '9.9';
+            const bDil = document.getElementById('fertDilution').value;
+            const lDil = document.getElementById('fertDilutionLev').value;
+            
+            const processDivs = (selector, isInd, isInh) => {
+                document.querySelectorAll(selector).forEach(div => {
+                    const mcfInp = div.querySelector('input[placeholder="McF"]');
+                    if (!mcfInp) return;
+                    let resSpan = div.querySelector('.souche-result-span');
+                    if (!resSpan) {
+                        resSpan = document.createElement('span');
+                        resSpan.className = 'souche-result-span';
+                        resSpan.style = 'font-size:0.55rem; color:var(--primary); font-weight:900; background:rgba(79,70,229,0.1); border:1px solid rgba(79,70,229,0.2); padding:2px 4px; border-radius:6px; margin-left:4px; flex-shrink:0; white-space:nowrap;';
+                        mcfInp.parentNode.appendChild(resSpan);
+                    }
+                    const lbl = div.querySelector('label') ? div.querySelector('label').innerText : (div.querySelector('.fert-souche') || div.querySelector('.fert-ind-souche') || div.querySelector('.fert-inh-souche') ? (div.querySelector('.fert-souche') || div.querySelector('.fert-ind-souche') || div.querySelector('.fert-inh-souche')).value : '');
+                    const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(lbl);
+                    let dil = bDil;
+                    if (isInd) dil = isYeast ? document.getElementById('fertIndDilutionLev').value : document.getElementById('fertIndDilution').value;
+                    else if (isInh) dil = isYeast ? document.getElementById('fertInhDilutionLev').value : document.getElementById('fertInhDilution').value;
+                    else dil = isYeast ? lDil : bDil;
+                    
+                    const res = window._calcFinalUfc(mcfInp.value, dil, volPrise, volDiluant);
+                    resSpan.innerText = res ? `${res}` : '';
+                });
+            };
+            
+            processDivs('#fertSouchesCatalogue div', false, false);
+            processDivs('#fertSouchesContainer div', false, false);
+            
+            processDivs('#fertIndSouchesCatalogue div', true, false);
+            processDivs('#fertIndSouchesContainer div', true, false);
+            
+            processDivs('#fertInhSouchesCatalogue div', false, true);
+            processDivs('#fertInhSouchesContainer div', false, true);
+        };
+
+        // Fonctions déclenchées par oninput sur les champs
+        window.autoCalcFertUfc = function() {
+            const c = document.getElementById('fertConcentration').value;
+            const d = document.getElementById('fertDilution').value;
+            const r = window._calcUfc(c, d);
+            if (r) document.getElementById('fertUfc').value = r;
+            if(window.updateAllSouchesResults) window.updateAllSouchesResults();
+        };
+        window.autoCalcFertUfcLev = function() {
+            const c = document.getElementById('fertConcentrationLev').value;
+            const d = document.getElementById('fertDilutionLev').value;
+            const r = window._calcUfc(c, d);
+            if (r) document.getElementById('fertUfcLev').value = r;
+            if(window.updateAllSouchesResults) window.updateAllSouchesResults();
+        };
+        window.autoCalcIndUfc = function() {
+            const c = document.getElementById('fertIndConcentration').value;
+            const d = document.getElementById('fertIndDilution').value;
+            const r = window._calcUfc(c, d);
+            if (r) document.getElementById('fertIndUfc').value = r;
+            if(window.updateAllSouchesResults) window.updateAllSouchesResults();
+        };
+        window.autoCalcIndUfcLev = function() {
+            const c = document.getElementById('fertIndConcentrationLev').value;
+            const d = document.getElementById('fertIndDilutionLev').value;
+            const r = window._calcUfc(c, d);
+            if (r) document.getElementById('fertIndUfcLev').value = r;
+            if(window.updateAllSouchesResults) window.updateAllSouchesResults();
+        };
+        window.autoCalcInhUfc = function() {
+            const c = document.getElementById('fertInhConcentration').value;
+            const d = document.getElementById('fertInhDilution').value;
+            const r = window._calcUfc(c, d);
+            if (r) document.getElementById('fertInhUfc').value = r;
+        };
+        window.autoCalcInhUfcLev = function() {
+            const c = document.getElementById('fertInhConcentrationLev').value;
+            const d = document.getElementById('fertInhDilutionLev').value;
+            const r = window._calcUfc(c, d);
+            if (r) document.getElementById('fertInhUfcLev').value = r;
         };
 
         // ---- Génération PDF RECAPITULATIF ----
@@ -9193,10 +9488,15 @@
                 
                 let _mcf = '—';
                 let _ufc = '—';
-                for(const f of selectedFiches) {
+                for (const f of selectedFiches) {
                     if (f.mcfMap && f.mcfMap[s]) { 
                         _mcf = f.mcfMap[s] + ' McF'; 
-                        _ufc = window._mcfToUfcString(f.mcfMap[s]);
+                        const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
+                        let dil = isYeast ? f.dilutionLev : f.dilution;
+                        if (f.indSouches && f.indSouches.includes(s)) dil = isYeast ? f.indDilutionLev : f.indDilution;
+                        else if (f.inhSouches && f.inhSouches.includes(s)) dil = isYeast ? f.inhDilutionLev : f.inhDilution;
+                        const finalRes = window._calcFinalUfc(f.mcfMap[s], dil, f.volPrise || '0.1', f.volDiluant || '9');
+                        _ufc = finalRes || '—';
                         break; 
                     }
                 }
@@ -9231,7 +9531,7 @@
             
             doc.autoTable({
                 startY: y + 5,
-                head: [['Souche Unique', 'Conc. (McF)', 'Equiv. UFC/mL', 'Tubes pH7 (9mL)']],
+                head: [['Souche Unique', 'Conc. (McF)', 'Resultat (UFC)', 'Tubes pH7 (9mL)']],
                 body: strainsData,
                 theme: 'grid',
                 headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0] },
@@ -9431,25 +9731,51 @@
             doc.text(`Imprime le : ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - 15, 13, { align: 'right' });
             y = 36;
 
-            // Incubation + Concentration + Dilution + UFC
+            // Conditions d'incubation dynamiques
+            let incubBody = [];
+            if (f.incubConditions && f.incubConditions.length > 0) {
+                incubBody = f.incubConditions.map(c => [c.duree || '-', c.temp || '-']);
+            } else {
+                incubBody = [[f.incubDuree || '-', f.incubTemp || '-']];
+            }
             doc.autoTable({
                 startY: y,
-                head: [['Duree d\'incubation', 'Temperature', 'Concentration', 'Dilution', 'UFC Attendus']],
-                body: [[f.incubDuree || '-', f.incubTemp || '-', cU(f.concentration), cU(f.dilution), cU(f.ufc)]],
+                head: [['Duree d\'incubation', 'Temperature']],
+                body: incubBody,
                 theme: 'grid',
                 headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
-                styles: { fontSize: 9, cellPadding: 4, lineColor: [0, 0, 0], textColor: 0 }
+                styles: { fontSize: 9, cellPadding: 3, lineColor: [0, 0, 0], textColor: 0 },
+                margin: { right: 15 } 
             });
+            y = doc.lastAutoTable.finalY + 4;
+
+            // Paramètres Fertilité (Bactéries / Levures)
+            const fertParamsBody = [
+                ['Bacteries', cU(f.concentration), cU(f.dilution), cU(f.ufc)],
+                ['Levures / Moisissures', cU(f.concentrationLev), cU(f.dilutionLev), cU(f.ufcLev)]
+            ];
+            doc.autoTable({
+                startY: y,
+                head: [['Type de germe', 'Concentration', 'Dilution', 'UFC Attendus']],
+                body: fertParamsBody,
+                theme: 'grid',
+                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0] },
+                styles: { fontSize: 9, cellPadding: 3, lineColor: [0, 0, 0], textColor: 0 },
+                margin: { right: 15 }
+            });
+            
             y = doc.lastAutoTable.finalY + 8;
 
             // Souches fertilité (compact)
             if (f.souches && f.souches.length > 0) {
                 doc.autoTable({
                     startY: y,
-                    head: [['Souches de Fertilite', 'Conc. (McF)', 'Equiv. UFC/mL', 'Remarque']],
+                    head: [['Souches de Fertilite', 'Conc. (McF)', 'Resultat (UFC)', 'Remarque']],
                     body: f.souches.map(s => {
                         let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
-                        return [s, mcf ? mcf + ' McF' : '-', window._mcfToUfcString(mcf), ''];
+                        const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
+                        let res = window._calcFinalUfc(mcf, isYeast ? f.dilutionLev : f.dilution, f.volPrise || '0.1', f.volDiluant || '9');
+                        return [s, mcf ? mcf + ' McF' : '-', res || '-', ''];
                     }),
                     theme: 'grid',
                     headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0], fontSize: 8 },
@@ -9466,21 +9792,28 @@
                 doc.text('INDICATION', 15, y); y += 5;
                 doc.setLineWidth(0.3); doc.setDrawColor(0,0,0);
                 doc.line(15, y, pageWidth - 15, y); y += 4;
+                const indParamsBody = [
+                    ['Bacteries', cU(f.indConcentration), cU(f.indDilution), cU(f.indUfc)],
+                    ['Levures / Moisissures', cU(f.indConcentrationLev), cU(f.indDilutionLev), cU(f.indUfcLev)]
+                ];
                 doc.autoTable({
                     startY: y,
-                    head: [['Concentration (Ind.)', 'Dilution (Ind.)', 'UFC Attendus (Ind.)']],
-                    body: [[cU(f.indConcentration), cU(f.indDilution), cU(f.indUfc)]],
+                    head: [['Type de germe', 'Concentration (Ind.)', 'Dilution (Ind.)', 'UFC (Ind.)']],
+                    body: indParamsBody,
                     theme: 'grid',
                     headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
-                    styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 }
+                    styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 },
+                    margin: { right: 15 }
                 });
                 y = doc.lastAutoTable.finalY + 4;
                 if (f.indSouches && f.indSouches.length > 0) {
                     doc.autoTable({
-                        startY: y, head: [['Souches Ind.', 'Conc. (McF)', 'Equiv. UFC/mL', 'Remarque']],
+                        startY: y, head: [['Souches Ind.', 'Conc. (McF)', 'Resultat (UFC)', 'Remarque']],
                         body: f.indSouches.map(s => {
                             let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
-                            return [s, mcf ? mcf + ' McF' : '-', window._mcfToUfcString(mcf), ''];
+                            const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
+                            let res = window._calcFinalUfc(mcf, isYeast ? f.indDilutionLev : f.indDilution, f.volPrise || '0.1', f.volDiluant || '9');
+                            return [s, mcf ? mcf + ' McF' : '-', res || '-', ''];
                         }), theme: 'grid',
                         headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
                         styles: { fontSize: 8, cellPadding: 1.5, lineColor: [0,0,0], textColor: 0 }
@@ -9517,21 +9850,28 @@
                 doc.text('INHIBITION', 15, y); y += 5;
                 doc.setLineWidth(0.3); doc.setDrawColor(0,0,0);
                 doc.line(15, y, pageWidth - 15, y); y += 4;
+                const inhParamsBody = [
+                    ['Bacteries', cU(f.inhConcentration), cU(f.inhDilution), cU(f.inhUfc)],
+                    ['Levures / Moisissures', cU(f.inhConcentrationLev), cU(f.inhDilutionLev), cU(f.inhUfcLev)]
+                ];
                 doc.autoTable({
                     startY: y,
-                    head: [['Concentration (Inh.)', 'Dilution (Inh.)', 'UFC Attendus (Inh.)']],
-                    body: [[cU(f.inhConcentration), cU(f.inhDilution), cU(f.inhUfc)]],
+                    head: [['Type de germe', 'Concentration (Inh.)', 'Dilution (Inh.)', 'UFC (Inh.)']],
+                    body: inhParamsBody,
                     theme: 'grid',
                     headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
-                    styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 }
+                    styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 },
+                    margin: { right: 15 }
                 });
                 y = doc.lastAutoTable.finalY + 4;
                 if (f.inhSouches && f.inhSouches.length > 0) {
                     doc.autoTable({
-                        startY: y, head: [['Souches Inh.', 'Conc. (McF)', 'Equiv. UFC/mL', 'Remarque']],
+                        startY: y, head: [['Souches Inh.', 'Conc. (McF)', 'Resultat (UFC)', 'Remarque']],
                         body: f.inhSouches.map(s => {
                             let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
-                            return [s, mcf ? mcf + ' McF' : '-', window._mcfToUfcString(mcf), ''];
+                            const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
+                            let res = window._calcFinalUfc(mcf, isYeast ? f.inhDilutionLev : f.inhDilution, f.volPrise || '0.1', f.volDiluant || '9');
+                            return [s, mcf ? mcf + ' McF' : '-', res || '-', ''];
                         }), theme: 'grid',
                         headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
                         styles: { fontSize: 8, cellPadding: 1.5, lineColor: [0,0,0], textColor: 0 }

@@ -8750,6 +8750,23 @@
             try { const g = JSON.parse(localStorage.getItem('fertGlobalMcf') || '{}'); return g[s] || ''; } catch(e){return '';}
         };
 
+        window._updateGlobalMcf = function(strain, val) {
+            if (!strain) return;
+            let globalMcf = {};
+            try { globalMcf = JSON.parse(localStorage.getItem('fertGlobalMcf') || '{}'); } catch(e){}
+            if (val.trim()) {
+                globalMcf[strain] = val.trim();
+            } else {
+                delete globalMcf[strain];
+            }
+            localStorage.setItem('fertGlobalMcf', JSON.stringify(globalMcf));
+            
+            // Sync all inputs with the same data-strain in the form live
+            document.querySelectorAll(`input[data-strain="${strain}"]`).forEach(inp => {
+                if (inp.value !== val) inp.value = val;
+            });
+        };
+
         // ---- Modal : Ouvrir ----
         window.openFertiliteModal = function(id = null) {
             const f = id ? fertiliteData.find(x => x.id === id) : null;
@@ -8812,7 +8829,7 @@
                         <input type="checkbox" class="fert-souche-chk" value="${s}" ${ (f && f.souches && f.souches.includes(s)) ? 'checked' : '' }> 
                         <span style="font-size:0.65rem;">${s}</span>
                     </label>
-                    <input type="text" class="form-input fert-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem;">
+                    <input type="text" class="form-input fert-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" oninput="window._updateGlobalMcf('${s}', this.value)" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem;">
                 </div>
             `).join('');
             const sc = document.getElementById('fertSouchesContainer');
@@ -8829,7 +8846,7 @@
                         <input type="checkbox" class="fert-ind-souche-chk" value="${s}" ${ (f && f.indSouches && f.indSouches.includes(s)) ? 'checked' : '' }> 
                         <span style="font-size:0.65rem;">${s}</span>
                     </label>
-                    <input type="text" class="form-input fert-ind-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(217,119,6,0.4);">
+                    <input type="text" class="form-input fert-ind-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" oninput="window._updateGlobalMcf('${s}', this.value)" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(217,119,6,0.4);">
                 </div>
             `).join('');
             const sind = document.getElementById('fertIndSouchesContainer');
@@ -8846,7 +8863,7 @@
                         <input type="checkbox" class="fert-inh-souche-chk" value="${s}" ${ (f && f.inhSouches && f.inhSouches.includes(s)) ? 'checked' : '' }> 
                         <span style="font-size:0.65rem;">${s}</span>
                     </label>
-                    <input type="text" class="form-input fert-inh-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(239,68,68,0.4);">
+                    <input type="text" class="form-input fert-inh-souche-mcf" data-strain="${s}" value="${getMcf(s)}" placeholder="McF" oninput="window._updateGlobalMcf('${s}', this.value)" style="width:50px; padding:2px 5px; margin:0; font-size:0.6rem; border-color:rgba(239,68,68,0.4);">
                 </div>
             `).join('');
             const si = document.getElementById('fertInhSouchesContainer');
@@ -8879,8 +8896,8 @@
             const c = document.getElementById('fertSouchesContainer');
             const div = document.createElement('div');
             div.style = 'display:flex; gap:8px; align-items:center;';
-            div.innerHTML = `<input type="text" class="form-input fert-souche" value="${val}" list="fertSoucheList" placeholder="Ex: E.coli ATCC 25922..." style="flex:2; margin:0;" oninput="const mcf = window._getGlobalMcf(this.value); if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
-                <input type="text" class="form-input fert-souche-mcf-custom" value="${mcf}" placeholder="McF" style="flex:1; margin:0;">
+            div.innerHTML = `<input type="text" class="form-input fert-souche" value="${val}" list="fertSoucheList" placeholder="Ex: E.coli ATCC 25922..." style="flex:2; margin:0;" oninput="const mcf = window._getGlobalMcf(this.value); this.nextElementSibling.dataset.strain = this.value; if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
+                <input type="text" class="form-input fert-souche-mcf-custom" data-strain="${val}" value="${mcf}" placeholder="McF" oninput="window._updateGlobalMcf(this.previousElementSibling.value, this.value)" style="flex:1; margin:0;">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;">✕</button>`;
             c.appendChild(div);
         };
@@ -8890,8 +8907,8 @@
             const c = document.getElementById('fertInhSouchesContainer');
             const div = document.createElement('div');
             div.style = 'display:flex; gap:8px; align-items:center;';
-            div.innerHTML = `<input type="text" class="form-input fert-inh-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Staph. aureus ATCC 6538..." style="flex:2; margin:0; border-color:rgba(239,68,68,0.4);" oninput="const mcf = window._getGlobalMcf(this.value); if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
-                <input type="text" class="form-input fert-inh-souche-mcf-custom" value="${mcf}" placeholder="McF" style="flex:1; margin:0; border-color:rgba(239,68,68,0.4);">
+            div.innerHTML = `<input type="text" class="form-input fert-inh-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Staph. aureus ATCC 6538..." style="flex:2; margin:0; border-color:rgba(239,68,68,0.4);" oninput="const mcf = window._getGlobalMcf(this.value); this.nextElementSibling.dataset.strain = this.value; if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
+                <input type="text" class="form-input fert-inh-souche-mcf-custom" data-strain="${val}" value="${mcf}" placeholder="McF" oninput="window._updateGlobalMcf(this.previousElementSibling.value, this.value)" style="flex:1; margin:0; border-color:rgba(239,68,68,0.4);">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-size:1.1rem; cursor:pointer;">✕</button>`;
             c.appendChild(div);
         };
@@ -8901,8 +8918,8 @@
             const c = document.getElementById('fertIndSouchesContainer');
             const div = document.createElement('div');
             div.style = 'display:flex; gap:8px; align-items:center;';
-            div.innerHTML = `<input type="text" class="form-input fert-ind-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Souche Ind..." style="flex:2; margin:0; border-color:rgba(217,119,6,0.4);" oninput="const mcf = window._getGlobalMcf(this.value); if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
-                <input type="text" class="form-input fert-ind-souche-mcf-custom" value="${mcf}" placeholder="McF" style="flex:1; margin:0; border-color:rgba(217,119,6,0.4);">
+            div.innerHTML = `<input type="text" class="form-input fert-ind-souche" value="${val}" list="fertInhSoucheList" placeholder="Ex: Souche Ind..." style="flex:2; margin:0; border-color:rgba(217,119,6,0.4);" oninput="const mcf = window._getGlobalMcf(this.value); this.nextElementSibling.dataset.strain = this.value; if(mcf && !this.nextElementSibling.value) this.nextElementSibling.value = mcf;">
+                <input type="text" class="form-input fert-ind-souche-mcf-custom" data-strain="${val}" value="${mcf}" placeholder="McF" oninput="window._updateGlobalMcf(this.previousElementSibling.value, this.value)" style="flex:1; margin:0; border-color:rgba(217,119,6,0.4);">
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#d97706; font-size:1.1rem; cursor:pointer;">✕</button>`;
             c.appendChild(div);
         };

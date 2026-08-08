@@ -717,7 +717,35 @@
             .main-tab { padding: 12px 15px; font-size: 0.8rem; min-width: auto; }
             .search-input { padding: 14px 18px 14px 48px; border-radius: 16px; }
             .search-icon { left: 16px; font-size: 1.1rem; }
-            .modal-content { padding: 24px 20px; margin: auto; max-height: 92vh; border-radius: 28px; width: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .modal-overlay { padding: 8px; display: flex; align-items: center; justify-content: center; }
+            .modal-content { 
+                padding: 20px 14px; 
+                margin: auto; 
+                max-height: 90vh; 
+                border-radius: 20px; 
+                width: 100%; 
+                max-width: 100%; 
+                box-sizing: border-box; 
+                overflow-y: auto; 
+                overflow-x: hidden; 
+                -webkit-overflow-scrolling: touch; 
+            }
+            .modal-content form > div[style*="grid-template-columns"],
+            .modal-content section > div[style*="grid-template-columns"],
+            .modal-content div[style*="grid-template-columns:1fr 1fr 1fr"],
+            .modal-content div[style*="grid-template-columns: 1fr 1fr 1fr"],
+            .modal-content div[style*="grid-template-columns:1fr 1fr"],
+            .modal-content div[style*="grid-template-columns: 1fr 1fr"] {
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+            }
+            #fertSouchesCatalogue, #fertIndSouchesCatalogue, #fertInhSouchesCatalogue {
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+            }
+            #fertSouchesCatalogue > div, #fertIndSouchesCatalogue > div, #fertInhSouchesCatalogue > div {
+                flex-wrap: wrap;
+            }
             .stat-chip { padding: 6px 12px; font-size: 0.7rem; }
             .stat-value { font-size: 0.75rem; }
             .prep-section { grid-template-columns: 1fr; }
@@ -2526,15 +2554,10 @@
             <h2 id="fertiliteModalTitle" style="margin-bottom:25px;">Nouveau MC — Fertilité</h2>
             <form id="fertiliteForm">
                 <input type="hidden" id="fertEditId">
-                <!-- NOM DU MILIEU -->
                 <div class="form-group">
                     <label>🧫 Désignation / Milieu de Culture (MC)</label>
                     <input type="text" id="fertNom" class="form-input" required placeholder="Ex: TSA, Gélose Columbia, PCA..." list="fertNomList">
                 </div>
-                <!-- CONCENTRATION + DILUTION + UFC -->
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
-                    <div class="form-group" style="margin:0;">
-
                 <!-- INCUBATION -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                     <div class="form-group" style="margin:0;">

@@ -8605,6 +8605,7 @@
         // Sync temps réel
         window.db.collection(FERTILITE_COL).onSnapshot(snap => {
             fertiliteData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            window._fertiliteData = fertiliteData;
             if (window.currentTab === 'fertilite') render();
         }, err => {
             console.error("Fertilite Sync Error:", err);
@@ -8633,6 +8634,7 @@
                 <div style="display:flex; gap:10px;">
                     <button onclick="window.openPlanTravailModal()" style="flex:1; background:transparent; color:#3b82f6; border:2px solid #3b82f6; padding:8px 10px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer;">📝 Plan de Travail (Texte Libre)</button>
                     <button onclick="window.generateFertGlobalRecap()" style="flex:1; background:linear-gradient(to right, #3b82f6, #2563eb); color:white; padding:8px 10px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📊 Résumé Consommables</button>
+                    <button onclick="window.generateFertFeuillesResultats()" style="flex:1; background:linear-gradient(to right, #059669, #047857); color:white; padding:8px 10px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📋 Feuilles Résultats</button>
                 </div>
             </div>`;
 
@@ -9305,8 +9307,9 @@
             return Math.round(res) + ' UFC/mL';
         };
 
-        // Calcul automatique UFC à partir de concentration McF + dilution
-        window._calcUfc = function(concStr, dilStr) {
+        // Calcul automatique UFC à partir de concentration McF + dilution + volumes
+        // Formule : UFC/mL_final = McF × 3×10^8 × dilution_décimale × (Vprise / (Vprise + Vdiluant))
+        window._calcUfc = function(concStr, dilStr, volPriseStr, volDiluantStr) {
             if (!concStr && !dilStr) return '';
             const mStr = String(concStr || '').replace(',', '.');
             const mMatch = mStr.match(/([0-9]*\.?[0-9]+)/);
@@ -9323,6 +9326,12 @@
                     base = base * Math.pow(10, exp);
                 }
             }
+            // Intégration du facteur de dilution des volumes : Vprise / (Vprise + Vdiluant)
+            const vp = parseFloat(String(volPriseStr || '').replace(',', '.')) || 0;
+            const vd = parseFloat(String(volDiluantStr || '').replace(',', '.')) || 0;
+            if (vp > 0 && vd > 0) {
+                base = base * (vp / (vp + vd));
+            }
             if (base <= 0 || isNaN(base)) return '';
             if (base >= 1000000) {
                 const parts = base.toExponential(1).split('e');
@@ -9333,6 +9342,7 @@
             return Math.round(base) + ' UFC/mL';
         };
 
+        // Formule corrigée : UFC/mL_final = McF × 3×10^8 × dilution × (Vprise / (Vprise + Vdiluant))
         window._calcFinalUfc = function(mcfStr, dilStr, volPriseStr, volDiluantStr) {
             if (!mcfStr || !dilStr || !volPriseStr || !volDiluantStr) return '';
             const mMatch = String(mcfStr).replace(',', '.').match(/([0-9]*\.?[0-9]+)/);
@@ -9342,7 +9352,7 @@
             const mcf = parseFloat(mMatch[1]);
             const vp = parseFloat(vMatch[1]);
             const vd = parseFloat(dMatch[1]);
-            if (vd === 0) return '';
+            if (vp <= 0 || vd <= 0) return '';
             let base = mcf * 3e8;
 
             const dStr = String(dilStr).replace(',', '.').replace('×', '*').replace('x', '*').replace('×', '*');
@@ -9352,11 +9362,14 @@
                 base = base * Math.pow(10, exp);
             }
             if (base <= 0 || isNaN(base)) return '';
-            const finalUfc = (base * vp) / vd;
-            
-            if (finalUfc >= 1000) {
-                // Si ça reste très grand (ex: erreur de saisie), on arrondit ou on garde format normal
-                return Math.round(finalUfc) + ' UFC';
+            // Facteur tube : Vprise / (Vprise + Vdiluant)
+            const finalUfc = base * (vp / (vp + vd));
+            if (isNaN(finalUfc) || finalUfc <= 0) return '';
+            if (finalUfc >= 1000000) {
+                const parts = finalUfc.toExponential(1).split('e');
+                const mantisse = parseFloat(parts[0]).toFixed(1).replace('.', ',');
+                const exp = parseInt(parts[1], 10);
+                return `${mantisse} x 10^${exp} UFC`;
             }
             return Math.round(finalUfc) + ' UFC';
         };
@@ -9401,45 +9414,261 @@
         };
 
         // Fonctions déclenchées par oninput sur les champs
+        // Toutes passent maintenant les volumes Vprise/Vdiluant pour un calcul correct
         window.autoCalcFertUfc = function() {
             const c = document.getElementById('fertConcentration').value;
             const d = document.getElementById('fertDilution').value;
-            const r = window._calcUfc(c, d);
+            const vp = document.getElementById('fertVolPrise').value;
+            const vd = document.getElementById('fertVolDiluant').value;
+            const r = window._calcUfc(c, d, vp, vd);
             if (r) document.getElementById('fertUfc').value = r;
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcFertUfcLev = function() {
             const c = document.getElementById('fertConcentrationLev').value;
             const d = document.getElementById('fertDilutionLev').value;
-            const r = window._calcUfc(c, d);
+            const vp = document.getElementById('fertVolPrise').value;
+            const vd = document.getElementById('fertVolDiluant').value;
+            const r = window._calcUfc(c, d, vp, vd);
             if (r) document.getElementById('fertUfcLev').value = r;
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcIndUfc = function() {
             const c = document.getElementById('fertIndConcentration').value;
             const d = document.getElementById('fertIndDilution').value;
-            const r = window._calcUfc(c, d);
+            const vp = document.getElementById('fertVolPrise').value;
+            const vd = document.getElementById('fertVolDiluant').value;
+            const r = window._calcUfc(c, d, vp, vd);
             if (r) document.getElementById('fertIndUfc').value = r;
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcIndUfcLev = function() {
             const c = document.getElementById('fertIndConcentrationLev').value;
             const d = document.getElementById('fertIndDilutionLev').value;
-            const r = window._calcUfc(c, d);
+            const vp = document.getElementById('fertVolPrise').value;
+            const vd = document.getElementById('fertVolDiluant').value;
+            const r = window._calcUfc(c, d, vp, vd);
             if (r) document.getElementById('fertIndUfcLev').value = r;
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcInhUfc = function() {
             const c = document.getElementById('fertInhConcentration').value;
             const d = document.getElementById('fertInhDilution').value;
-            const r = window._calcUfc(c, d);
+            const vp = document.getElementById('fertVolPrise').value;
+            const vd = document.getElementById('fertVolDiluant').value;
+            const r = window._calcUfc(c, d, vp, vd);
             if (r) document.getElementById('fertInhUfc').value = r;
+            if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcInhUfcLev = function() {
             const c = document.getElementById('fertInhConcentrationLev').value;
             const d = document.getElementById('fertInhDilutionLev').value;
-            const r = window._calcUfc(c, d);
+            const vp = document.getElementById('fertVolPrise').value;
+            const vd = document.getElementById('fertVolDiluant').value;
+            const r = window._calcUfc(c, d, vp, vd);
             if (r) document.getElementById('fertInhUfcLev').value = r;
+            if(window.updateAllSouchesResults) window.updateAllSouchesResults();
+        };
+
+        // ---- Génération PDF Feuilles de Résultats (tableau vierge par milieu) ----
+        window.generateFertFeuillesResultats = function() {
+            const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
+            if (checkedIds.length === 0) {
+                window.showToast("Cochez au moins un MC pour les feuilles de résultats !", "error");
+                return;
+            }
+            const fertiliteData = window._fertiliteData || [];
+            const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
+            if (selectedFiches.length === 0) { window.showToast("Aucun milieu sélectionné.", "error"); return; }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const date = new Date().toLocaleDateString('fr-FR');
+
+            const cU = (str) => {
+                if (!str) return '';
+                const supMap = {'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','⁺':'+','⁻':'-'};
+                let s = String(str);
+                // Convert superscript chars
+                Object.keys(supMap).forEach(k => { s = s.split(k).join(supMap[k]); });
+                // Convert unicode powers like ³ etc already done above
+                s = s.replace(/×/g, 'x');
+                // Clean up extra ^ if any
+                return s;
+            };
+
+            // Dessine un tableau de résultats pour une section
+            // ufcMap : { [soucheName]: '1,5 x 10^4 UFC/mL' } (optionnel)
+            const drawResultSection = (doc, souches, sectionLabel, startY, ufcMap) => {
+                let y = startY;
+                if (!souches || souches.length === 0) return y;
+                if (y > 248) { doc.addPage(); y = 20; }
+
+                // --- Label section : texte encadré simple ---
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.setTextColor(0, 0, 0);
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.4);
+                doc.rect(15, y, pageWidth - 30, 7, 'D');
+                doc.text(sectionLabel, 18, y + 5);
+                y += 9;
+
+                // --- En-tête colonnes ---
+                const colWidths = [63, 32, 20, 20, 22, 32];
+                const colHeaders = ['Souche / Micro-organisme', 'UFC Attendus', 'Boite 1', 'Boite 2', 'Moyenne', 'Observation'];
+                const rowH = 9;
+                let xOffset = 15;
+
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.3);
+                doc.rect(15, y, pageWidth - 30, rowH, 'D');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.setTextColor(0, 0, 0);
+                colHeaders.forEach((h, i) => {
+                    doc.text(h, xOffset + 2, y + 6);
+                    xOffset += colWidths[i];
+                    if (i < colHeaders.length - 1) doc.line(xOffset, y, xOffset, y + rowH);
+                });
+                y += rowH;
+
+                // --- Lignes pour chaque souche (UFC Attendus pré-rempli si dispo) ---
+                souches.forEach((s) => {
+                    if (y + rowH > pageHeight - 18) { doc.addPage(); y = 20; }
+
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(0.2);
+                    doc.rect(15, y, pageWidth - 30, rowH, 'D');
+
+                    xOffset = 15;
+                    const ufcVal = (ufcMap && ufcMap[s]) ? cU(ufcMap[s]) : '';
+                    const rowData = [cU(s), ufcVal, '', '', '', ''];
+                    rowData.forEach((val, i) => {
+                        doc.setFont('helvetica', (i === 0 || i === 1) ? 'bold' : 'normal');
+                        doc.setFontSize(i === 0 ? 7 : 7.5);
+                        doc.setTextColor(i === 1 ? 20 : 0, i === 1 ? 80 : 0, i === 1 ? 20 : 0); // UFC en vert foncé
+                        if (val) {
+                            const lines = doc.splitTextToSize(val, colWidths[i] - 3);
+                            doc.text(lines[0] || '', xOffset + 2, y + 6);
+                        }
+                        xOffset += colWidths[i];
+                        if (i < rowData.length - 1) {
+                            doc.setDrawColor(0, 0, 0);
+                            doc.setLineWidth(0.2);
+                            doc.line(xOffset, y, xOffset, y + rowH);
+                        }
+                    });
+                    y += rowH;
+                });
+
+                return y + 4;
+            };
+
+            selectedFiches.forEach((f, idx) => {
+                if (idx > 0) doc.addPage();
+
+                let y = 15;
+
+                // ===== EN-TETE PAGE : noir/blanc, texte noir sur fond blanc =====
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.5);
+                doc.rect(0, 0, pageWidth, 13, 'D');
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text('FEUILLE DE RESULTATS  -  FERTILITE', 15, 9);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Date : ${date}`, pageWidth - 15, 9, { align: 'right' });
+
+                y = 20;
+
+                // Nom MC
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(13);
+                doc.setTextColor(0, 0, 0);
+                doc.text('Milieu : ' + cU(f.nom || 'MC'), 15, y);
+                y += 5;
+                doc.setLineWidth(0.5);
+                doc.setDrawColor(0,0,0);
+                doc.line(15, y, pageWidth - 15, y);
+                y += 5;
+
+                // Infos paramètres
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(40, 40, 40);
+                const bDil = cU(f.dilution || '').replace(/\^(-?\d+)/g, (m, p) => ' x 10^' + p) || '—';
+                const lDil = cU(f.dilutionLev || '').replace(/\^(-?\d+)/g, (m, p) => ' x 10^' + p) || '—';
+                // Infos incubation
+                let incubStr = '—';
+                if (f.incubConditions && f.incubConditions.length > 0) {
+                    incubStr = f.incubConditions.map(c => [c.duree, c.temp].filter(Boolean).join(' / ')).filter(Boolean).join(' | ');
+                } else if (f.incubDuree || f.incubTemp) {
+                    incubStr = [f.incubDuree, f.incubTemp].filter(Boolean).join(' / ');
+                }
+                const paramLines = [
+                    `Incubation : ${incubStr}`,
+                    `Bacteries       : Dilution ${bDil}   UFC attendus : ${cU(f.ufc) || '—'}`,
+                    `Lev./Moisiss.   : Dilution ${lDil}   UFC attendus : ${cU(f.ufcLev) || '—'}`,
+                    `Vol. inoculum : ${f.volPrise || '0.1'} mL   Vol. diluant : ${f.volDiluant || '9'} mL`,
+                ];
+                paramLines.forEach(line => {
+                    doc.text(line, 15, y);
+                    y += 5;
+                });
+                y += 4;
+                doc.setLineWidth(0.2);
+                doc.setDrawColor(180, 180, 180);
+                doc.line(15, y - 2, pageWidth - 15, y - 2);
+                y += 2;
+
+                // === Calcul UFC par souche (utilise mcfMap + dilution + volumes) ===
+                const vp = f.volPrise || '0.1';
+                const vd = f.volDiluant || '9';
+                const buildUfcMap = (souches, dilBact, dilLev) => {
+                    const map = {};
+                    (souches || []).forEach(s => {
+                        const mcfVal = f.mcfMap && f.mcfMap[s] ? f.mcfMap[s] : null;
+                        if (!mcfVal) return;
+                        const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
+                        const dil = isYeast ? dilLev : dilBact;
+                        const res = window._calcFinalUfc(mcfVal, dil, vp, vd);
+                        if (res) map[s] = res;
+                    });
+                    return map;
+                };
+
+                // ===== SECTION FERTILITE =====
+                if (f.souches && f.souches.length > 0) {
+                    const ufcMapFert = buildUfcMap(f.souches, f.dilution, f.dilutionLev);
+                    y = drawResultSection(doc, f.souches, 'Fertilite', y, ufcMapFert);
+                }
+
+                // ===== SECTION INDICATION =====
+                if (f.indSouches && f.indSouches.length > 0) {
+                    const ufcMapInd = buildUfcMap(f.indSouches, f.indDilution, f.indDilutionLev);
+                    y = drawResultSection(doc, f.indSouches, 'Indication', y, ufcMapInd);
+                }
+
+                // ===== SECTION INHIBITION =====
+                if (f.inhSouches && f.inhSouches.length > 0) {
+                    const ufcMapInh = buildUfcMap(f.inhSouches, f.inhDilution, f.inhDilutionLev);
+                    y = drawResultSection(doc, f.inhSouches, 'Inhibition', y, ufcMapInh);
+                }
+
+                // Footer
+                doc.setFont('helvetica', 'italic');
+                doc.setFontSize(7);
+                doc.setTextColor(150, 150, 150);
+                doc.text('Validé par : ____________________________     Signature : ____________________________', 15, pageHeight - 10);
+                doc.text(`Page ${idx + 1} / ${selectedFiches.length}`, pageWidth - 15, pageHeight - 10, { align: 'right' });
+            });
+
+            doc.save(`Feuilles_Resultats_Fertilite_${date.replace(/\//g,'_')}.pdf`);
         };
 
         // ---- Génération PDF RECAPITULATIF ----

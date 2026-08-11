@@ -8628,13 +8628,26 @@
                 return;
             }
 
+            // Tri
+            filtered.sort((a, b) => {
+                if (window.sortBy === 'name') {
+                    const na = (a.nom || '').toLowerCase();
+                    const nb = (b.nom || '').toLowerCase();
+                    return window.sortOrder === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
+                } else {
+                    const ta = a.updatedAt || 0;
+                    const tb = b.updatedAt || 0;
+                    return window.sortOrder === 'desc' ? tb - ta : ta - tb;
+                }
+            });
+
             const recapHtml = `
             <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; background:rgba(59,130,246,0.05); padding:10px; border-radius:10px; border:1px solid rgba(59,130,246,0.2);">
                 <div style="font-size:0.75rem; color:#1e40af; font-weight:800;">Cochez les milieux et choisissez votre document :</div>
-                <div style="display:flex; gap:10px;">
-                    <button onclick="window.openPlanTravailModal()" style="flex:1; background:transparent; color:#3b82f6; border:2px solid #3b82f6; padding:8px 10px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer;">📝 Plan de Travail (Texte Libre)</button>
-                    <button onclick="window.generateFertGlobalRecap()" style="flex:1; background:linear-gradient(to right, #3b82f6, #2563eb); color:white; padding:8px 10px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📊 Résumé Consommables</button>
-                    <button onclick="window.generateFertFeuillesResultats()" style="flex:1; background:linear-gradient(to right, #059669, #047857); color:white; padding:8px 10px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📋 Feuilles Résultats</button>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button onclick="window.openPlanTravailModal()" style="flex:1 1 150px; background:transparent; color:#3b82f6; border:2px solid #3b82f6; padding:8px 10px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer;">📝 Plan de Travail (Texte Libre)</button>
+                    <button onclick="window.generateFertGlobalRecap()" style="flex:1 1 150px; background:linear-gradient(to right, #3b82f6, #2563eb); color:white; padding:8px 10px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📊 Résumé Consommables</button>
+                    <button onclick="window.generateFertFeuillesResultats()" style="flex:1 1 150px; background:linear-gradient(to right, #059669, #047857); color:white; padding:8px 10px; border:none; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">📋 Feuilles Résultats</button>
                 </div>
             </div>`;
 
@@ -9398,7 +9411,12 @@
                     else if (isInh) dil = isYeast ? document.getElementById('fertInhDilutionLev').value : document.getElementById('fertInhDilution').value;
                     else dil = isYeast ? lDil : bDil;
                     
-                    const res = window._calcFinalUfc(mcfInp.value, dil, volPrise, volDiluant);
+                    let res = '';
+                    if (isYeast) {
+                        res = mcfInp.value ? (mcfInp.value + ' McF') : '';
+                    } else {
+                        res = window._calcFinalUfc(mcfInp.value, dil, volPrise, volDiluant);
+                    }
                     resSpan.innerText = res ? `${res}` : '';
                 });
             };
@@ -9425,12 +9443,6 @@
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcFertUfcLev = function() {
-            const c = document.getElementById('fertConcentrationLev').value;
-            const d = document.getElementById('fertDilutionLev').value;
-            const vp = document.getElementById('fertVolPrise').value;
-            const vd = document.getElementById('fertVolDiluant').value;
-            const r = window._calcUfc(c, d, vp, vd);
-            if (r) document.getElementById('fertUfcLev').value = r;
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcIndUfc = function() {
@@ -9443,12 +9455,6 @@
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcIndUfcLev = function() {
-            const c = document.getElementById('fertIndConcentrationLev').value;
-            const d = document.getElementById('fertIndDilutionLev').value;
-            const vp = document.getElementById('fertVolPrise').value;
-            const vd = document.getElementById('fertVolDiluant').value;
-            const r = window._calcUfc(c, d, vp, vd);
-            if (r) document.getElementById('fertIndUfcLev').value = r;
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcInhUfc = function() {
@@ -9461,12 +9467,6 @@
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
         window.autoCalcInhUfcLev = function() {
-            const c = document.getElementById('fertInhConcentrationLev').value;
-            const d = document.getElementById('fertInhDilutionLev').value;
-            const vp = document.getElementById('fertVolPrise').value;
-            const vd = document.getElementById('fertVolDiluant').value;
-            const r = window._calcUfc(c, d, vp, vd);
-            if (r) document.getElementById('fertInhUfcLev').value = r;
             if(window.updateAllSouchesResults) window.updateAllSouchesResults();
         };
 
@@ -9516,36 +9516,60 @@
                 doc.text(sectionLabel, 18, y + 5);
                 y += 9;
 
-                // --- En-tête colonnes ---
-                const colWidths = [63, 32, 20, 20, 22, 32];
-                const colHeaders = ['Souche / Micro-organisme', 'UFC Attendus', 'Boite 1', 'Boite 2', 'Moyenne', 'Observation'];
-                const rowH = 9;
-                let xOffset = 15;
-
+                // --- En-tête colonnes 2 niveaux ---
+                const rowH = 10;
                 doc.setDrawColor(0, 0, 0);
                 doc.setLineWidth(0.3);
                 doc.rect(15, y, pageWidth - 30, rowH, 'D');
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(7.5);
                 doc.setTextColor(0, 0, 0);
-                colHeaders.forEach((h, i) => {
-                    doc.text(h, xOffset + 2, y + 6);
-                    xOffset += colWidths[i];
-                    if (i < colHeaders.length - 1) doc.line(xOffset, y, xOffset, y + rowH);
-                });
+                
+                doc.text('Souche / Micro-organisme', 17, y + 6);
+                doc.text('UFC Attendus', 62, y + 6);
+                doc.text('Milieu de Référence', 84, y + 3.5);
+                doc.text('Milieu Testé', 130, y + 3.5);
+                doc.text('Observation', 164, y + 6);
+
+                doc.setFontSize(6.5);
+                doc.text('Bte 1', 84, y + 8.5);
+                doc.text('Bte 2', 97, y + 8.5);
+                doc.text('Moyenne', 109, y + 8.5);
+                doc.text('Bte 1', 124, y + 8.5);
+                doc.text('Bte 2', 137, y + 8.5);
+                doc.text('Moyenne', 149, y + 8.5);
+
+                // Lignes verticales principales
+                doc.line(60, y, 60, y + rowH);
+                doc.line(82, y, 82, y + rowH);
+                doc.line(122, y, 122, y + rowH);
+                doc.line(162, y, 162, y + rowH);
+
+                // Ligne horizontale pour sous-colonnes
+                doc.line(82, y + 5, 162, y + 5);
+
+                // Lignes verticales pour sous-colonnes
+                doc.line(95, y + 5, 95, y + rowH);
+                doc.line(108, y + 5, 108, y + rowH);
+                doc.line(135, y + 5, 135, y + rowH);
+                doc.line(148, y + 5, 148, y + rowH);
+
                 y += rowH;
 
-                // --- Lignes pour chaque souche (UFC Attendus pré-rempli si dispo) ---
+                // --- Lignes pour chaque souche ---
+                const colWidths = [45, 22, 13, 13, 14, 13, 13, 14, 33];
+                const rowHData = 9;
+                
                 souches.forEach((s) => {
-                    if (y + rowH > pageHeight - 18) { doc.addPage(); y = 20; }
+                    if (y + rowHData > pageHeight - 18) { doc.addPage(); y = 20; }
 
                     doc.setDrawColor(0, 0, 0);
                     doc.setLineWidth(0.2);
-                    doc.rect(15, y, pageWidth - 30, rowH, 'D');
+                    doc.rect(15, y, pageWidth - 30, rowHData, 'D');
 
-                    xOffset = 15;
+                    let xOffset = 15;
                     const ufcVal = (ufcMap && ufcMap[s]) ? cU(ufcMap[s]) : '';
-                    const rowData = [cU(s), ufcVal, '', '', '', ''];
+                    const rowData = [cU(s), ufcVal, '', '', '', '', '', '', ''];
                     rowData.forEach((val, i) => {
                         doc.setFont('helvetica', (i === 0 || i === 1) ? 'bold' : 'normal');
                         doc.setFontSize(i === 0 ? 7 : 7.5);
@@ -9558,10 +9582,10 @@
                         if (i < rowData.length - 1) {
                             doc.setDrawColor(0, 0, 0);
                             doc.setLineWidth(0.2);
-                            doc.line(xOffset, y, xOffset, y + rowH);
+                            doc.line(xOffset, y, xOffset, y + rowHData);
                         }
                     });
-                    y += rowH;
+                    y += rowHData;
                 });
 
                 return y + 4;
@@ -9612,8 +9636,8 @@
                 }
                 const paramLines = [
                     `Incubation : ${incubStr}`,
-                    `Bacteries       : Dilution ${bDil}   UFC attendus : ${cU(f.ufc) || '—'}`,
-                    `Lev./Moisiss.   : Dilution ${lDil}   UFC attendus : ${cU(f.ufcLev) || '—'}`,
+                    `Bacteries       : Dilution (${cU(f.concentration) || '—'}MCF)${bDil}   UFC attendus : ${cU(f.ufc) || '9000 UFC/mL'}`,
+                    `Lev./Moisiss.   : Dilution (${cU(f.concentrationLev) || '—'}MCF)${lDil}   UFC attendus : ${f.ufcLev ? cU(f.ufcLev) : '[10-100 UFC]'}`,
                     `Vol. inoculum : ${f.volPrise || '0.1'} mL   Vol. diluant : ${f.volDiluant || '9'} mL`,
                 ];
                 paramLines.forEach(line => {
@@ -9635,9 +9659,12 @@
                         const mcfVal = f.mcfMap && f.mcfMap[s] ? f.mcfMap[s] : null;
                         if (!mcfVal) return;
                         const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
-                        const dil = isYeast ? dilLev : dilBact;
-                        const res = window._calcFinalUfc(mcfVal, dil, vp, vd);
-                        if (res) map[s] = res;
+                        if (isYeast) {
+                            map[s] = f.ufcLev ? cU(f.ufcLev) : '[10-100 UFC]';
+                        } else {
+                            const res = window._calcFinalUfc(mcfVal, dilBact, vp, vd);
+                            if (res) map[s] = res;
+                        }
                     });
                     return map;
                 };
@@ -9721,11 +9748,15 @@
                     if (f.mcfMap && f.mcfMap[s]) { 
                         _mcf = f.mcfMap[s] + ' McF'; 
                         const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
-                        let dil = isYeast ? f.dilutionLev : f.dilution;
-                        if (f.indSouches && f.indSouches.includes(s)) dil = isYeast ? f.indDilutionLev : f.indDilution;
-                        else if (f.inhSouches && f.inhSouches.includes(s)) dil = isYeast ? f.inhDilutionLev : f.inhDilution;
-                        const finalRes = window._calcFinalUfc(f.mcfMap[s], dil, f.volPrise || '0.1', f.volDiluant || '9');
-                        _ufc = finalRes || '—';
+                        if (isYeast) {
+                            _ufc = f.ufcLev ? cU(f.ufcLev) : '[10-100 UFC]';
+                        } else {
+                            let dil = f.dilution;
+                            if (f.indSouches && f.indSouches.includes(s)) dil = f.indDilution;
+                            else if (f.inhSouches && f.inhSouches.includes(s)) dil = f.inhDilution;
+                            const finalRes = window._calcFinalUfc(f.mcfMap[s], dil, f.volPrise || '0.1', f.volDiluant || '9');
+                            _ufc = finalRes || '—';
+                        }
                         break; 
                     }
                 }
@@ -9981,7 +10012,7 @@
             // Paramètres Fertilité (Bactéries / Levures)
             const fertParamsBody = [
                 ['Bacteries', cU(f.concentration), cU(f.dilution), cU(f.ufc)],
-                ['Levures / Moisissures', cU(f.concentrationLev), cU(f.dilutionLev), cU(f.ufcLev)]
+                ['Levures / Moisissures', cU(f.concentrationLev), cU(f.dilutionLev), f.ufcLev ? cU(f.ufcLev) : '[10-100 UFC]']
             ];
             doc.autoTable({
                 startY: y,
@@ -10004,6 +10035,7 @@
                         let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
                         const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
                         let res = window._calcFinalUfc(mcf, isYeast ? f.dilutionLev : f.dilution, f.volPrise || '0.1', f.volDiluant || '9');
+                        if (isYeast) res = f.ufcLev ? cU(f.ufcLev) : '[10-100 UFC]';
                         return [s, mcf ? mcf + ' McF' : '-', res || '-', ''];
                     }),
                     theme: 'grid',
@@ -10023,7 +10055,7 @@
                 doc.line(15, y, pageWidth - 15, y); y += 4;
                 const indParamsBody = [
                     ['Bacteries', cU(f.indConcentration), cU(f.indDilution), cU(f.indUfc)],
-                    ['Levures / Moisissures', cU(f.indConcentrationLev), cU(f.indDilutionLev), cU(f.indUfcLev)]
+                    ['Levures / Moisissures', cU(f.indConcentrationLev), cU(f.indDilutionLev), f.indUfcLev ? cU(f.indUfcLev) : '[10-100 UFC]']
                 ];
                 doc.autoTable({
                     startY: y,
@@ -10042,6 +10074,7 @@
                             let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
                             const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
                             let res = window._calcFinalUfc(mcf, isYeast ? f.indDilutionLev : f.indDilution, f.volPrise || '0.1', f.volDiluant || '9');
+                            if (isYeast) res = f.indUfcLev ? cU(f.indUfcLev) : '[10-100 UFC]';
                             return [s, mcf ? mcf + ' McF' : '-', res || '-', ''];
                         }), theme: 'grid',
                         headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },
@@ -10081,7 +10114,7 @@
                 doc.line(15, y, pageWidth - 15, y); y += 4;
                 const inhParamsBody = [
                     ['Bacteries', cU(f.inhConcentration), cU(f.inhDilution), cU(f.inhUfc)],
-                    ['Levures / Moisissures', cU(f.inhConcentrationLev), cU(f.inhDilutionLev), cU(f.inhUfcLev)]
+                    ['Levures / Moisissures', cU(f.inhConcentrationLev), cU(f.inhDilutionLev), f.inhUfcLev ? cU(f.inhUfcLev) : '[10-100 UFC]']
                 ];
                 doc.autoTable({
                     startY: y,
@@ -10100,6 +10133,7 @@
                             let mcf = (f.mcfMap && f.mcfMap[s]) ? f.mcfMap[s] : '';
                             const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
                             let res = window._calcFinalUfc(mcf, isYeast ? f.inhDilutionLev : f.inhDilution, f.volPrise || '0.1', f.volDiluant || '9');
+                            if (isYeast) res = f.inhUfcLev ? cU(f.inhUfcLev) : '[10-100 UFC]';
                             return [s, mcf ? mcf + ' McF' : '-', res || '-', ''];
                         }), theme: 'grid',
                         headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8 },

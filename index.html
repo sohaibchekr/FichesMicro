@@ -2835,20 +2835,34 @@
         </div>
     </div>
 
-    <!-- Feuilles Résultats Config Modal -->
+    <!-- Feuilles Résultats Config Modal (2 étapes) -->
     <div id="feuillesResultatsModalOverlay" class="modal-overlay">
-        <div class="modal-content" style="max-width:700px;">
+        <div class="modal-content" style="max-width:960px; max-height:92vh; overflow-y:auto;">
             <button class="close-modal" onclick="window.closeModal('feuillesResultatsModalOverlay')">✕</button>
-            <h2 style="margin-bottom:20px; color:#059669; font-size:1.3rem; font-weight:900; background:none;-webkit-text-fill-color:#059669;letter-spacing:0;">📋 Configuration Lots - Feuilles de Résultats</h2>
-            <div style="font-size:0.8rem; color:var(--text-dim); margin-bottom:15px; font-weight:600; line-height:1.4;">
-                Définissez les numéros de Lot pour les milieux testés. Lors de la saisie, le lot précédent (préparé) sera assigné comme <strong>Lot Référence</strong> automatiquement.
+            <!-- ÉTAPE 1 : Sélection des Lots -->
+            <div id="frStep1Wrapper">
+                <h2 style="margin-bottom:10px; color:#059669; font-size:1.2rem; font-weight:900; background:none;-webkit-text-fill-color:#059669;letter-spacing:0;">📋 Étape 1/2 — Lots</h2>
+                <div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:14px; font-weight:600; line-height:1.4;">
+                    Sélectionnez le lot <strong>Testé</strong> et le lot <strong>Référence</strong>. Le lot précédent est proposé automatiquement.
+                </div>
+                <div id="feuillesResultatsLotsContainer" style="display:flex; flex-direction:column; gap:15px; max-height:45vh; overflow-y:auto; padding:5px; margin-bottom:15px;"><!-- Rempli en JS --></div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button type="button" onclick="window.closeModal('feuillesResultatsModalOverlay')" class="cancel-btn" style="flex:1;">Annuler</button>
+                    <button type="button" onclick="window.goToResultsStep2()" class="save-btn" style="flex:2; background:linear-gradient(to right, #3b82f6, #2563eb);">Suivant : Saisie des Résultats →</button>
+                </div>
             </div>
-            <div id="feuillesResultatsLotsContainer" style="display:flex; flex-direction:column; gap:15px; max-height:50vh; overflow-y:auto; padding:5px; margin-bottom:15px;">
-                <!-- Rempli en JS -->
-            </div>
-            <div style="display:flex; justify-content:space-between; gap:10px; margin-top:20px;">
-                <button type="button" onclick="window.closeModal('feuillesResultatsModalOverlay')" class="cancel-btn" style="flex:1;">Annuler</button>
-                <button type="button" onclick="window.confirmAndGenerateFertFeuillesResultats()" class="save-btn" style="flex:2; background:linear-gradient(to right, #059669, #10b981);">🖨️ GÉNÉRER LE PDF</button>
+            <!-- ÉTAPE 2 : Saisie des Résultats -->
+            <div id="frStep2Wrapper" style="display:none;">
+                <h2 style="margin-bottom:10px; color:#3b82f6; font-size:1.2rem; font-weight:900; background:none;-webkit-text-fill-color:#3b82f6;letter-spacing:0;">📊 Étape 2/2 — Saisie des Résultats</h2>
+                <div style="background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; margin-bottom:14px;">
+                    <div style="font-size:0.7rem; font-weight:900; color:#3b82f6; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">🧫 Inoculum de Départ — valeur partagée par souche (UFC/mL ou McF)</div>
+                    <div id="frInoculumContainer" style="display:flex; flex-wrap:wrap; gap:8px; max-height:22vh; overflow-y:auto;"></div>
+                </div>
+                <div id="frResultsContainer" style="display:flex; flex-direction:column; gap:20px; max-height:48vh; overflow-y:auto; padding:4px;"></div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button type="button" onclick="window.goBackToStep1()" class="cancel-btn" style="flex:1;">← Retour</button>
+                    <button type="button" onclick="window.confirmAndGenerateFertFeuillesResultats()" class="save-btn" style="flex:2; background:linear-gradient(to right, #059669, #10b981);">🖨️ GÉNÉRER LE PDF</button>
+                </div>
             </div>
         </div>
     </div>
@@ -9618,12 +9632,181 @@
             if(!found) refSelect.selectedIndex = 0;
         };
 
+        // ---- Aide: ID safe pour nom de souche ----
+        window._frSoucheKey = function(s) {
+            try { return btoa(unescape(encodeURIComponent(s))).replace(/[^a-zA-Z0-9]/g,'').slice(0,24); }
+            catch(e) { return s.replace(/[^a-zA-Z0-9]/g,'').slice(0,24); }
+        };
+
+        // ---- Étape 2: construction du tableau de saisie ----
+        window.goToResultsStep2 = function() {
+            const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
+            const fertiliteData = window._fertiliteData || [];
+            const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
+            if (selectedFiches.length === 0) return;
+
+            // Collecter toutes les souches uniques
+            const allSouches = [];
+            const seen = {};
+            selectedFiches.forEach(f => {
+                [...(f.souches||[]), ...(f.indSouches||[]), ...(f.inhSouches||[])].forEach(s => {
+                    if (s && !seen[s]) { seen[s] = true; allSouches.push(s); }
+                });
+            });
+
+            // --- Zone Inoculum ---
+            const inocContainer = document.getElementById('frInoculumContainer');
+            inocContainer.innerHTML = '';
+            allSouches.forEach(s => {
+                const key = window._frSoucheKey(s);
+                const cell = document.createElement('div');
+                cell.style.cssText = 'display:flex; flex-direction:column; gap:4px; min-width:160px; flex:1 1 160px;';
+                cell.innerHTML = `
+                    <label style="font-size:0.68rem; font-weight:800; color:var(--text-dim); word-break:break-word;" title="${s}">${s}</label>
+                    <input type="text" id="fr_inoc_${key}" data-souche="${s.replace(/"/g,'&quot;')}"
+                        class="form-input fr-inoc-input" placeholder="ex: 1500 ou 0.5 McF"
+                        style="padding:5px 8px; font-size:0.78rem; margin:0;" oninput="window._syncFrInoculumReadouts()">
+                `;
+                inocContainer.appendChild(cell);
+            });
+
+            // --- Zone Résultats par MC ---
+            const resultsContainer = document.getElementById('frResultsContainer');
+            resultsContainer.innerHTML = '';
+            const iS = 'padding:4px 5px; font-size:0.73rem; margin:0; border:1px solid #e2e8f0; border-radius:5px; width:100%; box-sizing:border-box;';
+            const aS = 'padding:4px 5px; font-size:0.73rem; margin:0; border:1px solid #bbf7d0; border-radius:5px; width:100%; box-sizing:border-box; background:#f0fdf4; font-weight:800; color:#059669;';
+            const rS = 'padding:4px 5px; font-size:0.73rem; margin:0; border:1px solid #fde68a; border-radius:5px; width:100%; box-sizing:border-box; background:#fffbeb; font-weight:900; color:#b45309;';
+
+            selectedFiches.forEach(f => {
+                const fid = f.id;
+                const testLotEl = document.getElementById('fr_testLot_' + fid);
+                const refLotEl = document.getElementById('fr_refLot_' + fid);
+                const testLotName = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? (testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
+                const refLotName  = (refLotEl  && refLotEl.options[refLotEl.selectedIndex])  ? (refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
+
+                const buildTable = (souches, secKey, secLabel, color) => {
+                    if (!souches || souches.length === 0) return '';
+                    const rows = souches.map(s => {
+                        const sk = window._frSoucheKey(s);
+                        const b = `frr_${fid}_${secKey}_${sk}`;
+                        const inocId = `fr_inoc_${sk}`;
+                        return `<tr>
+                            <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">${s}</td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="text" id="${b}_inoc" readonly class="fr-inoc-readout" data-inoc-id="${inocId}" placeholder="—" style="${aS} cursor:default;"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_rmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_tmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_ratio" readonly style="${rS} cursor:default;" placeholder="—"></td>
+                        </tr>`;
+                    }).join('');
+                    return `<div style="margin-bottom:12px;">
+                        <div style="font-size:0.63rem; font-weight:900; color:${color}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">${secLabel}</div>
+                        <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; min-width:700px;">
+                            <thead><tr style="background:#f8fafc;">
+                                <th style="padding:4px 6px; text-align:left; font-size:0.62rem; border:1px solid #e2e8f0;">Souche</th>
+                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(59,130,246,0.07);">Inoculum départ</th>
+                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(217,119,6,0.07);">Réf. Bte 1</th>
+                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(217,119,6,0.07);">Réf. Bte 2</th>
+                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(5,150,105,0.09);">Réf. Moy.</th>
+                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(79,70,229,0.07);">Testé Bte 1</th>
+                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(79,70,229,0.07);">Testé Bte 2</th>
+                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(5,150,105,0.09);">Testé Moy.</th>
+                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(217,119,6,0.15); font-weight:900;">Ratio T/R</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table></div>
+                    </div>`;
+                };
+
+                const mcDiv = document.createElement('div');
+                mcDiv.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px;';
+                mcDiv.innerHTML = `
+                    <div style="font-weight:900; font-size:0.9rem; color:var(--text-main); margin-bottom:4px;">🧪 ${f.nom || 'MC'}</div>
+                    <div style="font-size:0.65rem; color:var(--text-dim); margin-bottom:12px;">
+                        ${testLotName ? '📦 Testé : Lot ' + testLotName : ''}
+                        ${refLotName ? ' &nbsp;|&nbsp; 📦 Réf. : Lot ' + refLotName : ''}
+                    </div>
+                    ${buildTable(f.souches,    'fert', 'Fertilité',  'var(--success)')}
+                    ${buildTable(f.indSouches, 'ind',  'Indication', '#d97706')}
+                    ${buildTable(f.inhSouches, 'inh',  'Inhibition', '#ef4444')}
+                `;
+                resultsContainer.appendChild(mcDiv);
+            });
+
+            // Sync inoculum readouts
+            window._syncFrInoculumReadouts();
+
+            // Afficher étape 2
+            document.getElementById('frStep1Wrapper').style.display = 'none';
+            document.getElementById('frStep2Wrapper').style.display = '';
+        };
+
+        window.goBackToStep1 = function() {
+            document.getElementById('frStep2Wrapper').style.display = 'none';
+            document.getElementById('frStep1Wrapper').style.display = '';
+        };
+
+        window._syncFrInoculumReadouts = function() {
+            document.querySelectorAll('.fr-inoc-readout').forEach(el => {
+                const srcId = el.getAttribute('data-inoc-id');
+                const srcEl = document.getElementById(srcId);
+                el.value = srcEl ? srcEl.value : '';
+            });
+        };
+
+        window._calcFrRow = function(base) {
+            const v = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) || null : null; };
+            const rb1 = v(base + '_rb1'), rb2 = v(base + '_rb2');
+            const tb1 = v(base + '_tb1'), tb2 = v(base + '_tb2');
+
+            // Moyenne = somme / nb valeurs saisies (1 ou 2)
+            const avg = (a, b) => {
+                if (a !== null && b !== null) return (a + b) / 2;
+                if (a !== null) return a;
+                if (b !== null) return b;
+                return null;
+            };
+            const rmoy = avg(rb1, rb2);
+            const tmoy = avg(tb1, tb2);
+
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val !== null ? val.toFixed(1) : ''; };
+            set(base + '_rmoy', rmoy);
+            set(base + '_tmoy', tmoy);
+
+            const ratioEl = document.getElementById(base + '_ratio');
+            if (ratioEl) ratioEl.value = (rmoy !== null && tmoy !== null && rmoy !== 0) ? (tmoy / rmoy).toFixed(3) : '';
+
+            window._syncFrInoculumReadouts();
+        };
+
         window.confirmAndGenerateFertFeuillesResultats = function() {
             window.closeModal('feuillesResultatsModalOverlay');
             const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
             const fertiliteData = window._fertiliteData || [];
             const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
             if (selectedFiches.length === 0) return;
+
+            // Collecter inoculum partagé
+            const inoculumGlobal = {};
+            document.querySelectorAll('.fr-inoc-input').forEach(el => {
+                const s = el.getAttribute('data-souche');
+                if (s && el.value.trim()) inoculumGlobal[s] = el.value.trim();
+            });
+
+            // Collecter résultats par fiche / section / souche
+            const collectResults = (ficheId, souches, secKey) => {
+                const map = {};
+                (souches || []).forEach(s => {
+                    const b = 'frr_' + ficheId + '_' + secKey + '_' + window._frSoucheKey(s);
+                    const g = suf => { const el = document.getElementById(b + suf); return el ? el.value.trim() : ''; };
+                    map[s] = { rb1: g('_rb1'), rb2: g('_rb2'), rmoy: g('_rmoy'), tb1: g('_tb1'), tb2: g('_tb2'), tmoy: g('_tmoy'), ratio: g('_ratio') };
+                });
+                return map;
+            };
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -9645,7 +9828,7 @@
 
             // Dessine un tableau de résultats pour une section
             // ufcMap : { [soucheName]: '1,5 x 10^4 UFC/mL' } (optionnel)
-            const drawResultSection = (doc, souches, sectionLabel, startY, ufcMap, testLot, refLot) => {
+            const drawResultSection = (doc, souches, sectionLabel, startY, ufcMap, testLot, refLot, inoculumMap, resultsMap) => {
                 let y = startY;
                 if (!souches || souches.length === 0) return y;
                 if (y > 248) { doc.addPage(); y = 20; }
@@ -9714,7 +9897,9 @@
 
                     let xOffset = 15;
                     const ufcVal = (ufcMap && ufcMap[s]) ? cU(ufcMap[s]) : '';
-                    const rowData = [cU(s), '', '', '', '', '', '', '', '']; // UFC / Inoculum is blank for manual writing
+                    const inoc = (inoculumMap && inoculumMap[s]) ? inoculumMap[s] : '';
+                    const rr   = (resultsMap  && resultsMap[s])  ? resultsMap[s] : {};
+                    const rowData = [cU(s), inoc, rr.rb1||'', rr.rb2||'', rr.rmoy||'', rr.tb1||'', rr.tb2||'', rr.tmoy||'', rr.ratio ? ('R='+rr.ratio) : ''];
                     rowData.forEach((val, i) => {
                         doc.setFont('helvetica', (i === 0 || i === 1) ? 'bold' : 'normal');
                         doc.setFontSize(i === 0 ? 7 : 7.5);
@@ -9820,23 +10005,25 @@
                 const testL = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') : '';
                 const refL = (refLotEl && refLotEl.options[refLotEl.selectedIndex]) ? refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') : '';
 
-
                 // ===== SECTION FERTILITE =====
                 if (f.souches && f.souches.length > 0) {
                     const ufcMapFert = buildUfcMap(f.souches, f.dilution, f.dilutionLev);
-                    y = drawResultSection(doc, f.souches, 'Fertilite', y, ufcMapFert, testL, refL);
+                    const resFert = collectResults(f.id, f.souches, 'fert');
+                    y = drawResultSection(doc, f.souches, 'Fertilite', y, ufcMapFert, testL, refL, inoculumGlobal, resFert);
                 }
 
                 // ===== SECTION INDICATION =====
                 if (f.indSouches && f.indSouches.length > 0) {
                     const ufcMapInd = buildUfcMap(f.indSouches, f.indDilution, f.indDilutionLev);
-                    y = drawResultSection(doc, f.indSouches, 'Indication', y, ufcMapInd, testL, refL);
+                    const resInd = collectResults(f.id, f.indSouches, 'ind');
+                    y = drawResultSection(doc, f.indSouches, 'Indication', y, ufcMapInd, testL, refL, inoculumGlobal, resInd);
                 }
 
                 // ===== SECTION INHIBITION =====
                 if (f.inhSouches && f.inhSouches.length > 0) {
                     const ufcMapInh = buildUfcMap(f.inhSouches, f.inhDilution, f.inhDilutionLev);
-                    y = drawResultSection(doc, f.inhSouches, 'Inhibition', y, ufcMapInh, testL, refL);
+                    const resInh = collectResults(f.id, f.inhSouches, 'inh');
+                    y = drawResultSection(doc, f.inhSouches, 'Inhibition', y, ufcMapInh, testL, refL, inoculumGlobal, resInh);
                 }
 
                 // Footer

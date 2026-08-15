@@ -9173,9 +9173,9 @@
             souches.forEach(s => {
                 const nom = s.toLowerCase();
                 if (nom.includes('candida') || nom.includes('aspergillus') || nom.includes('saccharomyces')) {
-                    nbTubes += 4; // Levures/Moisissures
+                    nbTubes += 5; // Levures/Moisissures
                 } else {
-                    nbTubes += 5; // Souches classiques
+                    nbTubes += 6; // Souches classiques
                 }
             });
 
@@ -9401,7 +9401,7 @@
             const vp = parseFloat(String(volPriseStr || '').replace(',', '.')) || 0;
             const vd = parseFloat(String(volDiluantStr || '').replace(',', '.')) || 0;
             if (vp > 0 && vd > 0) {
-                base = base * (vp / (vp + vd));
+                // base = base * (vp / (vp + vd)); // L'utilisateur renseigne déjà la dilution finale (ex: 10^-6) donc pas de double multiplication
             }
             if (base <= 0 || isNaN(base)) return '';
             if (base >= 1000000) {
@@ -9433,8 +9433,8 @@
                 base = base * Math.pow(10, exp);
             }
             if (base <= 0 || isNaN(base)) return '';
-            // Facteur tube : Vprise / (Vprise + Vdiluant)
-            const finalUfc = base * (vp / (vp + vd));
+            // L'utilisateur renseigne déjà la dilution finale (ex: 10^-6) : on ne remultiplie pas par les volumes.
+            const finalUfc = base; // Anciennement: base * (vp / (vp + vd));
             if (isNaN(finalUfc) || finalUfc <= 0) return '';
             if (finalUfc >= 1000000) {
                 const parts = finalUfc.toExponential(1).split('e');
@@ -10049,9 +10049,9 @@
             let totalTubes = 0;
             let strainsData = uniqueStrains.map(s => {
                 const sn = s.toLowerCase();
-                let tubes = 5;
+                let tubes = 6;
                 if (sn.includes('candida') || sn.includes('aspergillus') || sn.includes('saccharomyces')) {
-                    tubes = 4;
+                    tubes = 5;
                 }
                 totalTubes += tubes;
                 
@@ -10667,6 +10667,16 @@
                         (p.lot && p.lot.toLowerCase().includes(query))
                     );
 
+                    // Appliquer le tri selon la sélection courante (menu Milieux Libérés)
+                    const rfSort = window._rfSortMode || window.currentSort || 'recent';
+                    if (rfSort === 'recent') {
+                        prepsList.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                    } else if (rfSort === 'oldest') {
+                        prepsList.sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+                    } else if (rfSort === 'alpha') {
+                        prepsList.sort((a, b) => (a.designation || '').localeCompare(b.designation || ''));
+                    }
+
                     let tableRows = prepsList.map(p => {
                         const pid = p.id;
                         const name = (p.designation || '-').replace(/'/g, "\'");
@@ -10700,11 +10710,18 @@
 
                     container.innerHTML = `
                         <div style="padding:20px; font-family:Arial, sans-serif;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #111; padding-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #111; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
                                 <h2 style="color:#111; margin:0; font-size:1.3rem;">🧪 Milieux Libérés — Résultats de Fertilité</h2>
                                 <button onclick="window.switchTab('preps')" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">
                                     ← Aller aux Préparations
                                 </button>
+                            </div>
+
+                            <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+                                <span style="font-size:0.75rem; font-weight:700; color:#555;">Trier :</span>
+                                <button onclick="window._rfSortMode='recent'; window.render();" style="background:#111; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:700;">📅 Récent</button>
+                                <button onclick="window._rfSortMode='oldest'; window.render();" style="background:#555; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.75rem;">📅 Ancien</button>
+                                <button onclick="window._rfSortMode='alpha'; window.render();" style="background:#555; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.75rem;">🔤 A-Z</button>
                             </div>
 
                             <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
@@ -10835,7 +10852,7 @@
 
                     // Table header
                     const colX = [12, 65, 95, 118, 143, 168, 185];
-                    const headers = ["Milieu (MC)", "Lot", "Date Prep.", "Fertilité", "Lecture", "Resultat",];
+                    const headers = ["Milieu (MC)", "Lot", "Date Prep.", "Fertilité", "Résultat", "Observation"];
                     const colW  = [53, 30, 23, 25, 25, 17, 17];
 
                     let y = 42;
@@ -10868,8 +10885,8 @@
 
                         // Alternate rows
                         if (idx % 2 === 0) {
-                            doc.setFillColor(248, 248, 248);
-                            doc.rect(10, y - 4, 190, 9, 'F');
+                            // doc.setFillColor(248, 248, 248);
+                            // doc.rect(10, y - 4, 190, 9, 'F');
                         }
 
                         doc.setTextColor(0, 0, 0);
@@ -10885,8 +10902,7 @@
                         doc.setFont("helvetica", "bold");
                         doc.text(res === 'CONFORME' ? 'OK' : 'NON', colX[5], y);
                         doc.setFont("helvetica", "normal");
-
-                        
+                        y += 10;
                     });
 
                     // Signature section

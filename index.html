@@ -9639,20 +9639,58 @@
         };
 
         // ---- Étape 2: construction du tableau de saisie ----
+                window._syncFrInoculumReadouts = function() {
+            document.querySelectorAll('.fr-inoc-readout').forEach(function(el) {
+                var srcId = el.getAttribute('data-inoc-id');
+                var srcEl = document.getElementById(srcId);
+                el.value = srcEl ? srcEl.value : '';
+            });
+        };
+
+        window._calcFrRow = function(base) {
+            var v = function(id) { var el = document.getElementById(id); return el ? parseFloat(el.value) || null : null; };
+            var rb1 = v(base + '_rb1'), rb2 = v(base + '_rb2');
+            var tb1 = v(base + '_tb1'), tb2 = v(base + '_tb2');
+
+            var avg = function(a, b) {
+                if (a !== null && b !== null) return (a + b) / 2;
+                if (a !== null) return a;
+                if (b !== null) return b;
+                return null;
+            };
+            var rmoy = avg(rb1, rb2);
+            var tmoy = avg(tb1, tb2);
+
+            var setVal = function(id, val) { var el = document.getElementById(id); if (el) el.value = val !== null ? val.toFixed(1) : ''; };
+            setVal(base + '_rmoy', rmoy);
+            setVal(base + '_tmoy', tmoy);
+
+            var ratioEl = document.getElementById(base + '_ratio');
+            if (ratioEl) ratioEl.value = (rmoy !== null && tmoy !== null && rmoy !== 0) ? (tmoy / rmoy).toFixed(3) : '';
+
+            window._syncFrInoculumReadouts();
+        };
+
         window.goToResultsStep2 = function() {
             const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
             const fertiliteData = window._fertiliteData || [];
             const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
             if (selectedFiches.length === 0) return;
 
-            // Collecter toutes les souches uniques
-            const allSouches = [];
-            const seen = {};
+            // Collecter toutes les souches uniques et tous les milieux où on les teste
+            const souchesMap = {}; // { 'Souche 1': [ { f: fiche, secKey: 'fert', secLabel: 'Fertilite' }, ... ] }
             selectedFiches.forEach(f => {
-                [...(f.souches||[]), ...(f.indSouches||[]), ...(f.inhSouches||[])].forEach(s => {
-                    if (s && !seen[s]) { seen[s] = true; allSouches.push(s); }
-                });
+                const addS = (arr, secK, secL) => {
+                    (arr||[]).forEach(s => {
+                        if (!souchesMap[s]) souchesMap[s] = [];
+                        souchesMap[s].push({ f, secKey: secK, secLabel: secL });
+                    });
+                };
+                addS(f.souches, 'fert', 'Fertilité');
+                addS(f.indSouches, 'ind', 'Indication');
+                addS(f.inhSouches, 'inh', 'Inhibition');
             });
+            const allSouches = Object.keys(souchesMap).sort();
 
             // --- Zone Inoculum ---
             const inocContainer = document.getElementById('frInoculumContainer');
@@ -9670,69 +9708,68 @@
                 inocContainer.appendChild(cell);
             });
 
-            // --- Zone Résultats par MC ---
+            // --- Zone Résultats par SOUCHE (POUR NE PAS DOUBLER) ---
             const resultsContainer = document.getElementById('frResultsContainer');
             resultsContainer.innerHTML = '';
             const iS = 'padding:4px 5px; font-size:0.73rem; margin:0; border:1px solid #e2e8f0; border-radius:5px; width:100%; box-sizing:border-box;';
             const aS = 'padding:4px 5px; font-size:0.73rem; margin:0; border:1px solid #bbf7d0; border-radius:5px; width:100%; box-sizing:border-box; background:#f0fdf4; font-weight:800; color:#059669;';
             const rS = 'padding:4px 5px; font-size:0.73rem; margin:0; border:1px solid #fde68a; border-radius:5px; width:100%; box-sizing:border-box; background:#fffbeb; font-weight:900; color:#b45309;';
-
-            selectedFiches.forEach(f => {
-                const fid = f.id;
-                const testLotEl = document.getElementById('fr_testLot_' + fid);
-                const refLotEl = document.getElementById('fr_refLot_' + fid);
-                const testLotName = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? (testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
-                const refLotName  = (refLotEl  && refLotEl.options[refLotEl.selectedIndex])  ? (refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
-
-                const buildTable = (souches, secKey, secLabel, color) => {
-                    if (!souches || souches.length === 0) return '';
-                    const rows = souches.map(s => {
-                        const sk = window._frSoucheKey(s);
-                        const b = `frr_${fid}_${secKey}_${sk}`;
-                        const inocId = `fr_inoc_${sk}`;
-                        return `<tr>
-                            <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">${s}</td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="text" id="${b}_inoc" readonly class="fr-inoc-readout" data-inoc-id="${inocId}" placeholder="—" style="${aS} cursor:default;"></td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_rmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_tmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_ratio" readonly style="${rS} cursor:default;" placeholder="—"></td>
-                        </tr>`;
-                    }).join('');
-                    return `<div style="margin-bottom:12px;">
-                        <div style="font-size:0.63rem; font-weight:900; color:${color}; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">${secLabel}</div>
-                        <div style="overflow-x:auto;">
-                        <table style="width:100%; border-collapse:collapse; min-width:700px;">
-                            <thead><tr style="background:#f8fafc;">
-                                <th style="padding:4px 6px; text-align:left; font-size:0.62rem; border:1px solid #e2e8f0;">Souche</th>
-                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(59,130,246,0.07);">Inoculum départ</th>
-                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(217,119,6,0.07);">Réf. Bte 1</th>
-                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(217,119,6,0.07);">Réf. Bte 2</th>
-                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(5,150,105,0.09);">Réf. Moy.</th>
-                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(79,70,229,0.07);">Testé Bte 1</th>
-                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(79,70,229,0.07);">Testé Bte 2</th>
-                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(5,150,105,0.09);">Testé Moy.</th>
-                                <th style="padding:4px 6px; font-size:0.62rem; border:1px solid #e2e8f0; background:rgba(217,119,6,0.15); font-weight:900;">Ratio T/R</th>
-                            </tr></thead>
-                            <tbody>${rows}</tbody>
-                        </table></div>
-                    </div>`;
-                };
+            
+            allSouches.forEach(s => {
+                const sk = window._frSoucheKey(s);
+                const inocId = 'fr_inoc_' + sk;
+                const testsForSouche = souchesMap[s];
+                
+                let rows = testsForSouche.map(t => {
+                    const fid = t.f.id;
+                    const b = `frr_${fid}_${t.secKey}_${sk}`;
+                    const testLotEl = document.getElementById('fr_testLot_' + fid);
+                    const refLotEl = document.getElementById('fr_refLot_' + fid);
+                    const testLotName = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? (testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
+                    const refLotName  = (refLotEl  && refLotEl.options[refLotEl.selectedIndex])  ? (refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
+                    
+                    return `<tr>
+                        <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
+                            ${t.f.nom || 'MC'}<br>
+                            <span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
+                        </td>
+                        <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569; position:relative;">
+                            <div style="margin-bottom:2px;">R: ${refLotName||'—'}</div>
+                            <div>T: ${testLotName||'—'}</div>
+                        </td>
+                        <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                        <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                        <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_rmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
+                        <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                        <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                        <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_tmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
+                        <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_ratio" readonly style="${rS} cursor:default;" placeholder="—"></td>
+                    </tr>`;
+                }).join('');
 
                 const mcDiv = document.createElement('div');
-                mcDiv.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px;';
+                mcDiv.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);';
                 mcDiv.innerHTML = `
-                    <div style="font-weight:900; font-size:0.9rem; color:var(--text-main); margin-bottom:4px;">🧪 ${f.nom || 'MC'}</div>
-                    <div style="font-size:0.65rem; color:var(--text-dim); margin-bottom:12px;">
-                        ${testLotName ? '📦 Testé : Lot ' + testLotName : ''}
-                        ${refLotName ? ' &nbsp;|&nbsp; 📦 Réf. : Lot ' + refLotName : ''}
+                    <div style="font-weight:900; font-size:0.95rem; color:var(--text-main); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#0f172a; text-transform:uppercase; letter-spacing:0.5px;">🦠 ${s}</span>
+                        <input type="text" id="readout_${inocId}" readonly class="fr-inoc-readout" data-inoc-id="${inocId}" placeholder="— Inoc. —" style="padding:4px 10px; font-size:0.75rem; border:1px solid #bbf7d0; border-radius:15px; background:#f0fdf4; font-weight:800; color:#059669; cursor:default; max-width:110px; text-align:center;" title="Inoculum de la souche renseigné en haut">
                     </div>
-                    ${buildTable(f.souches,    'fert', 'Fertilité',  'var(--success)')}
-                    ${buildTable(f.indSouches, 'ind',  'Indication', '#d97706')}
-                    ${buildTable(f.inhSouches, 'inh',  'Inhibition', '#ef4444')}
+                    <div style="overflow-x:auto; border-radius:6px; border:1px solid #cbd5e1;">
+                        <table style="width:100%; border-collapse:collapse; min-width:800px; background:#fff;">
+                            <thead><tr style="background:#e2e8f0;">
+                                <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:20%;">Milieu Testé</th>
+                                <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:15%;">Lots (Réf / Test)</th>
+                                <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.07);">Réf Bte 1</th>
+                                <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.07);">Réf Bte 2</th>
+                                <th style="padding:6px; font-size:0.62rem; border-right:2px solid #94a3b8; border-bottom:1px solid #cbd5e1; background:rgba(5,150,105,0.09);">Réf Moy.</th>
+                                <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(79,70,229,0.07);">Tes. Bte 1</th>
+                                <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(79,70,229,0.07);">Tes. Bte 2</th>
+                                <th style="padding:6px; font-size:0.62rem; border-right:2px solid #94a3b8; border-bottom:1px solid #cbd5e1; background:rgba(5,150,105,0.09);">Tes. Moy.</th>
+                                <th style="padding:6px; font-size:0.62rem; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.15); font-weight:900;">Ratio T/R</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
                 `;
                 resultsContainer.appendChild(mcDiv);
             });
@@ -9750,39 +9787,6 @@
             document.getElementById('frStep1Wrapper').style.display = '';
         };
 
-        window._syncFrInoculumReadouts = function() {
-            document.querySelectorAll('.fr-inoc-readout').forEach(el => {
-                const srcId = el.getAttribute('data-inoc-id');
-                const srcEl = document.getElementById(srcId);
-                el.value = srcEl ? srcEl.value : '';
-            });
-        };
-
-        window._calcFrRow = function(base) {
-            const v = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) || null : null; };
-            const rb1 = v(base + '_rb1'), rb2 = v(base + '_rb2');
-            const tb1 = v(base + '_tb1'), tb2 = v(base + '_tb2');
-
-            // Moyenne = somme / nb valeurs saisies (1 ou 2)
-            const avg = (a, b) => {
-                if (a !== null && b !== null) return (a + b) / 2;
-                if (a !== null) return a;
-                if (b !== null) return b;
-                return null;
-            };
-            const rmoy = avg(rb1, rb2);
-            const tmoy = avg(tb1, tb2);
-
-            const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val !== null ? val.toFixed(1) : ''; };
-            set(base + '_rmoy', rmoy);
-            set(base + '_tmoy', tmoy);
-
-            const ratioEl = document.getElementById(base + '_ratio');
-            if (ratioEl) ratioEl.value = (rmoy !== null && tmoy !== null && rmoy !== 0) ? (tmoy / rmoy).toFixed(3) : '';
-
-            window._syncFrInoculumReadouts();
-        };
-
         window.confirmAndGenerateFertFeuillesResultats = function() {
             window.closeModal('feuillesResultatsModalOverlay');
             const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
@@ -9797,19 +9801,23 @@
                 if (s && el.value.trim()) inoculumGlobal[s] = el.value.trim();
             });
 
-            // Collecter résultats par fiche / section / souche
-            const collectResults = (ficheId, souches, secKey) => {
-                const map = {};
-                (souches || []).forEach(s => {
-                    const b = 'frr_' + ficheId + '_' + secKey + '_' + window._frSoucheKey(s);
-                    const g = suf => { const el = document.getElementById(b + suf); return el ? el.value.trim() : ''; };
-                    map[s] = { rb1: g('_rb1'), rb2: g('_rb2'), rmoy: g('_rmoy'), tb1: g('_tb1'), tb2: g('_tb2'), tmoy: g('_tmoy'), ratio: g('_ratio') };
-                });
-                return map;
-            };
+            // Re-créer souchesMap pour les données
+            const souchesMap = {}; 
+            selectedFiches.forEach(f => {
+                const addS = (arr, secK, secL) => {
+                    (arr||[]).forEach(s => {
+                        if (!souchesMap[s]) souchesMap[s] = [];
+                        souchesMap[s].push({ f, secKey: secK, secLabel: secL });
+                    });
+                };
+                addS(f.souches, 'fert', 'Fertilité');
+                addS(f.indSouches, 'ind', 'Indication');
+                addS(f.inhSouches, 'inh', 'Inhibition');
+            });
+            const allSouches = Object.keys(souchesMap).sort();
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
             const date = new Date().toLocaleDateString('fr-FR');
@@ -9818,226 +9826,182 @@
                 if (!str) return '';
                 const supMap = {'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','⁺':'+','⁻':'-'};
                 let s = String(str);
-                // Convert superscript chars
                 Object.keys(supMap).forEach(k => { s = s.split(k).join(supMap[k]); });
-                // Convert unicode powers like ³ etc already done above
                 s = s.replace(/×/g, 'x');
-                // Clean up extra ^ if any
                 return s;
             };
 
-            // Dessine un tableau de résultats pour une section
-            // ufcMap : { [soucheName]: '1,5 x 10^4 UFC/mL' } (optionnel)
-            const drawResultSection = (doc, souches, sectionLabel, startY, ufcMap, testLot, refLot, inoculumMap, resultsMap) => {
-                let y = startY;
-                if (!souches || souches.length === 0) return y;
-                if (y > 248) { doc.addPage(); y = 20; }
-
-                // --- Label section : texte encadré simple ---
+            let y = 15;
+            
+            const addHeader = (pageNum) => {
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.5);
+                doc.rect(10, 5, pageWidth - 20, 12, 'D');
                 doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.setTextColor(0, 0, 0);
+                doc.text('FEUILLE DE RESULTATS GLOBALE - FERTILITE', 15, 13);
                 doc.setFontSize(9);
-                doc.setTextColor(0, 0, 0);
-                doc.setDrawColor(0, 0, 0);
-                doc.setLineWidth(0.4);
-                doc.rect(15, y, pageWidth - 30, 7, 'D');
-                doc.text(sectionLabel, 18, y + 5);
-                y += 9;
-
-                // --- En-tête colonnes 2 niveaux ---
-                const rowH = 10;
-                doc.setDrawColor(0, 0, 0);
-                doc.setLineWidth(0.3);
-                doc.rect(15, y, pageWidth - 30, rowH, 'D');
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(7.5);
-                doc.setTextColor(0, 0, 0);
-                
-                doc.text('Souche / Micro-organisme', 17, y + 6);
-                doc.text('Inoculum', 64, y + 4.5);
-                doc.text('de départ', 63, y + 8);
-                doc.text('Milieu de Référence' + (refLot ? ' (' + refLot + ')' : ''), 84, y + 3.5);
-                doc.text('Milieu Testé' + (testLot ? ' (' + testLot + ')' : ''), 130, y + 3.5);
-                doc.text('Observation', 164, y + 6);
-
-                doc.setFontSize(6.5);
-                doc.text('Bte 1', 84, y + 8.5);
-                doc.text('Bte 2', 97, y + 8.5);
-                doc.text('Moyenne', 109, y + 8.5);
-                doc.text('Bte 1', 124, y + 8.5);
-                doc.text('Bte 2', 137, y + 8.5);
-                doc.text('Moyenne', 149, y + 8.5);
-
-                // Lignes verticales principales
-                doc.line(60, y, 60, y + rowH);
-                doc.line(82, y, 82, y + rowH);
-                doc.line(122, y, 122, y + rowH);
-                doc.line(162, y, 162, y + rowH);
-
-                // Ligne horizontale pour sous-colonnes
-                doc.line(82, y + 5, 162, y + 5);
-
-                // Lignes verticales pour sous-colonnes
-                doc.line(95, y + 5, 95, y + rowH);
-                doc.line(108, y + 5, 108, y + rowH);
-                doc.line(135, y + 5, 135, y + rowH);
-                doc.line(148, y + 5, 148, y + rowH);
-
-                y += rowH;
-
-                // --- Lignes pour chaque souche ---
-                const colWidths = [45, 22, 13, 13, 14, 13, 13, 14, 33];
-                const rowHData = 9;
-                
-                souches.forEach((s) => {
-                    if (y + rowHData > pageHeight - 18) { doc.addPage(); y = 20; }
-
-                    doc.setDrawColor(0, 0, 0);
-                    doc.setLineWidth(0.2);
-                    doc.rect(15, y, pageWidth - 30, rowHData, 'D');
-
-                    let xOffset = 15;
-                    const ufcVal = (ufcMap && ufcMap[s]) ? cU(ufcMap[s]) : '';
-                    const inoc = (inoculumMap && inoculumMap[s]) ? inoculumMap[s] : '';
-                    const rr   = (resultsMap  && resultsMap[s])  ? resultsMap[s] : {};
-                    const rowData = [cU(s), inoc, rr.rb1||'', rr.rb2||'', rr.rmoy||'', rr.tb1||'', rr.tb2||'', rr.tmoy||'', rr.ratio ? ('R='+rr.ratio) : ''];
-                    rowData.forEach((val, i) => {
-                        doc.setFont('helvetica', (i === 0 || i === 1) ? 'bold' : 'normal');
-                        doc.setFontSize(i === 0 ? 7 : 7.5);
-                        doc.setTextColor(i === 1 ? 20 : 0, i === 1 ? 80 : 0, i === 1 ? 20 : 0); // UFC en vert foncé
-                        if (val) {
-                            const lines = doc.splitTextToSize(val, colWidths[i] - 3);
-                            doc.text(lines[0] || '', xOffset + 2, y + 6);
-                        }
-                        xOffset += colWidths[i];
-                        if (i < rowData.length - 1) {
-                            doc.setDrawColor(0, 0, 0);
-                            doc.setLineWidth(0.2);
-                            doc.line(xOffset, y, xOffset, y + rowHData);
-                        }
-                    });
-                    y += rowHData;
-                });
-
-                return y + 4;
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Date : ${date}   -   Page ${pageNum}`, pageWidth - 15, 13, { align: 'right' });
+                y = 25;
             };
 
-            selectedFiches.forEach((f, idx) => {
-                if (idx > 0) doc.addPage();
+            let pageNb = 1;
+            addHeader(pageNb);
 
-                let y = 15;
+            if (allSouches.length === 0) {
+                 doc.text("Aucune souche trouvée.", 15, y);
+            }
 
-                // ===== EN-TETE PAGE : noir/blanc, texte noir sur fond blanc =====
-                doc.setDrawColor(0, 0, 0);
-                doc.setLineWidth(0.5);
-                doc.rect(0, 0, pageWidth, 13, 'D');
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(12);
-                doc.setTextColor(0, 0, 0);
-                doc.text('FEUILLE DE RESULTATS  -  FERTILITE', 15, 9);
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`Date : ${date}`, pageWidth - 15, 9, { align: 'right' });
-
-                y = 20;
-
-                // Nom MC
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(13);
-                doc.setTextColor(0, 0, 0);
-                doc.text('Milieu : ' + cU(f.nom || 'MC'), 15, y);
-                y += 5;
-                doc.setLineWidth(0.5);
-                doc.setDrawColor(0,0,0);
-                doc.line(15, y, pageWidth - 15, y);
-                y += 5;
-
-                // Infos paramètres
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8);
-                doc.setTextColor(40, 40, 40);
-                const bDil = cU(f.dilution || '').replace(/\^(-?\d+)/g, (m, p) => ' x 10^' + p) || '—';
-                const lDil = cU(f.dilutionLev || '').replace(/\^(-?\d+)/g, (m, p) => ' x 10^' + p) || '—';
-                // Infos incubation
-                let incubStr = '—';
-                if (f.incubConditions && f.incubConditions.length > 0) {
-                    incubStr = f.incubConditions.map(c => [c.duree, c.temp].filter(Boolean).join(' / ')).filter(Boolean).join(' | ');
-                } else if (f.incubDuree || f.incubTemp) {
-                    incubStr = [f.incubDuree, f.incubTemp].filter(Boolean).join(' / ');
+            allSouches.forEach((s) => {
+                const rowH = 7;
+                const testsForSouche = souchesMap[s];
+                
+                // On pré-calcule l'espace nécessaire : Titre (7) + En-tête (7) + (N * 7) + Espacement (8)
+                const requiredHeight = 7 + 7 + (testsForSouche.length * rowH) + 10;
+                
+                if (y + requiredHeight > pageHeight - 10) {
+                    doc.addPage();
+                    pageNb++;
+                    addHeader(pageNb);
                 }
-                const paramLines = [
-                    `Incubation : ${incubStr}`,
-                    `Bacteries       : Dilution (${cU(f.concentration) || '—'}MCF)${bDil}`,
-                    `Lev./Moisiss.   : Dilution (${cU(f.concentrationLev) || '—'}MCF)${lDil}`,
-                    `Vol. inoculum : ${f.volPrise || '0.1'} mL   Vol. diluant : ${f.volDiluant || '9'} mL`,
-                ];
-                paramLines.forEach(line => {
-                    doc.text(line, 15, y);
-                    y += 5;
-                });
-                y += 4;
-                doc.setLineWidth(0.2);
-                doc.setDrawColor(180, 180, 180);
-                doc.line(15, y - 2, pageWidth - 15, y - 2);
-                y += 2;
 
-                // === Calcul UFC par souche (utilise mcfMap + dilution + volumes) ===
-                const vp = f.volPrise || '0.1';
-                const vd = f.volDiluant || '9';
-                const buildUfcMap = (souches, dilBact, dilLev) => {
-                    const map = {};
-                    (souches || []).forEach(s => {
-                        const mcfVal = f.mcfMap && f.mcfMap[s] ? f.mcfMap[s] : null;
-                        if (!mcfVal) return;
-                        const isYeast = /candida|aspergillus|saccharomyces|levure|moisissure|rhodotorula/i.test(s);
-                        if (isYeast) {
-                            map[s] = f.ufcLev ? cU(f.ufcLev) : '[10-100 UFC]';
-                        } else {
-                            const res = window._calcFinalUfc(mcfVal, dilBact, vp, vd);
-                            if (res) map[s] = res;
+                // Titre Souche
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                doc.setFillColor(235, 235, 235);
+                doc.rect(10, y, pageWidth - 20, 8, 'F');
+                doc.setDrawColor(0,0,0);
+                doc.setLineWidth(0.3);
+                doc.rect(10, y, pageWidth - 20, 8, 'D');
+                
+                const inocV = inoculumGlobal[s] ? inoculumGlobal[s] : '—';
+                doc.text(`SOUCHE : ${cU(s)}`, 12, y + 5.5);
+                
+                doc.setFontSize(9);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`Inoculum de départ : ${inocV} ${inocV!=='—' ? '(UFC, McF)' : ''}`, pageWidth - 12, y + 5.2, { align: 'right' });
+                
+                y += 8;
+
+                // Table Header pour la souche
+                doc.setFillColor(250, 250, 250);
+                doc.rect(10, y, pageWidth - 20, rowH, 'F');
+                doc.setDrawColor(0,0,0);
+                doc.setLineWidth(0.3);
+                doc.rect(10, y, pageWidth - 20, rowH, 'D');
+                
+                doc.setFont('helvetica', 'bold');
+                // Header columns :
+                // Milieu | Section | Lot Ref | Lot Testé | R B1 | R B2 | R Moy || T B1 | T B2 | T Moy || Ratio | Obs
+                doc.setFontSize(7.5);
+                
+                // Mettre les lignes verticales pour l'en-tête
+                const cols = [50, 75, 95, 115, 130, 145, 160, 175, 190, 205, 225, pageWidth - 10]; 
+                
+                doc.text('Milieu Testé', 12, y + 5);
+                doc.text('Section', cols[0]+2, y + 5);
+                doc.text('Lot Réf', cols[1]+2, y + 5);
+                doc.text('Lot Test', cols[2]+2, y + 5);
+                
+                doc.text('Réf. B1', cols[3]+2, y + 5);
+                doc.text('Réf. B2', cols[4]+2, y + 5);
+                doc.text('R. Moy', cols[5]+2, y + 5);
+                
+                doc.text('Test B1', cols[6]+2, y + 5);
+                doc.text('Test B2', cols[7]+2, y + 5);
+                doc.text('T. Moy', cols[8]+2, y + 5);
+                
+                doc.text('Ratio', cols[9]+2, y + 5);
+                doc.text('Observation', cols[10]+2, y + 5);
+                
+                cols.forEach((colX, idx) => {
+                    if (idx < cols.length - 1) {
+                         if (idx === 5 || idx === 8) doc.setLineWidth(0.4); // Séparations Réf/Test
+                         else doc.setLineWidth(0.15);
+                         doc.line(colX, y, colX, y + rowH);
+                    }
+                });
+                
+                y += rowH;
+                
+                testsForSouche.forEach((t) => {
+                    const fid = t.f.id;
+                    const b = `frr_${fid}_${t.secKey}_${window._frSoucheKey(s)}`;
+                    const g = suf => { const el = document.getElementById(b + suf); return el ? el.value.trim() : ''; };
+                    
+                    const rb1 = g('_rb1'), rb2 = g('_rb2'), rmoy = g('_rmoy');
+                    const tb1 = g('_tb1'), tb2 = g('_tb2'), tmoy = g('_tmoy');
+                    const ratio = g('_ratio');
+                    
+                    const testLotEl = document.getElementById('fr_testLot_' + fid);
+                    const refLotEl = document.getElementById('fr_refLot_' + fid);
+                    const testL = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') : '';
+                    const refL = (refLotEl && refLotEl.options[refLotEl.selectedIndex]) ? refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') : '';
+
+                    let obsText = '';
+                    if (ratio && Number(ratio)) {
+                         let rVal = Number(ratio);
+                         if (rVal >= 0.5 && rVal <= 2.0) obsText = 'OK';
+                         else obsText = 'NON CF (Ratio)';
+                    }
+                    else if (t.secKey === 'inh') {
+                         if (tb1 || tb2) { obsText = 'NON CF (Croissance)'; } 
+                         else { obsText = 'OK (Inhibé)'; } // Pas de ratio mais pousse pas = OK pour inh
+                    }
+
+                    doc.setDrawColor(0,0,0);
+                    doc.setLineWidth(0.2);
+                    doc.rect(10, y, pageWidth - 20, rowH, 'D');
+                    
+                    // Lignes colonnes pour data
+                    cols.forEach((colX, idx) => {
+                        if (idx < cols.length - 1) {
+                             if (idx === 5 || idx === 8) doc.setLineWidth(0.4);
+                             else doc.setLineWidth(0.15);
+                             doc.line(colX, y, colX, y + rowH);
                         }
                     });
-                    return map;
-                };
+                    
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(7.5);
+                    let mNameLine = doc.splitTextToSize(cU(t.f.nom), cols[0] - 12);
+                    doc.text(mNameLine[0], 12, y + 5);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(cU(t.secLabel), cols[0]+2, y + 5);
+                    doc.text(refL || '—', cols[1]+2, y + 5);
+                    doc.text(testL || '—', cols[2]+2, y + 5);
+                    
+                    doc.text(rb1||'', cols[3]+2, y + 5);
+                    doc.text(rb2||'', cols[4]+2, y + 5);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(rmoy||'', cols[5]+2, y + 5);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(tb1||'', cols[6]+2, y + 5);
+                    doc.text(tb2||'', cols[7]+2, y + 5);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(tmoy||'', cols[8]+2, y + 5);
+                    
+                    doc.setTextColor(0, 0, 0); // Pas de couleur
+                    doc.text(ratio ? (ratio + '') : '', cols[9]+2, y + 5);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    if (obsText !== 'OK' && obsText !== '') doc.setFont('helvetica', 'bold');
+                    doc.text(obsText, cols[10]+2, y + 5);
 
-                // ====== USER ASSIGNED LOTS ======
-                const testLotEl = document.getElementById('fr_testLot_' + f.id);
-                const refLotEl = document.getElementById('fr_refLot_' + f.id);
-                const testL = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') : '';
-                const refL = (refLotEl && refLotEl.options[refLotEl.selectedIndex]) ? refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') : '';
-
-                // ===== SECTION FERTILITE =====
-                if (f.souches && f.souches.length > 0) {
-                    const ufcMapFert = buildUfcMap(f.souches, f.dilution, f.dilutionLev);
-                    const resFert = collectResults(f.id, f.souches, 'fert');
-                    y = drawResultSection(doc, f.souches, 'Fertilite', y, ufcMapFert, testL, refL, inoculumGlobal, resFert);
-                }
-
-                // ===== SECTION INDICATION =====
-                if (f.indSouches && f.indSouches.length > 0) {
-                    const ufcMapInd = buildUfcMap(f.indSouches, f.indDilution, f.indDilutionLev);
-                    const resInd = collectResults(f.id, f.indSouches, 'ind');
-                    y = drawResultSection(doc, f.indSouches, 'Indication', y, ufcMapInd, testL, refL, inoculumGlobal, resInd);
-                }
-
-                // ===== SECTION INHIBITION =====
-                if (f.inhSouches && f.inhSouches.length > 0) {
-                    const ufcMapInh = buildUfcMap(f.inhSouches, f.inhDilution, f.inhDilutionLev);
-                    const resInh = collectResults(f.id, f.inhSouches, 'inh');
-                    y = drawResultSection(doc, f.inhSouches, 'Inhibition', y, ufcMapInh, testL, refL, inoculumGlobal, resInh);
-                }
-
-                // Footer
-                doc.setFont('helvetica', 'italic');
-                doc.setFontSize(7);
-                doc.setTextColor(150, 150, 150);
-                doc.text('', 15, pageHeight - 10);
-                doc.text(`Page ${idx + 1} / ${selectedFiches.length}`, pageWidth - 15, pageHeight - 10, { align: 'right' });
+                    y += rowH;
+                });
+                
+                y += 8; // Espace entre les souches
             });
 
-            doc.save(`Feuilles_Resultats_Fertilite_${date.replace(/\//g,'_')}.pdf`);
+            doc.save(`Feuilles_Resultats_Global_Fertilite_${date.replace(/\//g,'_')}.pdf`);
         };
-
-        // ---- Génération PDF RECAPITULATIF ----
+// ---- Génération PDF RECAPITULATIF ----
         window.generateFertGlobalRecap = function() {
             const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
             if (checkedIds.length === 0) {
@@ -10662,6 +10626,299 @@
         })();
 
     </script>
+
+
+\n
+
+<script>
+    (function() {
+        setTimeout(function() {
+            // === INJECT TAB BUTTON ===
+            const tabsContainer = document.querySelector('.main-tabs');
+            if (tabsContainer && !document.getElementById('tab-resfert')) {
+                const btn = document.createElement('button');
+                btn.id = 'tab-resfert';
+                btn.className = 'main-tab';
+                btn.setAttribute('draggable', 'true');
+                btn.setAttribute('data-tab-id', 'resfert');
+                btn.setAttribute('onclick', "window.switchTab('resfert')");
+                btn.textContent = '🧪 Milieux Libérés';
+                tabsContainer.appendChild(btn);
+            }
+            if (typeof tabsOrder !== 'undefined' && !tabsOrder.includes('resfert')) {
+                tabsOrder.push('resfert');
+            }
+
+            // === INTERCEPT RENDER ===
+            const _oldRenderML = window.render;
+            window.render = function() {
+                if (window.currentTab === 'resfert') {
+                    const container = document.getElementById('fiches-list');
+                    if (!container) return;
+
+                    const query = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+                    if (document.getElementById('addBtn')) document.getElementById('addBtn').style.display = 'none';
+                    if (document.getElementById('excelPrepBtn')) document.getElementById('excelPrepBtn').style.display = 'none';
+                    if (document.getElementById('importDirectBtn')) document.getElementById('importDirectBtn').style.display = 'none';
+
+                    let prepsList = (window.preps || []).filter(p =>
+                        !query ||
+                        (p.designation && p.designation.toLowerCase().includes(query)) ||
+                        (p.lot && p.lot.toLowerCase().includes(query))
+                    );
+
+                    let tableRows = prepsList.map(p => {
+                        const pid = p.id;
+                        const name = (p.designation || '-').replace(/'/g, "\'");
+                        const lot = (p.lot || '-').replace(/'/g, "\'");
+                        const dateP = window.formatStringToDate(p.datePrep) || '-';
+                        return `<tr id="row_${pid}" style="border-top:1px solid #ddd; cursor:pointer;" onclick="window.rf_toggleRow('${pid}')">
+                            <td style="padding:10px; vertical-align:middle; text-align:center;">
+                                <input type="checkbox" id="chk_${pid}" onchange="window.rf_onChkChange('${pid}')" style="width:18px;height:18px;cursor:pointer;" onclick="event.stopPropagation()">
+                            </td>
+                            <td style="padding:10px; color:#111; font-weight:500;">${p.designation || '-'}</td>
+                            <td style="padding:10px; color:#444;">${p.lot || '-'}</td>
+                            <td style="padding:10px; color:#444;">${dateP}</td>
+                            <td style="padding:10px; text-align:center; vertical-align:middle;">
+                                <input type="date" id="dateTest_${pid}" style="padding:5px; border-radius:6px; border:1px solid #bbb; background:#fff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()">
+                            </td>
+                            <td style="padding:10px; text-align:center; vertical-align:middle;">
+                                <div style="display:flex; gap:5px; justify-content:center; flex-wrap:wrap;">
+                                    <button onclick="event.stopPropagation(); window.rf_addDaysRow('${pid}', 5)" style="background:#111; color:#fff; border:none; padding:4px 8px; border-radius:5px; cursor:pointer; font-size:0.75rem;">+5j</button>
+                                    <button onclick="event.stopPropagation(); window.rf_addDaysRow('${pid}', 7)" style="background:#444; color:#fff; border:none; padding:4px 8px; border-radius:5px; cursor:pointer; font-size:0.75rem;">+7j</button>
+                                    <input type="date" id="dateLecture_${pid}" style="padding:5px; border-radius:6px; border:1px solid #bbb; background:#fff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()">
+                                </div>
+                            </td>
+                            <td style="padding:10px; text-align:center; vertical-align:middle;">
+                                <select id="res_${pid}" style="padding:5px; border-radius:6px; border:1px solid #bbb; background:#fff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()">
+                                    <option value="CONFORME">CONFORME</option>
+                                    <option value="NON CONFORME">NON CONFORME</option>
+                                </select>
+                            </td>
+                        </tr>`;
+                    }).join('');
+
+                    container.innerHTML = `
+                        <div style="padding:20px; font-family:Arial, sans-serif;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #111; padding-bottom:10px;">
+                                <h2 style="color:#111; margin:0; font-size:1.3rem;">🧪 Milieux Libérés — Résultats de Fertilité</h2>
+                                <button onclick="window.switchTab('preps')" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">
+                                    ← Aller aux Préparations
+                                </button>
+                            </div>
+
+                            <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+                                <button onclick="window.rf_selectAll()" style="background:#111; color:#fff; border:none; padding:9px 16px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:bold;">
+                                    ✅ Tout sélectionner
+                                </button>
+                                <button onclick="window.rf_deselectAll()" style="background:#888; color:#fff; border:none; padding:9px 16px; border-radius:8px; cursor:pointer; font-size:0.85rem;">
+                                    ✕ Tout désélectionner
+                                </button>
+                                <button onclick="window.rf_generatePDF()" style="background:#fff; color:#111; border:2px solid #111; padding:9px 20px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:bold; margin-left:auto;">
+                                    📄 LIBÉRER LES MILIEUX SÉLECTIONNÉS (PDF)
+                                </button>
+                            </div>
+
+                            <div style="overflow-x:auto; border-radius:10px; border:1px solid #ccc;">
+                                <table style="width:100%; border-collapse:collapse; font-size:0.85rem; background:#fff; color:#111;">
+                                    <thead>
+                                        <tr style="background:#111; color:#fff; text-align:left;">
+                                            <th style="padding:11px; width:40px;"></th>
+                                            <th style="padding:11px;">Milieu (MC)</th>
+                                            <th style="padding:11px;">Lot</th>
+                                            <th style="padding:11px;">Date Préparation</th>
+                                            <th style="padding:11px; text-align:center;">Date de fertilité</th>
+                                            <th style="padding:11px; text-align:center;">Date Lecture (+5j / +7j / Manuel)</th>
+                                            <th style="padding:11px; text-align:center;">Résultat</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rf_tbody">
+                                        ${tableRows || '<tr><td colspan="7" style="padding:20px; text-align:center; color:#888;">Aucune préparation trouvée</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                if (_oldRenderML) _oldRenderML();
+            };
+
+            // === HELPER FUNCTIONS ===
+            window.rf_toggleRow = function(pid) {
+                const chk = document.getElementById('chk_' + pid);
+                if (chk) {
+                    chk.checked = !chk.checked;
+                    window.rf_onChkChange(pid);
+                }
+            };
+
+            window.rf_onChkChange = function(pid) {
+                const row = document.getElementById('row_' + pid);
+                const chk = document.getElementById('chk_' + pid);
+                if (row && chk) {
+                    row.style.background = chk.checked ? '#f0f0f0' : '';
+                }
+            };
+
+            window.rf_selectAll = function() {
+                const tbody = document.getElementById('rf_tbody');
+                if (!tbody) return;
+                tbody.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                    chk.checked = true;
+                    const pid = chk.id.replace('chk_', '');
+                    window.rf_onChkChange(pid);
+                });
+            };
+
+            window.rf_deselectAll = function() {
+                const tbody = document.getElementById('rf_tbody');
+                if (!tbody) return;
+                tbody.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                    chk.checked = false;
+                    const pid = chk.id.replace('chk_', '');
+                    window.rf_onChkChange(pid);
+                });
+            };
+
+            window.rf_addDaysRow = function(pid, days) {
+                const dateTestEl = document.getElementById('dateTest_' + pid);
+                const dateLectureEl = document.getElementById('dateLecture_' + pid);
+                if (!dateTestEl || !dateTestEl.value) {
+                    if (window.showToast) window.showToast("Entrez d'abord la date de fertilité.", "info");
+                    return;
+                }
+                const d = new Date(dateTestEl.value);
+                d.setDate(d.getDate() + days);
+                dateLectureEl.value = d.toISOString().split('T')[0];
+            };
+
+            window.rf_generatePDF = function() {
+                const tbody = document.getElementById('rf_tbody');
+                if (!tbody) return;
+
+                const checked = [];
+                tbody.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                    if (chk.checked) {
+                        const pid = chk.id.replace('chk_', '');
+                        const p = (window.preps || []).find(x => x.id === pid);
+                        if (!p) return;
+                        const dateTest = (document.getElementById('dateTest_' + pid) || {}).value || '';
+                        const dateLecture = (document.getElementById('dateLecture_' + pid) || {}).value || '';
+                        const res = (document.getElementById('res_' + pid) || {}).value || 'CONFORME';
+                        checked.push({ p, dateTest, dateLecture, res });
+                    }
+                });
+
+                if (checked.length === 0) {
+                    if (window.showToast) window.showToast("Veuillez sélectionner au moins un milieu.", "error");
+                    return;
+                }
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF('p', 'mm', 'a4');
+                    const fw = window.formatStringToDate;
+
+                    // Title page header
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(18);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text("Milieux libérés - RESULTATS DE FERTILITE", 105, 22, null, null, "center");
+                    doc.setLineWidth(0.8);
+                    doc.line(10, 26, 200, 26);
+                    doc.setFontSize(9);
+                    doc.setFont("helvetica", "normal");
+                    const today = new Date().toLocaleDateString('fr-FR');
+                    doc.text("Date d'edition : " + today, 200, 33, null, null, "right");
+                    doc.line(10, 35, 200, 35);
+
+                    // Table header
+                    const colX = [12, 65, 95, 118, 143, 168, 185];
+                    const headers = ["Milieu (MC)", "Lot", "Date Prep.", "Fertilité", "Lecture", "Resultat",];
+                    const colW  = [53, 30, 23, 25, 25, 17, 17];
+
+                    let y = 42;
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setFillColor(220, 220, 220);
+                    doc.rect(10, y - 5, 190, 8, 'F');
+                    doc.setDrawColor(0);
+                    doc.setLineWidth(0.3);
+                    headers.forEach((h, i) => doc.text(h, colX[i], y, { maxWidth: colW[i] - 2 }));
+                    y += 5;
+                    doc.line(10, y, 200, y);
+                    y += 5;
+
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(8);
+
+                    checked.forEach((item, idx) => {
+                        const { p, dateTest, dateLecture, res } = item;
+                        const nom = p.designation || '-';
+                        const lot = p.lot || '-';
+                        const dateP = fw(p.datePrep) || '-';
+                        const dTest = fw(dateTest) || '-';
+                        const dLec = fw(dateLecture) || '-';
+
+                        if (y > 265) {
+                            doc.addPage();
+                            y = 20;
+                        }
+
+                        // Alternate rows
+                        if (idx % 2 === 0) {
+                            doc.setFillColor(248, 248, 248);
+                            doc.rect(10, y - 4, 190, 9, 'F');
+                        }
+
+                        doc.setTextColor(0, 0, 0);
+                        // Nom MC (wrap if needed)
+                        const nomLines = doc.splitTextToSize(nom, colW[0] - 2);
+                        doc.text(nomLines[0], colX[0], y);
+                        doc.text(lot, colX[1], y);
+                        doc.text(dateP, colX[2], y);
+                        doc.text(dTest, colX[3], y);
+                        doc.text(dLec, colX[4], y);
+
+                        // Result - bold
+                        doc.setFont("helvetica", "bold");
+                        doc.text(res === 'CONFORME' ? 'OK' : 'NON', colX[5], y);
+                        doc.setFont("helvetica", "normal");
+
+                        
+                    });
+
+                    // Signature section
+                    y += 10;
+                    if (y > 250) { doc.addPage(); y = 20; }
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(9);
+                    doc.text("Fait par :", 12, y);
+                    doc.setLineWidth(0.5);
+                    doc.line(12, y + 15, 90, y + 15);
+
+                    doc.text("", 120, y);
+                    doc.line(120, y + 15, 198, y + 15);
+
+                    const d = new Date();
+                    const fname = "Milieux_Liberes_" + d.getFullYear() + (d.getMonth()+1).toString().padStart(2,'0') + d.getDate().toString().padStart(2,'0') + ".pdf";
+                    doc.save(fname);
+                    if (window.showToast) window.showToast("PDF généré : " + fname, "success");
+
+                } catch (err) {
+                    console.error(err);
+                    if (window.showToast) window.showToast("Erreur PDF : " + err.message, "error");
+                }
+            };
+
+            if (window.currentTab === 'resfert' && typeof window.render === 'function') {
+                window.render();
+            }
+        }, 800);
+    })();
+</script>
+
 </body>
 
 </html>

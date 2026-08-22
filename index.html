@@ -1414,6 +1414,11 @@
     style="background: #10b981; border: none; padding: 0 14px; border-radius: 12px; color: white; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.3s;">
     <span>📤 EXPORT BDD</span>
 </button>
+<button id="pcImportSyncBtn" onclick="window.triggerPcToFirebaseImport()"
+    style="background: #8b5cf6; border: none; padding: 0 14px; border-radius: 12px; color: white; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.3s;">
+    <span>📥 IMPORT PC</span>
+</button>
+<input type="file" id="pcImportFileInput" style="display:none" accept=".json" onchange="window.processPcImportFile(event)">
 
         </div>
         <div id="selectionActions"
@@ -11076,6 +11081,59 @@ window.triggerSyncExport = async function() {
         console.error('Erreur export:', err);
         alert('Erreur lors de l\'export : ' + err.message);
     }
+};
+</script>
+
+<script>
+// ============================================================
+// IMPORT SYNC (PC -> Tel) : injecte un JSON du PC dans Firebase
+// ============================================================
+window.triggerPcToFirebaseImport = function() {
+    document.getElementById('pcImportFileInput').click();
+};
+
+window.processPcImportFile = async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            const totalCollections = Object.keys(data).length;
+            const totalDocs = Object.values(data).reduce((acc, col) => acc + Object.keys(col).length, 0);
+            
+            if (!confirm('Importer ' + totalDocs + ' documents depuis le PC vers Firebase ?\n\nLes donnees existantes seront fusionnees (pas supprimees).')) {
+                event.target.value = '';
+                return;
+            }
+            
+            if (window.showToast) window.showToast('Import en cours... ' + totalDocs + ' documents a traiter.', 'info', 8000);
+            
+            let imported = 0;
+            for (let [collectionId, docs] of Object.entries(data)) {
+                for (let [docId, docData] of Object.entries(docs)) {
+                    try {
+                        await window.db.collection(collectionId).doc(docId).set(docData);
+                        imported++;
+                    } catch(err) {
+                        console.warn('Erreur import doc:', collectionId, docId, err);
+                    }
+                }
+            }
+            
+            if (window.showToast) window.showToast('Import PC reussi ! ' + imported + '/' + totalDocs + ' documents synchronises dans Firebase.', 'success', 8000);
+            event.target.value = '';
+            
+            // Recharger pour voir les nouvelles donnees
+            setTimeout(() => location.reload(), 3000);
+            
+        } catch(err) {
+            console.error('Erreur import PC:', err);
+            alert('Erreur de lecture du fichier JSON: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
 };
 </script>
 

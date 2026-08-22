@@ -1410,6 +1410,11 @@
                 style="background: #fff; border: 1.5px solid var(--glass-border); padding: 0 14px; border-radius: 12px; color: var(--text-dim); cursor: pointer; height: 40px; display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;" id="sortBtn">
                 <span id="sortBtnIcon">📅</span><span id="sortBtnLabel">Date ↓</span>
             </button>
+<button id="exportSyncBtn" onclick="window.triggerSyncExport()"
+    style="background: #10b981; border: none; padding: 0 14px; border-radius: 12px; color: white; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.3s;">
+    <span>📤 EXPORT BDD</span>
+</button>
+
         </div>
         <div id="selectionActions"
             style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -9723,7 +9728,7 @@
         };
 
         window.goToResultsStep2 = function() {
-            const checkedIds = Array.from(window._fertCheckedIds || new Set());
+            const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
             const fertiliteData = window._fertiliteData || [];
             const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
             if (selectedFiches.length === 0) return;
@@ -9779,36 +9784,6 @@
                     const testLotName = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? (testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
                     const refLotName  = (refLotEl  && refLotEl.options[refLotEl.selectedIndex])  ? (refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
                     
-                    const isEnrich = (t.f.categorie === 'enrichissement');
-
-                    if (isEnrich) {
-                        return `<tr>
-                            <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
-                                ${t.f.nom || 'MC'}<br>
-                                <span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
-                            </td>
-                            <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569; position:relative;">
-                                <div style="margin-bottom:2px;">R: ${refLotName||'—'}</div>
-                                <div>T: ${testLotName||'—'}</div>
-                            </td>
-                            <td colspan="3" style="padding:4px; border:1px solid #e2e8f0; text-align:center;">
-                                <select id="${b}_rmoy" style="${iS} text-align:center;">
-                                    <option value="" disabled selected>— Sélectionner —</option>
-                                    <option value="+ (Trouble)">+ (Trouble)</option>
-                                    <option value="- (Limpide)">- (Limpide)</option>
-                                </select>
-                            </td>
-                            <td colspan="3" style="padding:4px; border:1px solid #e2e8f0; text-align:center;">
-                                <select id="${b}_tmoy" style="${iS} text-align:center;">
-                                    <option value="" disabled selected>— Sélectionner —</option>
-                                    <option value="+ (Trouble)">+ (Trouble)</option>
-                                    <option value="- (Limpide)">- (Limpide)</option>
-                                </select>
-                            </td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="hidden" id="${b}_ratio" value=""><input readonly style="${rS} cursor:default; opacity:0; width:100%; border:none;" placeholder="—"></td>
-                        </tr>`;
-                    }
-
                     return `<tr>
                         <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
                             ${t.f.nom || 'MC'}<br>
@@ -9870,7 +9845,7 @@
 
         window.confirmAndGenerateFertFeuillesResultats = function() {
             window.closeModal('feuillesResultatsModalOverlay');
-            const checkedIds = Array.from(window._fertCheckedIds || new Set());
+            const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
             const fertiliteData = window._fertiliteData || [];
             const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
             if (selectedFiches.length === 0) return;
@@ -9917,27 +9892,15 @@
             const addHeader = (pageNum) => {
                 doc.setDrawColor(0, 0, 0);
                 doc.setLineWidth(0.5);
-                doc.rect(10, 5, pageWidth - 20, 16, 'D');
+                doc.rect(10, 5, pageWidth - 20, 12, 'D');
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(14);
                 doc.setTextColor(0, 0, 0);
-                doc.text('FEUILLE DE RESULTATS GLOBALE - FERTILITE', 15, 12);
+                doc.text('FEUILLE DE RESULTATS GLOBALE - FERTILITE', 15, 13);
                 doc.setFontSize(9);
                 doc.setFont('helvetica', 'normal');
-                doc.text(`Date Edition : ${date}   -   Page ${pageNum}`, pageWidth - 15, 12, { align: 'right' });
-                
-                const dF = document.getElementById('frGlobalDateFert') ? window.formatStringToDate(document.getElementById('frGlobalDateFert').value, '') : '';
-                const dL = document.getElementById('frGlobalDateLect') ? window.formatStringToDate(document.getElementById('frGlobalDateLect').value, '') : '';
-                const dS = document.getElementById('frGlobalDateSter') ? window.formatStringToDate(document.getElementById('frGlobalDateSter').value, '') : '';
-                
-                doc.setFontSize(8);
-                let infos = [];
-                if (dF && dF !== '-') infos.push(`Date de Fertilité : ${dF}`);
-                if (dL && dL !== '-') infos.push(`Date de Lecture : ${dL}`);
-                if (dS && dS !== '-') infos.push(`Date de Stérilité : ${dS}`);
-                if (infos.length > 0) doc.text(infos.join('   |   '), 15, 18);
-                
-                y = 26;
+                doc.text(`Date : ${date}   -   Page ${pageNum}`, pageWidth - 15, 13, { align: 'right' });
+                y = 25;
             };
 
             let pageNb = 1;
@@ -10035,15 +9998,7 @@
                     const refL = (refLotEl && refLotEl.options[refLotEl.selectedIndex]) ? refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') : '';
 
                     let obsText = '';
-                    const isEnrich = (t.f.categorie === 'enrichissement');
-                    
-                    if (isEnrich) {
-                         if (rmoy && tmoy) {
-                              if (rmoy === tmoy) obsText = 'OK';
-                              else obsText = 'NON CF';
-                         }
-                    }
-                    else if (ratio && Number(ratio)) {
+                    if (ratio && Number(ratio)) {
                          let rVal = Number(ratio);
                          if (rVal >= 0.5 && rVal <= 2.0) obsText = 'OK';
                          else obsText = 'NON CF (Ratio)';
@@ -10076,33 +10031,23 @@
                     doc.text(refL || '—', cols[1]+2, y + 5);
                     doc.text(testL || '—', cols[2]+2, y + 5);
                     
-                    if (isEnrich) {
-                        doc.setFont('helvetica', 'bold');
-                        doc.text(rmoy||'', cols[3]+2, y + 5);
-                        doc.text(tmoy||'', cols[6]+2, y + 5);
-                        doc.setFont('helvetica', 'normal');
-                        if (obsText !== 'OK' && obsText !== '') doc.setFont('helvetica', 'bold');
-                        doc.text(obsText, cols[10]+2, y + 5);
-                    } else {
-                        doc.setFont('helvetica', 'normal');
-                        doc.text(tb1||'', cols[3]+2, y + 5);
-                        doc.text(tb2||'', cols[4]+2, y + 5);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text(rmoy||'', cols[5]+2, y + 5);
-                        
-                        doc.setFont('helvetica', 'normal');
-                        doc.text(tb1||'', cols[6]+2, y + 5);
-                        doc.text(tb2||'', cols[7]+2, y + 5);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text(tmoy||'', cols[8]+2, y + 5);
-                        
-                        doc.setTextColor(0, 0, 0); // Pas de couleur
-                        doc.text(ratio ? (ratio + '') : '', cols[9]+2, y + 5);
-                        
-                        doc.setFont('helvetica', 'normal');
-                        if (obsText !== 'OK' && obsText !== '') doc.setFont('helvetica', 'bold');
-                        doc.text(obsText, cols[10]+2, y + 5);
-                    }
+                    doc.text(rb1||'', cols[3]+2, y + 5);
+                    doc.text(rb2||'', cols[4]+2, y + 5);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(rmoy||'', cols[5]+2, y + 5);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(tb1||'', cols[6]+2, y + 5);
+                    doc.text(tb2||'', cols[7]+2, y + 5);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(tmoy||'', cols[8]+2, y + 5);
+                    
+                    doc.setTextColor(0, 0, 0); // Pas de couleur
+                    doc.text(ratio ? (ratio + '') : '', cols[9]+2, y + 5);
+                    
+                    doc.setFont('helvetica', 'normal');
+                    if (obsText !== 'OK' && obsText !== '') doc.setFont('helvetica', 'bold');
+                    doc.text(obsText, cols[10]+2, y + 5);
 
                     y += rowH;
                 });
@@ -11071,6 +11016,67 @@
             }
         }, 800);
     })();
+</script>
+
+<script>
+// ============================================================
+// EXPORT BDD - Synchronisation Firebase -> PC Local
+// ============================================================
+window.triggerSyncExport = async function() {
+    try {
+        if (window.showToast) window.showToast("Preparation de l'export... Patientez.", 'info', 5000);
+        
+        // Vrais noms des collections Firebase de l'application
+        const collections = {
+            'fiches':             'Fiches',
+            'preparations':       'Preparations',
+            'analyses':           'Analyses',
+            'photos':             'Photos',
+            'registres_config':   'Registres Config',
+            'registres_data':     'Registres Donnees',
+            'bulletins_stabilite':'Bulletins Stabilite',
+            'germes_catalog':     'Germes',
+            'fertilite_mc':       'Fertilite MC',
+            'settings':           'Parametres',
+            'laboratoires':       'Laboratoires'
+        };
+        
+        let fullStore = {};
+        let totalDocs = 0;
+        
+        for (let [col, label] of Object.entries(collections)) {
+            fullStore[col] = {};
+            try {
+                const snap = await window.db.collection(col).get();
+                snap.forEach(function(doc) {
+                    fullStore[col][doc.id] = doc.data();
+                    totalDocs++;
+                });
+                console.log(label + ': ' + Object.keys(fullStore[col]).length + ' docs');
+            } catch(e) {
+                console.warn('Collection ignoree:', col, e.message);
+            }
+        }
+        
+        const dataStr = JSON.stringify(fullStore, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const date = new Date().toISOString().slice(0, 10);
+        a.download = 'fichesmicro_backup_' + date + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        if (window.showToast) window.showToast('Export reussi ! ' + totalDocs + ' documents exportes.', 'success', 5000);
+        
+    } catch(err) {
+        console.error('Erreur export:', err);
+        alert('Erreur lors de l\'export : ' + err.message);
+    }
+};
 </script>
 
 </body>

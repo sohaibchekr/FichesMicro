@@ -9650,7 +9650,7 @@
                 div.style.borderRadius = '12px';
                 div.innerHTML = `
                     <div style="font-weight:800; font-size:0.9rem; color:var(--text-main); margin-bottom:8px;">🧪 ${mcName}</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
                         <div>
                             <label style="font-size:0.7rem; font-weight:800; color:var(--primary);">LOT TESTÉ</label>
                             <select id="fr_testLot_${f.id}" class="form-input" style="padding:6px; font-size:0.8rem;" onchange="window._autoSelectRefLot('${f.id}', this)">
@@ -9661,6 +9661,24 @@
                             <label style="font-size:0.7rem; font-weight:800; color:#d97706;">LOT RÉFÉRENCE</label>
                             <select id="fr_refLot_${f.id}" class="form-input" style="padding:6px; font-size:0.8rem;">
                                 ${optionsHtml}
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Dates & Result for this MC -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; border-top:1px dashed #cbd5e1; padding-top:8px;">
+                        <div>
+                            <label style="font-size:0.7rem; font-weight:800; color:#475569;">Date Fertilité</label>
+                            <input type="date" id="fr_df_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;" onchange="var s=document.getElementById('fr_ds_${f.id}'); if(s && !s.value) s.value=this.value;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem; font-weight:800; color:#475569;">Date Stérilité</label>
+                            <input type="date" id="fr_ds_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.7rem; font-weight:800; color:#475569;">Stérilité</label>
+                            <select id="fr_res_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;">
+                                <option value="OK">Conforme (OK)</option>
+                                <option value="NON">Non conforme (NON)</option>
                             </select>
                         </div>
                     </div>
@@ -9789,6 +9807,41 @@
                     const testLotName = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? (testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
                     const refLotName  = (refLotEl  && refLotEl.options[refLotEl.selectedIndex])  ? (refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
                     
+                    const isEnrich = (t.f.categorie === 'enrichissement' || (t.f.nom || '').toLowerCase().includes('rappaport'));
+                    if (isEnrich) {
+                        return `<tr>
+                            <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
+                                ${t.f.nom || 'MC'}<br>
+                                <span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
+                            </td>
+                            <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569; position:relative;">
+                                <div style="margin-bottom:2px;">R: ${refLotName||'—'}</div>
+                                <div>T: ${testLotName||'—'}</div>
+                            </td>
+                            <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
+                                <select id="${b}_rmoy" style="${iS}">
+                                    <option value=""></option>
+                                    <option value="Trouble">Trouble</option>
+                                    <option value="Limpide">Limpide</option>
+                                </select>
+                            </td>
+                            <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
+                                <select id="${b}_tmoy" style="${iS}">
+                                    <option value=""></option>
+                                    <option value="Trouble">Trouble</option>
+                                    <option value="Limpide">Limpide</option>
+                                </select>
+                            </td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;">
+                                <select id="${b}_ratio" style="${rS}">
+                                    <option value="—">—</option>
+                                    <option value="OK">OK</option>
+                                    <option value="NON">NON</option>
+                                </select>
+                            </td>
+                        </tr>`;
+                    }
+                    
                     return `<tr>
                         <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
                             ${t.f.nom || 'MC'}<br>
@@ -9892,20 +9945,36 @@
                 return s;
             };
 
+            const fmtDate = (d) => {
+                if (!d) return '—';
+                const parts = d.split('-');
+                if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                return d;
+            };
+
+            const gDateFert = document.getElementById('frGlobalDateFert') ? document.getElementById('frGlobalDateFert').value : '';
+            const gDateSter = document.getElementById('frGlobalDateSter') ? document.getElementById('frGlobalDateSter').value : '';
+            const gDateLect = document.getElementById('frGlobalDateLect') ? document.getElementById('frGlobalDateLect').value : '';
+
             let y = 15;
             
             const addHeader = (pageNum) => {
                 doc.setDrawColor(0, 0, 0);
                 doc.setLineWidth(0.5);
-                doc.rect(10, 5, pageWidth - 20, 12, 'D');
+                doc.rect(10, 5, pageWidth - 20, 16, 'D');
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(14);
                 doc.setTextColor(0, 0, 0);
-                doc.text('FEUILLE DE RESULTATS GLOBALE - FERTILITE', 15, 13);
+                doc.text('FEUILLE DE RESULTATS GLOBALE - FERTILITE', 15, 12);
                 doc.setFontSize(9);
                 doc.setFont('helvetica', 'normal');
-                doc.text(`Date : ${date}   -   Page ${pageNum}`, pageWidth - 15, 13, { align: 'right' });
-                y = 25;
+                doc.text(`Date d'édition : ${date}   -   Page ${pageNum}`, pageWidth - 15, 12, { align: 'right' });
+                
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Dates :  Fertilité: ${fmtDate(gDateFert)}  |  Stérilité: ${fmtDate(gDateSter)}  |  Lecture: ${fmtDate(gDateLect)}`, 15, 18);
+                
+                y = 28;
             };
 
             let pageNb = 1;
@@ -9916,10 +9985,10 @@
             }
 
             allSouches.forEach((s) => {
-                const rowH = 7;
+                const rowH = 9;
                 const testsForSouche = souchesMap[s];
                 
-                // On pré-calcule l'espace nécessaire : Titre (7) + En-tête (7) + (N * 7) + Espacement (8)
+                // On pré-calcule l'espace nécessaire : Titre (7) + En-tête (7) + (N * 9) + Espacement (8)
                 const requiredHeight = 7 + 7 + (testsForSouche.length * rowH) + 10;
                 
                 if (y + requiredHeight > pageHeight - 10) {
@@ -10029,30 +10098,43 @@
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(7.5);
                     let mNameLine = doc.splitTextToSize(cU(t.f.nom), cols[0] - 12);
-                    doc.text(mNameLine[0], 12, y + 5);
+                    doc.text(mNameLine[0], 12, y + 4.5);
+                    
+                    const elDf = document.getElementById('fr_df_' + fid);
+                    const elDs = document.getElementById('fr_ds_' + fid);
+                    const elRes = document.getElementById('fr_res_' + fid);
+                    const dF_str = elDf ? fmtDate(elDf.value) : '—';
+                    const dS_str = elDs ? fmtDate(elDs.value) : '—';
+                    const res_str = elRes ? elRes.value : '';
+                    
+                    doc.setFontSize(5);
+                    doc.setTextColor(80,80,80);
+                    doc.text(`F:${dF_str} S:${dS_str} [${res_str}]`, 12, y + 7.5);
+                    
+                    doc.setFontSize(7.5);
+                    doc.setTextColor(0,0,0);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(cU(t.secLabel), cols[0]+2, y + 6);
+                    doc.text(refL || '—', cols[1]+2, y + 6);
+                    doc.text(testL || '—', cols[2]+2, y + 6);
+                    
+                    doc.text(rb1||'', cols[3]+2, y + 6);
+                    doc.text(rb2||'', cols[4]+2, y + 6);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(rmoy||'', cols[5]+2, y + 6);
                     
                     doc.setFont('helvetica', 'normal');
-                    doc.text(cU(t.secLabel), cols[0]+2, y + 5);
-                    doc.text(refL || '—', cols[1]+2, y + 5);
-                    doc.text(testL || '—', cols[2]+2, y + 5);
-                    
-                    doc.text(rb1||'', cols[3]+2, y + 5);
-                    doc.text(rb2||'', cols[4]+2, y + 5);
+                    doc.text(tb1||'', cols[6]+2, y + 6);
+                    doc.text(tb2||'', cols[7]+2, y + 6);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(rmoy||'', cols[5]+2, y + 5);
-                    
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(tb1||'', cols[6]+2, y + 5);
-                    doc.text(tb2||'', cols[7]+2, y + 5);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(tmoy||'', cols[8]+2, y + 5);
+                    doc.text(tmoy||'', cols[8]+2, y + 6);
                     
                     doc.setTextColor(0, 0, 0); // Pas de couleur
-                    doc.text(ratio ? (ratio + '') : '', cols[9]+2, y + 5);
+                    doc.text(ratio ? (ratio + '') : '', cols[9]+2, y + 6);
                     
                     doc.setFont('helvetica', 'normal');
                     if (obsText !== 'OK' && obsText !== '') doc.setFont('helvetica', 'bold');
-                    doc.text(obsText, cols[10]+2, y + 5);
+                    doc.text(obsText, cols[10]+2, y + 6);
 
                     y += rowH;
                 });
@@ -10093,12 +10175,24 @@
                 let mStrainsCount = allS.length;
                 let boites = 0; let tubes = 0; let flacons = 0;
                 
-                if (f.categorie === 'enrichissement') {
-                     tubes = mStrainsCount * 2;
+                let nomLower = (f.nom || '').toLowerCase();
+                let isDiluant = nomLower.includes('diluant');
+                let isBouillon = (f.categorie === 'enrichissement') || nomLower.includes('bouillon') || nomLower.includes('rappaport');
+
+                // Pour chaque souche :
+                //   - Gélose/Agar : 2 boites dilution ciblée (Test) + 2 boites (Réf) + 2 témoins par souche (TSA ou GS) = 6 boites/souche
+                //   - Diluant : idem (2 TSA Test + 2 TSA Réf + 2 témoins) = 6 boites/souche
+                //   - Bouillon/Enrichissement : 1 tube (Test) + 1 tube (Réf) = 2 tubes/souche
+                //   + Stérilité TESTÉ SEULEMENT : 2 boites (géloses) ou 3 tubes (bouillons)
+
+                if (isBouillon) {
+                     tubes = (mStrainsCount * 2) + 3; // 1 tube/souche (Test+Ref), + 3 stérilité MC testé uniquement
                 } else {
-                     boites = mStrainsCount * 4;
+                     // 6 boites/souche (2 dilution Test + 2 dilution Ref + 2 témoins TSA/GS) + 2 stérilité (MC testé seulement)
+                     boites = (mStrainsCount * 6) + 2;
                      flacons = Math.ceil(boites / 10);
                 }
+                
                 totalBoites += boites;
                 totalFlacons += flacons;
                 totalTubesMC += tubes;
@@ -10116,6 +10210,7 @@
                     nom: f.nom,
                     lot: testLotStr,
                     souchesCount: mStrainsCount,
+                    souchesList: allS.length > 0 ? allS.join(', ') : '—',
                     boites: boites,
                     flacons: flacons,
                     tubes: tubes
@@ -10170,18 +10265,33 @@
             doc.setFontSize(10); doc.setTextColor(0,0,0); doc.setFont('helvetica', 'bold');
             doc.text('1. PREPARATION DES MILIEUX (Consommables par MC)', 15, 36);
             
-            let headCols = ['Milieu de Culture', 'Lot Testé', 'Nb Souches', 'Boites de Petri', 'Flacons (190mL)', 'Tubes MC'];
+            let headCols = ['Milieu de Culture', 'Lot Testé', 'Souches', 'Boites incubées', 'Flacons 190mL*', 'Tubes'];
             
             doc.autoTable({
                 startY: 40,
                 head: [headCols],
                 body: recapMC.map(r => {
                       let lotStr = (useLots && r.lot) ? r.lot : '';
-                      return [r.nom, lotStr, r.souchesCount, r.boites, r.flacons, r.tubes];
+                      const flaconsStr = r.flacons > 0 ? r.flacons + ' fl. (~' + (r.flacons * 190) + 'mL)' : '--';
+                      return [r.nom, lotStr, r.souchesList, r.boites > 0 ? r.boites : '--', flaconsStr, r.tubes > 0 ? r.tubes : '--'];
                 }),
                 theme: 'grid',
-                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0] },
-                styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 }
+                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 7 },
+                styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], textColor: 0 },
+                columnStyles: {
+                    0: { cellWidth: 35 },
+                    1: { cellWidth: 22 },
+                    2: { cellWidth: 55 },
+                    3: { cellWidth: 22, halign: 'center' },
+                    4: { cellWidth: 30, halign: 'center' },
+                    5: { cellWidth: 18, halign: 'center' }
+                },
+                didDrawPage: function(data) {
+                    doc.setFontSize(6.5);
+                    doc.setFont('helvetica', 'italic');
+                    doc.setTextColor(100,100,100);
+                    doc.text('* 1 flacon gélose fondue 190mL = 10 boites de Petri', 15, doc.lastAutoTable ? doc.lastAutoTable.finalY + 4 : 80);
+                }
             });
             
             let y = doc.lastAutoTable.finalY + 12;
@@ -10287,18 +10397,21 @@
             doc.text(totalSectionNum + ' TOTAUX GENERAUX', 15, y); y += 7;
             doc.autoTable({
                 startY: y,
-                head: [['Consommable', 'Quantite Totale']],
+                head: [['Consommable (Test + Réf)', 'Quantite (Dans l\'étuve)']],
                 body: [
-                    ['Boites de Petri (toutes MC confondues)', totalBoites + ' boites'],
-                    ['Flacons 190mL necessaires', totalFlacons + ' flacon(s)'],
-                    ['Tubes de MC (Milieux d\'enrichissement)', totalTubesMC + ' tube(s)'],
-                    ['Tubes de dilution pH 7 (9mL)', totalTubes + ' tubes (sans doublon souches)'],
+                    ['Boites de Petri (toutes test/réf/stérilité)', totalBoites + ' boites'],
+                    ['Flacons gélose fondue 190mL *', totalFlacons + ' flacon(s)'],
+                    ['Tubes MC (Bouillons, dont stérilité MC testé)', totalTubesMC + ' tube(s)'],
+                    ['Tubes de dilution pH 7 (9mL)', totalTubes + ' tubes'],
                 ],
                 theme: 'grid',
-                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0] },
-                styles: { fontSize: 10, cellPadding: 3, lineColor: [0,0,0], textColor: 0 },
-                columnStyles: { 1: { halign: 'center' } }
+                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 9 },
+                styles: { fontSize: 9, cellPadding: 3, lineColor: [0,0,0], textColor: 0 },
+                columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 60, halign: 'center', fontStyle: 'bold' } }
             });
+            y = doc.lastAutoTable.finalY + 5;
+            doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(100,100,100);
+            doc.text('* 1 flacon gélose fondue 190mL = 10 boites de Petri  |  Total gélose : ~' + (totalFlacons * 190) + ' mL', 15, y);
             
             doc.save('Recap_Global_Fertilite.pdf');
         };
@@ -10778,7 +10891,13 @@
                             <td style="padding:10px; color:#444;">${p.lot || '-'}</td>
                             <td style="padding:10px; color:#444;">${dateP}</td>
                             <td style="padding:10px; text-align:center; vertical-align:middle;">
-                                <input type="date" id="dateTest_${pid}" style="padding:5px; border-radius:6px; border:1px solid #bbb; background:#fff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()">
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <label style="font-size:0.7rem; color:#444;">F (fertilité)</label>
+                                    <input type="date" id="dateTest_${pid}" style="padding:5px; border-radius:6px; border:1px solid #bbb; background:#fff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()" onchange="(function(){ var s=document.getElementById('dateSt_${pid}'); if(s && !s.value) s.value=this.value; }).call(this)">
+                                    <label style="font-size:0.7rem; color:#444;">S (stérilité)</label>
+                                    <input type="date" id="dateSt_${pid}" style="padding:5px; border-radius:6px; border:1px solid #3b82f6; background:#eff6ff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()">
+                                    <button onclick="event.stopPropagation(); var f=document.getElementById('dateTest_${pid}'); var s=document.getElementById('dateSt_${pid}'); if(f) s.value=f.value;" style="font-size:0.65rem; background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; border-radius:4px; padding:2px 6px; cursor:pointer;">= Copier F→S</button>
+                                </div>
                             </td>
                             <td style="padding:10px; text-align:center; vertical-align:middle;">
                                 <div style="display:flex; gap:5px; justify-content:center; flex-wrap:wrap;">
@@ -10832,7 +10951,7 @@
                                             <th style="padding:11px;">Milieu (MC)</th>
                                             <th style="padding:11px;">Lot</th>
                                             <th style="padding:11px;">Date Préparation</th>
-                                            <th style="padding:11px; text-align:center;">Date de fertilité</th>
+                                            <th style="padding:11px; text-align:center;">Dates (Fertilité & Stérilité)</th>
                                             <th style="padding:11px; text-align:center;">Date Lecture (+5j / +7j / Manuel)</th>
                                             <th style="padding:11px; text-align:center;">Résultat</th>
                                         </tr>
@@ -10909,9 +11028,10 @@
                         const p = (window.preps || []).find(x => x.id === pid);
                         if (!p) return;
                         const dateTest = (document.getElementById('dateTest_' + pid) || {}).value || '';
+                        const dateSt = (document.getElementById('dateSt_' + pid) || {}).value || '';
                         const dateLecture = (document.getElementById('dateLecture_' + pid) || {}).value || '';
                         const res = (document.getElementById('res_' + pid) || {}).value || 'CONFORME';
-                        checked.push({ p, dateTest, dateLecture, res });
+                        checked.push({ p, dateTest, dateSt, dateLecture, res });
                     }
                 });
 
@@ -10939,9 +11059,9 @@
                     doc.line(10, 35, 200, 35);
 
                     // Table header
-                    const colX = [12, 65, 90, 115, 140, 165];
-                    const headers = ["Milieu (MC)", "Lot", "Date Prep.", "Fertilité", "Résultat", "Observation"];
-                    const colW  = [53, 22, 23, 23, 23, 30];
+                    const colX = [12, 52, 73, 98, 123, 148, 173];
+                    const headers = ["Milieu (MC)", "Lot", "Date Prep.", "Fertilité", "Stérilité", "Date Lecture", "Résultat"];
+                    const colW  = [38, 19, 23, 23, 23, 23, 20];
 
                     let y = 42;
                     doc.setFont("helvetica", "bold");
@@ -10984,11 +11104,12 @@
                         doc.text(lot, colX[1], y);
                         doc.text(dateP, colX[2], y);
                         doc.text(dTest, colX[3], y);
-                        doc.text(dLec, colX[4], y);
-
+                        doc.text(item.dateSt || '-', colX[4], y);
+                        doc.text(dLec, colX[5], y);
+                        
                         // Result - bold
                         doc.setFont("helvetica", "bold");
-                        doc.text(res === 'CONFORME' ? 'OK' : 'NON', colX[5], y);
+                        doc.text(res === 'CONFORME' ? 'OK' : 'NON', colX[6], y);
                         doc.setFont("helvetica", "normal");
                         y += 10;
                     });

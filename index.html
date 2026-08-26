@@ -4,6 +4,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <!-- JSpreadsheet / Excel (Fallback/Ancien) -->
+    <script src="assets/jsuites.js"></script>
+    <link rel="stylesheet" href="assets/jsuites.css" type="text/css" />
+    <script src="assets/jexcel.js"></script>
+    <link rel="stylesheet" href="assets/jexcel.css" type="text/css" />
+
+    <!-- Luckysheet (Clone Microsoft Office Excel) -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/css/pluginsCss.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/plugins.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/css/luckysheet.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/assets/iconfont/iconfont.css' />
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js"></script>
     <style>
         * {
             margin: 0;
@@ -1363,6 +1376,22 @@
         <div id="network-dot"></div>
     </div>
 
+    <button onclick="toggleMainRibbon()" id="maskMainRibbonBtn" class="fab" style="bottom: 120px; right: 30px; font-size:1.1rem; width:55px; height:55px; min-width: 55px; padding:0; background: var(--surface); color: var(--primary); z-index: 2500; border-radius: 50%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+    </button>
+    <script>
+        function toggleMainRibbon() {
+            var header = document.querySelector('.header');
+            if (header.style.display === 'none') {
+                header.style.display = 'flex';
+                if(window.showToast) window.showToast('Ruban affiché', 'info');
+            } else {
+                header.style.display = 'none';
+                if(window.showToast) window.showToast('Ruban masqué', 'info');
+            }
+        }
+    </script>
+
     <header class="header">
         <div class="header-top">
             <div class="logo-container">
@@ -1387,6 +1416,7 @@
             <button onclick="window.switchTab('bulletins')" id="tab-bulletins" class="main-tab" draggable="true" data-tab-id="bulletins">📄 Stabilité</button>
             <button onclick="window.switchTab('germes')" id="tab-germes" class="main-tab" draggable="true" data-tab-id="germes">🦠 Germes</button>
             <button onclick="window.switchTab('fertilite')" id="tab-fertilite" class="main-tab" draggable="true" data-tab-id="fertilite"> Fertilité</button>
+            <button onclick="window.open('excel.html','_blank')" id="tab-excel" class="main-tab" draggable="true" data-tab-id="excel">📊 Excel</button>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
@@ -1440,6 +1470,83 @@
     </main>
 
     <button id="addBtn" class="fab" onclick="window.openAddModal()">+</button>
+
+    <!-- ===== VUE EXCEL TABLEUR ===== -->
+    <div id="view-excel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f1f5f9; z-index:3500; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#1e293b; color:#fff; flex-shrink:0; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button onclick="document.getElementById('view-excel').style.display='none'; document.getElementById('fiches-list').style.display=''; if (document.getElementById('addBtn')) document.getElementById('addBtn').style.display='flex';" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;">← Retour</button>
+                <span style="font-weight:800; font-size:1rem;">📊 Tableur (Office Clone)</span>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button onclick="window.saveLuckysheetData()" style="padding:6px 14px; background:#10b981; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.78rem;">💾 Enregistrer</button>
+                <button onclick="window.clearExcelData()" style="padding:6px 14px; background:#ef4444; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.78rem;">🗑️ Vider</button>
+            </div>
+        </div>
+        <!-- Tableur Luckysheet -->
+        <div style="position: relative; flex: 1; width: 100%;">
+            <div id="luckysheet" style="margin:0px;padding:0px;position:absolute;width:100%;height:100%;left: 0px;top: 0px;background:#fff;"></div>
+        </div>
+    </div>
+    <script>
+        window.mySpreadsheet = null;
+
+        window.initExcel = function() {
+            if (typeof luckysheet === 'undefined') {
+                document.getElementById('luckysheet').innerHTML = '<p style="padding:30px; color:red;">⚠️ Bibliothèque Luckysheet introuvable. Connexion internet requise pour charger Excel Officiel.</p>';
+                return;
+            }
+            try {
+                const saved = localStorage.getItem('micro_luckysheet_v1');
+                let sheets = [{ name: 'Feuille 1', status: 1, order: 0, celldata: [] }];
+                if (saved) {
+                    sheets = JSON.parse(saved);
+                }
+                luckysheet.create({
+                    container: 'luckysheet',
+                    lang: 'fr',
+                    data: sheets,
+                    showinfobar: false,
+                    enableAddBackTop: false,
+                    showtoolbarConfig: {
+                        image: true,
+                        print: true
+                    },
+                });
+                window.mySpreadsheet = true; // flag
+            } catch(e) {
+                console.error('Luckysheet init error:', e);
+            }
+        };
+
+        window.saveLuckysheetData = function() {
+            if (typeof luckysheet !== 'undefined') {
+                const data = luckysheet.getAllSheets();
+                // We must format data to avoid cyclic objects
+                const exportData = data.map(sheet => {
+                    return {
+                        name: sheet.name,
+                        color: sheet.color,
+                        index: sheet.index,
+                        status: sheet.status,
+                        order: sheet.order,
+                        celldata: sheet.celldata,
+                        config: sheet.config
+                    };
+                });
+                localStorage.setItem('micro_luckysheet_v1', JSON.stringify(exportData));
+                if (window.showToast) window.showToast('Tableur enregistré !', 'success');
+            }
+        }
+        
+        window.clearExcelData = function() {
+            if (!confirm('Vider tout le classeur ?')) return;
+            localStorage.removeItem('micro_luckysheet_v1');
+            location.reload();
+        }
+
+
+    </script>
 
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
         <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.11.0 • Stockage Local Direct</div>
@@ -6037,13 +6144,32 @@
                 container.innerHTML = registres.map(reg => {
                     let entries = rEntries.filter(e => e.regId === reg.id);
                     
-                    // Filtrage par recherche
+                    // Filtrage par recherche texte
                     if (query) {
                         const matchesName = (reg.name || "").toLowerCase().includes(query);
                         const filteredEntries = entries.filter(e => Object.values(e.data || {}).some(v => String(v).toLowerCase().includes(query)));
                         
                         if (!matchesName && filteredEntries.length === 0) return ""; // Rien ne correspond
                         if (!matchesName) entries = filteredEntries; // On ne garde que les lignes qui matchent
+                    }
+                    
+                    // Filtrage par date (dateStart / dateEnd)
+                    const dateStart = document.getElementById('dateFilterStart') ? document.getElementById('dateFilterStart').value : '';
+                    const dateEnd = document.getElementById('dateFilterEnd') ? document.getElementById('dateFilterEnd').value : '';
+                    
+                    if (dateStart || dateEnd) {
+                        entries = entries.filter(e => {
+                            // Chercher des champs date dans la ligne
+                            const rowDates = Object.values(e.data || {}).filter(v => typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}$/));
+                            if (rowDates.length > 0) {
+                                return rowDates.some(d => (!dateStart || d >= dateStart) && (!dateEnd || d <= dateEnd));
+                            } else {
+                                // Si pas de champ date, on filtre sur la date de création/maj
+                                const d = new Date(e.updatedAt || 0).toISOString().split('T')[0];
+                                return (!dateStart || d >= dateStart) && (!dateEnd || d <= dateEnd);
+                            }
+                        });
+                        if (entries.length === 0) return ""; // Rien ne correspond aux dates
                     }
 
                     entries.sort((a, b) => {
@@ -6111,7 +6237,29 @@
                                                         return `<td><span style="background:rgba(79,70,229,0.08); padding:2px 8px; border-radius:50px; font-size:0.65rem; font-weight:800; color:var(--primary);">${checkedCount}/${opts.length} ✅</span></td>`;
                                                     }
                                                     if (typeof c === 'object' && c.type === 'date') {
-                                                        return `<td>${window.formatStringToDate(val, '<span style="opacity:0.3;">—</span>')}</td>`;
+                                                        let dateHtml = window.formatStringToDate(val, '<span style="opacity:0.3;">—</span>');
+                                                        let colorStyle = "";
+                                                        if (val) {
+                                                            const isExp = /(périm|peremp|expir|limite|validité|fin|dlc|dluo|libération)/i.test(colName);
+                                                            if (isExp) {
+                                                                const today = new Date();
+                                                                today.setHours(0,0,0,0);
+                                                                const d = new Date(val);
+                                                                const diffDays = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                                                                
+                                                                if (diffDays < 0) {
+                                                                    colorStyle = 'background: rgba(239, 68, 68, 0.1); color: #ef4444; font-weight: 800; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;';
+                                                                } else if (diffDays <= 7) { // Orange for <= 7 days (or 3 days depending on setting, using 7 generally)
+                                                                    colorStyle = 'background: rgba(245, 158, 11, 0.1); color: #d97706; font-weight: 800; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;';
+                                                                } else {
+                                                                    colorStyle = 'background: rgba(34, 197, 94, 0.1); color: #15803d; font-weight: 800; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;';
+                                                                }
+                                                            }
+                                                        }
+                                                        if (colorStyle) {
+                                                            return `<td><span style="${colorStyle}">${dateHtml}</span></td>`;
+                                                        }
+                                                        return `<td>${dateHtml}</td>`;
                                                     }
                                                     return `<td>${val || '<span style="opacity:0.3;">—</span>'}</td>`;
                                                 }).join('')}
@@ -6831,6 +6979,13 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 
+                // Helper: normalise a string for fuzzy matching
+                function normalizeKey(s) {
+                    return String(s).toLowerCase().trim()
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^a-z0-9]/g, '');
+                }
+
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     try {
@@ -6848,24 +7003,33 @@
                         const reg = registres.find(r => r.id === regId);
                         const batch = window.db.batch();
                         let count = 0;
+
+                        // Build a normalised map of Excel column headers
+                        const excelHeaders = Object.keys(json[0]);
+                        const normExcelHeaders = {};
+                        excelHeaders.forEach(h => { normExcelHeaders[normalizeKey(h)] = h; });
                         
                         json.forEach(row => {
                             let entryData = {};
                             
-                            // Normaliser les clés d'Excel (espaces et casse)
-                            const normalizedRow = {};
-                            Object.keys(row).forEach(k => {
-                                normalizedRow[k.trim().toLowerCase()] = row[k];
-                            });
-
                             reg.columns.forEach(col => {
                                 const colName = typeof col === 'string' ? col : col.name;
-                                const cleanColName = colName.trim().toLowerCase();
-                                if (normalizedRow[cleanColName] !== undefined && normalizedRow[cleanColName] !== null) {
-                                    let val = normalizedRow[cleanColName];
-                                    // Gérer la correction de date d'Excel (cellDates produit des JS Date)
+                                const normColName = normalizeKey(colName);
+                                
+                                // Try exact normalised match first, then fallback to partial
+                                let matchedKey = normExcelHeaders[normColName];
+                                if (!matchedKey) {
+                                    // partial: find any header containing or contained in colName
+                                    Object.entries(normExcelHeaders).forEach(([normH, origH]) => {
+                                        if (!matchedKey && (normH.includes(normColName) || normColName.includes(normH))) {
+                                            matchedKey = origH;
+                                        }
+                                    });
+                                }
+
+                                if (matchedKey !== undefined && row[matchedKey] !== undefined && row[matchedKey] !== null) {
+                                    let val = row[matchedKey];
                                     if (val instanceof Date) {
-                                        // Corriger le décalage de fuseau horaire potentiel pour avoir la date locale
                                         const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
                                         val = offsetDate.toISOString().split('T')[0];
                                     } else if (typeof val === 'string' && val.includes('/')) {
@@ -6880,13 +7044,11 @@
                                 }
                             });
                             
-                            // Seulement si on a pu récupérer au moins une donnée
                             if (Object.keys(entryData).length > 0) {
                                 const newRef = window.db.collection(R_ENTRIES_COL).doc();
                                 batch.set(newRef, {
                                     regId: regId,
                                     data: entryData,
-                                    // Maintenir l'ordre Excel exact !
                                     updatedAt: Date.now() - (count * 1000)
                                 });
                                 count++;
@@ -6909,6 +7071,7 @@
             fileInput.click();
         };
 
+
         window.importNewRegistry = function() {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -6916,7 +7079,18 @@
             fileInput.onchange = function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
+                // Detect column type from sample values
+                function detectColType(colName, values) {
+                    const dateKeywords = /(date|expir|périm|peremp|validit|limite|dlc|dluo|libér|fin)/i;
+                    if (dateKeywords.test(colName)) return 'date';
+                    const sample = values.filter(v => v !== '' && v !== null && v !== undefined);
+                    if (sample.length === 0) return 'text';
+                    if (sample.every(v => v instanceof Date)) return 'date';
+                    if (sample.every(v => !isNaN(parseFloat(v)) && isFinite(v))) return 'number';
+                    return 'text';
+                }
+
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     try {
@@ -6930,9 +7104,18 @@
                         
                         // Extraire les colonnes de la première ligne
                         const headerKeys = Object.keys(json[0]);
-                        const colsToCreate = headerKeys.map(k => k.trim()).filter(k => k);
+                        const colNames = headerKeys.map(k => k.trim()).filter(k => k);
                         
-                        if (colsToCreate.length === 0) { return window.showToast("Aucune colonne détectée.", 'error'); }
+                        if (colNames.length === 0) { return window.showToast("Aucune colonne détectée.", 'error'); }
+
+                        // Auto-detect column types from first 10 rows
+                        const sampleRows = json.slice(0, 10);
+                        const colsToCreate = colNames.map(colName => {
+                            const sampleVals = sampleRows.map(r => r[colName]);
+                            const type = detectColType(colName, sampleVals);
+                            if (type === 'text') return colName; // keep simple string for text cols
+                            return { name: colName, type: type };
+                        });
                         
                         const title = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
                         const newRegRef = window.db.collection(REGISTRES_COL).doc();
@@ -6949,28 +7132,21 @@
                         let count = 0;
                         json.forEach(row => {
                             let entryData = {};
-                            const normalizedRow = {};
-                            Object.keys(row).forEach(k => {
-                                normalizedRow[k.trim().toLowerCase()] = row[k];
-                            });
-
-                            colsToCreate.forEach(colName => {
-                                const cleanColName = colName.toLowerCase();
-                                if (normalizedRow[cleanColName] !== undefined && normalizedRow[cleanColName] !== "" && normalizedRow[cleanColName] !== null) {
-                                    let val = normalizedRow[cleanColName];
-                                    if (val instanceof Date) {
-                                        const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
-                                        val = offsetDate.toISOString().split('T')[0];
-                                    } else if (typeof val === 'string' && val.includes('/')) {
-                                        const p = val.split('/');
-                                        if (p.length === 3) {
-                                            let y = p[2], m = p[1].padStart(2, '0'), d = p[0].padStart(2, '0');
-                                            if (y.length === 2) y = '20' + y;
-                                            if (y.length === 4) val = `${y}-${m}-${d}`;
-                                        }
+                            colNames.forEach(colName => {
+                                let val = row[colName];
+                                if (val === '' || val === null || val === undefined) return;
+                                if (val instanceof Date) {
+                                    const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
+                                    val = offsetDate.toISOString().split('T')[0];
+                                } else if (typeof val === 'string' && val.includes('/')) {
+                                    const p = val.split('/');
+                                    if (p.length === 3) {
+                                        let y = p[2], m = p[1].padStart(2, '0'), d = p[0].padStart(2, '0');
+                                        if (y.length === 2) y = '20' + y;
+                                        if (y.length === 4) val = `${y}-${m}-${d}`;
                                     }
-                                    entryData[colName] = val;
                                 }
+                                entryData[colName] = val;
                             });
                             
                             if (Object.keys(entryData).length > 0) {
@@ -6999,6 +7175,7 @@
             };
             fileInput.click();
         };
+
 
         // CSS additionnel
         const style = document.createElement('style');
@@ -10853,6 +11030,18 @@
             // === INTERCEPT RENDER ===
             const _oldRenderML = window.render;
             window.render = function() {
+                const viewExcel = document.getElementById('view-excel');
+                if (window.currentTab === 'excel') {
+                    document.getElementById('fiches-list').style.display = 'none';
+                    if(viewExcel) { viewExcel.style.display = 'flex'; }
+                    if (document.getElementById('addBtn')) document.getElementById('addBtn').style.display = 'none';
+                    if (!window.mySpreadsheet) window.initExcel();
+                    return;
+                } else {
+                    document.getElementById('fiches-list').style.display = '';
+                    if(viewExcel) viewExcel.style.display = 'none';
+                }
+                
                 if (window.currentTab === 'resfert') {
                     const container = document.getElementById('fiches-list');
                     if (!container) return;

@@ -6931,7 +6931,30 @@
         window.exportRegistry = function(regId) {
             const reg = registres.find(r => r.id === regId);
             if (!reg) return;
-            const entries = rEntries.filter(e => e.regId === regId);
+            let entries = rEntries.filter(e => e.regId === regId);
+            
+            const searchInput = document.getElementById('search-input');
+            const query = searchInput && searchInput.value ? searchInput.value.toLowerCase().trim() : '';
+            if (query) {
+                const matchesName = (reg.name || "").toLowerCase().includes(query);
+                const filteredEntries = entries.filter(e => Object.values(e.data || {}).some(v => String(v).toLowerCase().includes(query)));
+                if (!matchesName) entries = filteredEntries;
+            }
+            
+            const dateStart = document.getElementById('dateFilterStart') ? document.getElementById('dateFilterStart').value : '';
+            const dateEnd = document.getElementById('dateFilterEnd') ? document.getElementById('dateFilterEnd').value : '';
+            if (dateStart || dateEnd) {
+                entries = entries.filter(e => {
+                    const rowDates = Object.values(e.data || {}).filter(v => typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}$/));
+                    if (rowDates.length > 0) {
+                        return rowDates.some(d => (!dateStart || d >= dateStart) && (!dateEnd || d <= dateEnd));
+                    } else {
+                        const d = new Date(e.updatedAt || 0).toISOString().split('T')[0];
+                        return (!dateStart || d >= dateStart) && (!dateEnd || d <= dateEnd);
+                    }
+                });
+            }
+
             if (entries.length === 0) return window.showToast("Aucune donnée à exporter.", 'info');
 
             const cols = reg.columns || [];

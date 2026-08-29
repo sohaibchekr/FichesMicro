@@ -9885,6 +9885,11 @@
                 `;
                 container.appendChild(div);
             });
+            // Reset toujours à l'étape 1 avant d'ouvrir
+            document.getElementById('frStep1Wrapper').style.display = '';
+            document.getElementById('frStep2Wrapper').style.display = 'none';
+            document.getElementById('frInoculumContainer').innerHTML = '';
+            document.getElementById('frResultsContainer').innerHTML = '';
             window.openModal('feuillesResultatsModalOverlay');
         };
 
@@ -9971,18 +9976,29 @@
             });
             const allSouches = Object.keys(souchesMap).sort();
 
-            // --- Zone Inoculum ---
+            // --- Zone Inoculum (2 champs par souche: fertilité/ind + inhibition) ---
             const inocContainer = document.getElementById('frInoculumContainer');
             inocContainer.innerHTML = '';
             allSouches.forEach(s => {
                 const key = window._frSoucheKey(s);
                 const cell = document.createElement('div');
-                cell.style.cssText = 'display:flex; flex-direction:column; gap:4px; min-width:160px; flex:1 1 160px;';
+                cell.style.cssText = 'display:flex; flex-direction:column; gap:4px; min-width:180px; flex:1 1 180px; border:1px solid #e2e8f0; border-radius:8px; padding:8px; background:#fff;';
                 cell.innerHTML = `
-                    <label style="font-size:0.68rem; font-weight:800; color:var(--text-dim); word-break:break-word;" title="${s}">${s}</label>
-                    <input type="text" id="fr_inoc_${key}" data-souche="${s.replace(/"/g,'&quot;')}"
-                        class="form-input fr-inoc-input" placeholder="ex: 1500 ou 0.5 McF"
-                        style="padding:5px 8px; font-size:0.78rem; margin:0;" oninput="window._syncFrInoculumReadouts()">
+                    <label style="font-size:0.68rem; font-weight:800; color:var(--text-dim); word-break:break-word; margin-bottom:2px;" title="${s}">${s}</label>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <span style="font-size:0.6rem; font-weight:800; color:#059669; min-width:50px;">Fertilité</span>
+                            <input type="text" id="fr_inoc_${key}" data-souche="${s.replace(/"/g,'&quot;')}" data-sec="fert"
+                                class="form-input fr-inoc-input" placeholder="ex: 50 UFC"
+                                style="padding:3px 6px; font-size:0.72rem; margin:0; flex:1;" oninput="window._syncFrInoculumReadouts()">
+                        </div>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <span style="font-size:0.6rem; font-weight:800; color:#dc2626; min-width:50px;">Inhibition</span>
+                            <input type="text" id="fr_inoc_inh_${key}" data-souche="${s.replace(/"/g,'&quot;')}" data-sec="inh"
+                                class="form-input fr-inoc-input-inh" placeholder="ex: 500 UFC"
+                                style="padding:3px 6px; font-size:0.72rem; margin:0; flex:1;" oninput="window._syncFrInoculumReadouts()">
+                        </div>
+                    </div>
                 `;
                 inocContainer.appendChild(cell);
             });
@@ -9994,62 +10010,58 @@
             const aS = 'padding:4px 5px; font-size:0.73rem; margin:0; border:1px solid #bbf7d0; border-radius:5px; width:100%; box-sizing:border-box; background:#f0fdf4; font-weight:800; color:#059669;';
             const rS = 'padding:4px 5px; font-size:0.73rem; margin:0; border:1px solid #fde68a; border-radius:5px; width:100%; box-sizing:border-box; background:#fffbeb; font-weight:900; color:#b45309;';
             
-            allSouches.forEach(s => {
-                const sk = window._frSoucheKey(s);
-                const inocId = 'fr_inoc_' + sk;
-                const testsForSouche = souchesMap[s];
-                
-                let rows = testsForSouche.map(t => {
-                    const fid = t.f.id;
-                    const b = `frr_${fid}_${t.secKey}_${sk}`;
-                    const testLotEl = document.getElementById('fr_testLot_' + fid);
-                    const refLotEl = document.getElementById('fr_refLot_' + fid);
-                    const testLotName = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? (testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
-                    const refLotName  = (refLotEl  && refLotEl.options[refLotEl.selectedIndex])  ? (refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
-                    
-                    const isEnrich = (t.f.categorie === 'enrichissement' || (t.f.nom || '').toLowerCase().includes('rappaport'));
+            selectedFiches.forEach(f => {
+                const fid = f.id;
+
+                let fSouches = [];
+                const addFS = (arr, secK, secL) => {
+                    (arr||[]).forEach(s => { fSouches.push({ s, secKey: secK, secLabel: secL }); });
+                };
+                addFS(f.souches, 'fert', 'Fertilité');
+                addFS(f.indSouches, 'ind', 'Indication');
+                addFS(f.inhSouches, 'inh', 'Inhibition');
+                if (fSouches.length === 0) return;
+
+                const testLotEl = document.getElementById('fr_testLot_' + fid);
+                const refLotEl  = document.getElementById('fr_refLot_' + fid);
+                const testLotName = (testLotEl && testLotEl.selectedIndex >= 0 && testLotEl.options[testLotEl.selectedIndex]) ? (testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
+                const refLotName  = (refLotEl  && refLotEl.selectedIndex >= 0 && refLotEl.options[refLotEl.selectedIndex])  ? (refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
+
+                let rows = fSouches.map(t => {
+                    const sk = window._frSoucheKey(t.s);
+                    const b  = `frr_${fid}_${t.secKey}_${sk}`;
+                    // Choisir le bon inoculum selon la section
+                    const inocId = (t.secKey === 'inh') ? 'fr_inoc_inh_' + sk : 'fr_inoc_' + sk;
+                    const inocHtml = `<input type="text" id="readout_${b}" readonly class="fr-inoc-readout" data-inoc-id="${inocId}" placeholder="— Inoc. —" style="padding:4px; font-size:0.65rem; border:none; background:transparent; font-weight:800; color:${t.secKey === 'inh' ? '#dc2626' : '#059669'}; text-align:center; width:100%;">`;
+
+                    const isEnrich = (f.categorie === 'enrichissement' || (f.nom || '').toLowerCase().includes('rappaport'));
                     if (isEnrich) {
                         return `<tr>
                             <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
-                                ${t.f.nom || 'MC'}<br>
-                                <span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
+                                ${t.s}<br><span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
                             </td>
-                            <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569; position:relative;">
-                                <div style="margin-bottom:2px;">R: ${refLotName||'—'}</div>
-                                <div>T: ${testLotName||'—'}</div>
-                            </td>
-                            <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
-                                <select id="${b}_rmoy" style="${iS}">
-                                    <option value=""></option>
-                                    <option value="Trouble">Trouble</option>
-                                    <option value="Limpide">Limpide</option>
-                                </select>
+                            <td style="padding:0; border:1px solid #e2e8f0; text-align:center; background:#f0fdf4;">${inocHtml}</td>
+                            <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569;">
+                                <div>R: ${refLotName||'—'}</div><div>T: ${testLotName||'—'}</div>
                             </td>
                             <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
-                                <select id="${b}_tmoy" style="${iS}">
-                                    <option value=""></option>
-                                    <option value="Trouble">Trouble</option>
-                                    <option value="Limpide">Limpide</option>
-                                </select>
+                                <select id="${b}_rmoy" style="${iS}"><option value=""></option><option value="Trouble">Trouble</option><option value="Limpide">Limpide</option></select>
+                            </td>
+                            <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
+                                <select id="${b}_tmoy" style="${iS}"><option value=""></option><option value="Trouble">Trouble</option><option value="Limpide">Limpide</option></select>
                             </td>
                             <td style="padding:4px; border:1px solid #e2e8f0;">
-                                <select id="${b}_ratio" style="${rS}">
-                                    <option value="—">—</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NON">NON</option>
-                                </select>
+                                <select id="${b}_ratio" style="${rS}"><option value="—">—</option><option value="OK">OK</option><option value="NON">NON</option></select>
                             </td>
                         </tr>`;
                     }
-                    
                     return `<tr>
                         <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
-                            ${t.f.nom || 'MC'}<br>
-                            <span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
+                            ${t.s}<br><span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
                         </td>
-                        <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569; position:relative;">
-                            <div style="margin-bottom:2px;">R: ${refLotName||'—'}</div>
-                            <div>T: ${testLotName||'—'}</div>
+                        <td style="padding:0; border:1px solid #e2e8f0; text-align:center; background:#f0fdf4;">${inocHtml}</td>
+                        <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569;">
+                            <div>R: ${refLotName||'—'}</div><div>T: ${testLotName||'—'}</div>
                         </td>
                         <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
                         <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
@@ -10064,15 +10076,15 @@
                 const mcDiv = document.createElement('div');
                 mcDiv.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);';
                 mcDiv.innerHTML = `
-                    <div style="font-weight:900; font-size:0.95rem; color:var(--text-main); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                        <span style="color:#0f172a; text-transform:uppercase; letter-spacing:0.5px;">🦠 ${s}</span>
-                        <input type="text" id="readout_${inocId}" readonly class="fr-inoc-readout" data-inoc-id="${inocId}" placeholder="— Inoc. —" style="padding:4px 10px; font-size:0.75rem; border:1px solid #bbf7d0; border-radius:15px; background:#f0fdf4; font-weight:800; color:#059669; cursor:default; max-width:110px; text-align:center;" title="Inoculum de la souche renseigné en haut">
+                    <div style="font-weight:900; font-size:0.95rem; color:var(--text-main); margin-bottom:10px;">
+                        <span style="color:#0f172a; text-transform:uppercase; letter-spacing:0.5px;">🧪 ${f.nom}</span>
                     </div>
                     <div style="overflow-x:auto; border-radius:6px; border:1px solid #cbd5e1;">
-                        <table style="width:100%; border-collapse:collapse; min-width:800px; background:#fff;">
+                        <table style="width:100%; border-collapse:collapse; min-width:850px; background:#fff;">
                             <thead><tr style="background:#e2e8f0;">
-                                <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:20%;">Milieu Testé</th>
-                                <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:15%;">Lots (Réf / Test)</th>
+                                <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:18%;">Souche</th>
+                                <th style="padding:6px; text-align:center; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:10%;">Inoculum</th>
+                                <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:14%;">Lots (Réf / Test)</th>
                                 <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.07);">Réf Bte 1</th>
                                 <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.07);">Réf Bte 2</th>
                                 <th style="padding:6px; font-size:0.62rem; border-right:2px solid #94a3b8; border-bottom:1px solid #cbd5e1; background:rgba(5,150,105,0.09);">Réf Moy.</th>
@@ -10108,11 +10120,16 @@
             const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
             if (selectedFiches.length === 0) return;
 
-            // Collecter inoculum partagé
-            const inoculumGlobal = {};
+            // Collecter inoculum (fertilité et inhibition séparés)
+            const inoculumGlobal = {};     // fert/ind : fr_inoc_{sk}
+            const inoculumGlobalInh = {}; // inhibition : fr_inoc_inh_{sk}
             document.querySelectorAll('.fr-inoc-input').forEach(el => {
                 const s = el.getAttribute('data-souche');
                 if (s && el.value.trim()) inoculumGlobal[s] = el.value.trim();
+            });
+            document.querySelectorAll('.fr-inoc-input-inh').forEach(el => {
+                const s = el.getAttribute('data-souche');
+                if (s && el.value.trim()) inoculumGlobalInh[s] = el.value.trim();
             });
 
             // Re-créer souchesMap pour les données
@@ -10180,166 +10197,142 @@
             let pageNb = 1;
             addHeader(pageNb);
 
-            if (allSouches.length === 0) {
-                 doc.text("Aucune souche trouvée.", 15, y);
+            // 1. Tableau récap Inoculums
+            if (allSouches.length > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.text('1. INOCULUMS DE DÉPART', 12, y + 5);
+                y += 9;
+                doc.autoTable({
+                    startY: y,
+                    head: [['Souche', 'Inoculum de départ (UFC/mL ou McF)']],
+                    body: allSouches.map(s => [cU(s), inoculumGlobal[s] || '—']),
+                    theme: 'grid',
+                    headStyles: { fillColor: [235,235,235], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0] },
+                    styles: { fontSize: 8, cellPadding: 2, lineColor: [0,0,0], textColor: 0 },
+                    margin: { top: 10, right: 10, bottom: 10, left: 10 }
+                });
+                y = doc.lastAutoTable.finalY + 10;
             }
 
-            allSouches.forEach((s) => {
+            // 2. Résultats par Milieu
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('2. RÉSULTATS PAR MILIEU', 12, y + 5);
+            y += 9;
+
+            selectedFiches.forEach((f) => {
+                let fSouches = [];
+                const addFS = (arr, secK, secL) => { (arr||[]).forEach(s => fSouches.push({ s, secKey: secK, secLabel: secL })); };
+                addFS(f.souches, 'fert', 'Fertilité');
+                addFS(f.indSouches, 'ind', 'Indication');
+                addFS(f.inhSouches, 'inh', 'Inhibition');
+                if (fSouches.length === 0) return;
+
                 const rowH = 9;
-                const testsForSouche = souchesMap[s];
-                
-                // On pré-calcule l'espace nécessaire : Titre (7) + En-tête (7) + (N * 9) + Espacement (8)
-                const requiredHeight = 7 + 7 + (testsForSouche.length * rowH) + 10;
-                
+                const requiredHeight = 8 + rowH + (fSouches.length * rowH) + 10;
                 if (y + requiredHeight > pageHeight - 10) {
-                    doc.addPage();
-                    pageNb++;
-                    addHeader(pageNb);
+                    doc.addPage(); pageNb++; addHeader(pageNb);
                 }
 
-                // Titre Souche
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(11);
-                doc.setTextColor(0, 0, 0);
-                doc.setFillColor(235, 235, 235);
+                // Titre MC
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+                doc.setFillColor(235,235,235);
                 doc.rect(10, y, pageWidth - 20, 8, 'F');
-                doc.setDrawColor(0,0,0);
-                doc.setLineWidth(0.3);
+                doc.setDrawColor(0,0,0); doc.setLineWidth(0.3);
                 doc.rect(10, y, pageWidth - 20, 8, 'D');
-                
-                const inocV = inoculumGlobal[s] ? inoculumGlobal[s] : '—';
-                doc.text(`SOUCHE : ${cU(s)}`, 12, y + 5.5);
-                
-                doc.setFontSize(9);
-                doc.setTextColor(0, 0, 0);
-                doc.text(`Inoculum de départ : ${inocV} ${inocV!=='—' ? '(UFC, McF)' : ''}`, pageWidth - 12, y + 5.2, { align: 'right' });
-                
+                doc.text(`MILIEU : ${cU(f.nom)}`, 12, y + 5.5);
                 y += 8;
 
-                // Table Header pour la souche
-                doc.setFillColor(250, 250, 250);
+                // En-tête colonnes
+                doc.setFillColor(250,250,250);
                 doc.rect(10, y, pageWidth - 20, rowH, 'F');
-                doc.setDrawColor(0,0,0);
-                doc.setLineWidth(0.3);
                 doc.rect(10, y, pageWidth - 20, rowH, 'D');
-                
-                doc.setFont('helvetica', 'bold');
-                // Header columns :
-                // Milieu | Section | Lot Ref | Lot Testé | R B1 | R B2 | R Moy || T B1 | T B2 | T Moy || Ratio | Obs
-                doc.setFontSize(7.5);
-                
-                // Mettre les lignes verticales pour l'en-tête
-                const cols = [50, 75, 95, 115, 130, 145, 160, 175, 190, 205, 225, pageWidth - 10]; 
-                
-                doc.text('Milieu Testé', 12, y + 5);
-                doc.text('Section', cols[0]+2, y + 5);
-                doc.text('Lot Réf', cols[1]+2, y + 5);
-                doc.text('Lot Test', cols[2]+2, y + 5);
-                
-                doc.text('Réf. B1', cols[3]+2, y + 5);
-                doc.text('Réf. B2', cols[4]+2, y + 5);
-                doc.text('R. Moy', cols[5]+2, y + 5);
-                
-                doc.text('Test B1', cols[6]+2, y + 5);
-                doc.text('Test B2', cols[7]+2, y + 5);
-                doc.text('T. Moy', cols[8]+2, y + 5);
-                
-                doc.text('Ratio', cols[9]+2, y + 5);
-                doc.text('Observation', cols[10]+2, y + 5);
-                
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+
+                const cols = [42, 60, 80, 100, 120, 135, 150, 165, 180, 195, 215, pageWidth - 10];
+
+                doc.text('Souche',      12,          y + 5);
+                doc.text('Inoculum',   cols[0]+2,   y + 5);
+                doc.text('Section',    cols[1]+2,   y + 5);
+                doc.text('Lot Réf',    cols[2]+2,   y + 5);
+                doc.text('Lot Test',   cols[3]+2,   y + 5);
+                doc.text('Réf. B1',    cols[4]+2,   y + 5);
+                doc.text('Réf. B2',    cols[5]+2,   y + 5);
+                doc.text('R. Moy',     cols[6]+2,   y + 5);
+                doc.text('Test B1',    cols[7]+2,   y + 5);
+                doc.text('Test B2',    cols[8]+2,   y + 5);
+                doc.text('T. Moy',     cols[9]+2,   y + 5);
+                doc.text('Ratio',      cols[10]+2,  y + 5);
+
                 cols.forEach((colX, idx) => {
                     if (idx < cols.length - 1) {
-                         if (idx === 5 || idx === 8) doc.setLineWidth(0.4); // Séparations Réf/Test
-                         else doc.setLineWidth(0.15);
-                         doc.line(colX, y, colX, y + rowH);
+                        doc.setLineWidth(idx === 6 || idx === 9 ? 0.4 : 0.15);
+                        doc.line(colX, y, colX, y + rowH);
                     }
                 });
-                
                 y += rowH;
-                
-                testsForSouche.forEach((t) => {
-                    const fid = t.f.id;
-                    const b = `frr_${fid}_${t.secKey}_${window._frSoucheKey(s)}`;
-                    const g = suf => { const el = document.getElementById(b + suf); return el ? el.value.trim() : ''; };
-                    
+
+                // Récup lots du MC
+                const testLotEl = document.getElementById('fr_testLot_' + f.id);
+                const refLotEl  = document.getElementById('fr_refLot_'  + f.id);
+                const testL = (testLotEl && testLotEl.selectedIndex >= 0 && testLotEl.options[testLotEl.selectedIndex]) ? testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') : '';
+                const refL  = (refLotEl  && refLotEl.selectedIndex >= 0 && refLotEl.options[refLotEl.selectedIndex])  ? refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') : '';
+
+                fSouches.forEach((t) => {
+                    const s  = t.s;
+                    const b  = `frr_${f.id}_${t.secKey}_${window._frSoucheKey(s)}`;
+                    const g  = suf => { const el = document.getElementById(b + suf); return el ? el.value.trim() : ''; };
                     const rb1 = g('_rb1'), rb2 = g('_rb2'), rmoy = g('_rmoy');
                     const tb1 = g('_tb1'), tb2 = g('_tb2'), tmoy = g('_tmoy');
                     const ratio = g('_ratio');
-                    
-                    const testLotEl = document.getElementById('fr_testLot_' + fid);
-                    const refLotEl = document.getElementById('fr_refLot_' + fid);
-                    const testL = (testLotEl && testLotEl.options[testLotEl.selectedIndex]) ? testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') : '';
-                    const refL = (refLotEl && refLotEl.options[refLotEl.selectedIndex]) ? refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') : '';
+                    const inocV = t.secKey === 'inh'
+                        ? (inoculumGlobalInh[s] || '—')
+                        : (inoculumGlobal[s] || '—');
 
                     let obsText = '';
-                    if (ratio && Number(ratio)) {
-                         let rVal = Number(ratio);
-                         if (rVal >= 0.5 && rVal <= 2.0) obsText = 'OK';
-                         else obsText = 'NON CF (Ratio)';
-                    }
-                    else if (t.secKey === 'inh') {
-                         if (tb1 || tb2) { obsText = 'NON CF (Croissance)'; } 
-                         else { obsText = 'OK (Inhibé)'; } // Pas de ratio mais pousse pas = OK pour inh
+                    const isEnrich = (f.categorie === 'enrichissement' || (f.nom||'').toLowerCase().includes('rappaport'));
+                    if (isEnrich) {
+                        const rm = g('_rmoy'); const tm = g('_tmoy');
+                        if (rm && tm) obsText = rm === tm ? 'OK' : 'NON CF';
+                    } else if (ratio && Number(ratio)) {
+                        const rVal = Number(ratio);
+                        obsText = (rVal >= 0.5 && rVal <= 2.0) ? 'OK' : 'NON CF (Ratio)';
+                    } else if (t.secKey === 'inh') {
+                        obsText = (tb1 || tb2) ? 'NON CF (Croissance)' : 'OK (Inhibé)';
                     }
 
-                    doc.setDrawColor(0,0,0);
-                    doc.setLineWidth(0.2);
+                    doc.setDrawColor(0,0,0); doc.setLineWidth(0.2);
                     doc.rect(10, y, pageWidth - 20, rowH, 'D');
-                    
-                    // Lignes colonnes pour data
                     cols.forEach((colX, idx) => {
                         if (idx < cols.length - 1) {
-                             if (idx === 5 || idx === 8) doc.setLineWidth(0.4);
-                             else doc.setLineWidth(0.15);
-                             doc.line(colX, y, colX, y + rowH);
+                            doc.setLineWidth(idx === 6 || idx === 9 ? 0.4 : 0.15);
+                            doc.line(colX, y, colX, y + rowH);
                         }
                     });
-                    
+
+                    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+                    doc.text(doc.splitTextToSize(cU(s), cols[0]-12)[0], 12, y + 6);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(inocV,          cols[0]+2, y + 6);
+                    doc.text(cU(t.secLabel), cols[1]+2, y + 6);
+                    doc.text(refL  || '—',   cols[2]+2, y + 6);
+                    doc.text(testL || '—',   cols[3]+2, y + 6);
+                    doc.text(rb1||'',        cols[4]+2, y + 6);
+                    doc.text(rb2||'',        cols[5]+2, y + 6);
                     doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(7.5);
-                    let mNameLine = doc.splitTextToSize(cU(t.f.nom), cols[0] - 12);
-                    doc.text(mNameLine[0], 12, y + 4.5);
-                    
-                    const elDf = document.getElementById('fr_df_' + fid);
-                    const elDs = document.getElementById('fr_ds_' + fid);
-                    const elRes = document.getElementById('fr_res_' + fid);
-                    const dF_str = elDf ? fmtDate(elDf.value) : '—';
-                    const dS_str = elDs ? fmtDate(elDs.value) : '—';
-                    const res_str = elRes ? elRes.value : '';
-                    
-                    doc.setFontSize(5);
-                    doc.setTextColor(80,80,80);
-                    doc.text(`F:${dF_str} S:${dS_str} [${res_str}]`, 12, y + 7.5);
-                    
-                    doc.setFontSize(7.5);
+                    doc.text(rmoy||'',       cols[6]+2, y + 6);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(tb1||'',        cols[7]+2, y + 6);
+                    doc.text(tb2||'',        cols[8]+2, y + 6);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(tmoy||'',       cols[9]+2, y + 6);
                     doc.setTextColor(0,0,0);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(cU(t.secLabel), cols[0]+2, y + 6);
-                    doc.text(refL || '—', cols[1]+2, y + 6);
-                    doc.text(testL || '—', cols[2]+2, y + 6);
-                    
-                    doc.text(rb1||'', cols[3]+2, y + 6);
-                    doc.text(rb2||'', cols[4]+2, y + 6);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(rmoy||'', cols[5]+2, y + 6);
-                    
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(tb1||'', cols[6]+2, y + 6);
-                    doc.text(tb2||'', cols[7]+2, y + 6);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(tmoy||'', cols[8]+2, y + 6);
-                    
-                    doc.setTextColor(0, 0, 0); // Pas de couleur
-                    doc.text(ratio ? (ratio + '') : '', cols[9]+2, y + 6);
-                    
-                    doc.setFont('helvetica', 'normal');
-                    if (obsText !== 'OK' && obsText !== '') doc.setFont('helvetica', 'bold');
-                    doc.text(obsText, cols[10]+2, y + 6);
+                    doc.text(ratio ? String(ratio) : '', cols[10]+2, y + 6);
 
                     y += rowH;
                 });
-                
-                y += 8; // Espace entre les souches
+                y += 8;
             });
 
             doc.save(`Feuilles_Resultats_Global_Fertilite_${date.replace(/\//g,'_')}.pdf`);

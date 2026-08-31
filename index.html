@@ -2716,6 +2716,7 @@
                         </select>
                     </div>
                 </div>
+
                 <!-- INCUBATION DYNAMIQUE -->
                 <div style="background:rgba(14,165,233,0.05); border:1px solid rgba(14,165,233,0.2); border-radius:12px; padding:12px; margin-bottom:4px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -2756,7 +2757,16 @@
 
                 <!-- ===== SECTION FERTILITE ===== -->
                 <div id="sectionFertilite" style="border:2px solid rgba(5,150,105,0.25); border-radius:14px; padding:14px; margin-bottom:12px;">
-                    <div style="font-size:0.75rem; font-weight:900; color:#059669; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">✅ FERTILITÉ</div>
+                    <div style="font-size:0.75rem; font-weight:900; color:#059669; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">✅ FERTILITÉ</div>
+                    <!-- Milieu + Méthode Fértilité -->
+                    <div style="display:flex; gap:10px; margin-bottom:12px; background:rgba(5,150,105,0.05); padding:10px; border-radius:10px; border:1px solid rgba(5,150,105,0.2);">
+                        <input type="text" id="fertMilieuTest" class="form-input" placeholder="Milieu ex: TSA, GS..." style="flex:1;">
+                        <div style="display:flex; flex-direction:column; gap:6px; flex:1; justify-content:center;">
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertMethodeChk" value="surfusion"> Surfusion (Flacons)</label>
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertMethodeChk" value="surface"> Surface (Pré-coul.)</label>
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertMethodeChk" value="direct"> Tubes (Direct)</label>
+                        </div>
+                    </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
                         <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
                             <div style="font-size:0.65rem; font-weight:900; color:var(--text-main); margin-bottom:8px;">💧 VOL. DILUANT (mL/tube)</div>
@@ -2820,7 +2830,16 @@
 
                 <!-- ===== SECTION INDICATION ===== -->
                 <div id="sectionIndication" style="display:none; border:2px solid rgba(217,119,6,0.25); border-radius:14px; padding:14px; margin-bottom:12px;">
-                    <div style="font-size:0.75rem; font-weight:900; color:#d97706; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">🔶 INDICATION</div>
+                    <div style="font-size:0.75rem; font-weight:900; color:#d97706; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🔶 INDICATION</div>
+                    <!-- Milieu + Méthode Indication -->
+                    <div style="display:flex; gap:10px; margin-bottom:12px; background:rgba(217,119,6,0.05); padding:10px; border-radius:10px; border:1px solid rgba(217,119,6,0.2);">
+                        <input type="text" id="fertIndMilieuTest" class="form-input" placeholder="Milieu ex: VRBL, BEA..." style="flex:1;">
+                        <div style="display:flex; flex-direction:column; gap:6px; flex:1; justify-content:center;">
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertIndMethodeChk" value="surfusion"> Surfusion (Flacons)</label>
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertIndMethodeChk" value="surface"> Surface (Pré-coul.)</label>
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertIndMethodeChk" value="direct"> Tubes (Direct)</label>
+                        </div>
+                    </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
                         <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
                             <div style="font-size:0.65rem; font-weight:900; color:#d97706; margin-bottom:8px;">💧 VOL. DILUANT (mL/tube)</div>
@@ -2884,7 +2903,16 @@
 
                 <!-- ===== SECTION INHIBITION ===== -->
                 <div id="sectionInhibition" style="display:none; border:2px solid rgba(239,68,68,0.25); border-radius:14px; padding:14px; margin-bottom:12px;">
-                    <div style="font-size:0.75rem; font-weight:900; color:#ef4444; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">🚫 INHIBITION</div>
+                    <div style="font-size:0.75rem; font-weight:900; color:#ef4444; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🚫 INHIBITION</div>
+                    <!-- Milieu + Méthode Inhibition -->
+                    <div style="display:flex; gap:10px; margin-bottom:12px; background:rgba(239,68,68,0.05); padding:10px; border-radius:10px; border:1px solid rgba(239,68,68,0.2);">
+                        <input type="text" id="fertInhMilieuTest" class="form-input" placeholder="Milieu ex: XLD, Hektoen..." style="flex:1;">
+                        <div style="display:flex; flex-direction:column; gap:6px; flex:1; justify-content:center;">
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertInhMethodeChk" value="surfusion"> Surfusion (Flacons)</label>
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertInhMethodeChk" value="surface"> Surface (Pré-coul.)</label>
+                            <label style="font-size:0.72rem; font-weight:800; color:#374151; cursor:pointer;"><input type="checkbox" class="fertInhMethodeChk" value="direct"> Tubes (Direct)</label>
+                        </div>
+                    </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
                         <div style="background:rgba(0,0,0,0.02); padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.05);">
                             <div style="font-size:0.65rem; font-weight:900; color:#ef4444; margin-bottom:8px;">🦠 BACTÉRIES</div>
@@ -7259,21 +7287,34 @@
             const query = searchInput.value.toLowerCase().trim();
             const history = getSearchHistory();
 
-            // Fusionner l'historique avec les données vivantes (produits, lots, désignations...)
+            // Suggestions contextuelles selon l'onglet actif
             const liveSuggestions = new Set();
-            fiches.forEach(f => {
-                if (f.designation) liveSuggestions.add(f.designation.toUpperCase());
-                if (f.code) liveSuggestions.add(f.code.toUpperCase());
-            });
-            analyses.forEach(a => {
-                if (a.produit) liveSuggestions.add(a.produit.toUpperCase());
-                if (a.lot) liveSuggestions.add(a.lot.toUpperCase());
-                if (a.codeControl) liveSuggestions.add(a.codeControl.toUpperCase());
-            });
-            preps.forEach(p => {
-                if (p.designation) liveSuggestions.add(p.designation.toUpperCase());
-                if (p.lot) liveSuggestions.add(p.lot.toUpperCase());
-            });
+            const tab = window.currentTab || '';
+
+            if (tab === 'fertilite') {
+                // Onglet fertilité : suggérer les noms de milieux
+                (window._fertiliteData || []).forEach(f => {
+                    if (f.nom) liveSuggestions.add(f.nom.toUpperCase());
+                    if (f.code) liveSuggestions.add(f.code.toUpperCase());
+                });
+            } else if (tab === 'controles') {
+                analyses.forEach(a => {
+                    if (a.produit) liveSuggestions.add(a.produit.toUpperCase());
+                    if (a.lot) liveSuggestions.add(a.lot.toUpperCase());
+                    if (a.codeControl) liveSuggestions.add(a.codeControl.toUpperCase());
+                });
+            } else if (tab === 'preparations') {
+                preps.forEach(p => {
+                    if (p.designation) liveSuggestions.add(p.designation.toUpperCase());
+                    if (p.lot) liveSuggestions.add(p.lot.toUpperCase());
+                });
+            } else {
+                // Onglet principal : fiches signalétiques
+                fiches.forEach(f => {
+                    if (f.designation) liveSuggestions.add(f.designation.toUpperCase());
+                    if (f.code) liveSuggestions.add(f.code.toUpperCase());
+                });
+            }
 
             // Fusionner historique + données live, filtrées par la saisie
             const combined = [...new Set([...history, ...liveSuggestions])];
@@ -8907,12 +8948,22 @@
         // ---- Rendu de l'onglet (injecté dans render()) ----
         const _origRender = window.renderFertilite || null;
         window.renderFertiliteTab = function(container, query) {
+            const methodeStr = (f) => {
+                const m = f.methode;
+                if (Array.isArray(m)) return m.join(' ').toLowerCase();
+                return (m || '').toLowerCase();
+            };
             let filtered = fertiliteData.filter(f =>
                 (f.nom && f.nom.toLowerCase().includes(query)) ||
                 (f.code && f.code.toLowerCase().includes(query)) ||
-                (f.methode && f.methode.toLowerCase().includes(query)) ||
+                methodeStr(f).includes(query) ||
                 (f.fourn && f.fourn.toLowerCase().includes(query)) ||
-                ((f.souches || []).some(s => String(s).toLowerCase().includes(query)))
+                (f.milieuTest && f.milieuTest.toLowerCase().includes(query)) ||
+                (f.indMilieuTest && f.indMilieuTest.toLowerCase().includes(query)) ||
+                (f.inhMilieuTest && f.inhMilieuTest.toLowerCase().includes(query)) ||
+                ((f.souches || []).some(s => String(s).toLowerCase().includes(query))) ||
+                ((f.indSouches || []).some(s => String(s).toLowerCase().includes(query))) ||
+                ((f.inhSouches || []).some(s => String(s).toLowerCase().includes(query)))
             );
 
             if (filtered.length === 0) {
@@ -9232,6 +9283,21 @@
             document.getElementById('fertVolDiluant').value = f ? (f.volDiluant || '9') : '9';
             document.getElementById('fertVolPrise').value = f ? (f.volPrise || '0.1') : '0.1';
             document.getElementById('fertNom').value = f ? (f.nom || '') : '';
+            document.getElementById('fertMilieuTest').value = f ? (f.milieuTest || '') : '';
+            document.getElementById('fertIndMilieuTest').value = f ? (f.indMilieuTest || '') : '';
+            document.getElementById('fertInhMilieuTest').value = f ? (f.inhMilieuTest || '') : '';
+            
+            const setChks = (cls, vals) => {
+                let list = vals;
+                if (!Array.isArray(vals)) list = vals ? [vals] : ['surfusion'];
+                document.querySelectorAll('.' + cls).forEach(c => {
+                    c.checked = list.includes(c.value);
+                });
+            };
+            setChks('fertMethodeChk', f ? f.methode : null);
+            setChks('fertIndMethodeChk', f ? f.indMethode : null);
+            setChks('fertInhMethodeChk', f ? f.inhMethode : null);
+            
             if (document.getElementById('fertCategorie')) {
                 document.getElementById('fertCategorie').value = f ? (f.categorie || 'gelose') : 'gelose';
             }
@@ -9556,9 +9622,19 @@
             const indSteps = Array.from(document.querySelectorAll('.fert-ind-step')).map(i => i.value.trim()).filter(Boolean);
             const inhSteps = Array.from(document.querySelectorAll('.fert-inh-step')).map(i => i.value.trim()).filter(Boolean);
 
+            const getChks = (cls) => {
+                return Array.from(document.querySelectorAll('.'+cls+':checked')).map(c => c.value);
+            };
+
             const data = {
                 categorie: document.getElementById('fertCategorie') ? document.getElementById('fertCategorie').value : 'gelose',
                 nom: document.getElementById('fertNom').value.trim(),
+                milieuTest: document.getElementById('fertMilieuTest') ? document.getElementById('fertMilieuTest').value.trim() : '',
+                methode: getChks('fertMethodeChk'),
+                indMilieuTest: document.getElementById('fertIndMilieuTest') ? document.getElementById('fertIndMilieuTest').value.trim() : '',
+                indMethode: getChks('fertIndMethodeChk'),
+                inhMilieuTest: document.getElementById('fertInhMilieuTest') ? document.getElementById('fertInhMilieuTest').value.trim() : '',
+                inhMethode: getChks('fertInhMethodeChk'),
                 hasFert: document.getElementById('chkFertilite').checked,
                 hasInd: document.getElementById('chkIndication').checked,
                 hasInh: document.getElementById('chkInhibition').checked,
@@ -10363,32 +10439,41 @@
             let totalFlacons = 0;
             let totalTubesMC = 0;
             
+            let globalSterilityMarked = new Set();
+            
             selectedFiches.forEach(f => {
-                let allS = [...new Set([...(f.souches||[]), ...(f.indSouches||[]), ...(f.inhSouches||[])])];
-                let mStrainsCount = allS.length;
-                let boites = 0; let tubes = 0; let flacons = 0;
+                let sectionGroupMap = {};
                 
-                let nomLower = (f.nom || '').toLowerCase();
-                let isDiluant = nomLower.includes('diluant');
-                let isBouillon = (f.categorie === 'enrichissement') || nomLower.includes('bouillon') || nomLower.includes('rappaport');
+                const processStrains = (strains, sectionKey) => {
+                    if (!strains || strains.length === 0) return;
+                    let mName = f.nom;
+                    let methodsArr = ['surfusion'];
+                    
+                    if (sectionKey === 'fert') { mName = f.milieuTest || f.nom; methodsArr = Array.isArray(f.methode) ? f.methode : [f.methode || 'surfusion']; }
+                    if (sectionKey === 'ind') { mName = f.indMilieuTest || f.nom; methodsArr = Array.isArray(f.indMethode) ? f.indMethode : [f.indMethode || 'surfusion']; }
+                    if (sectionKey === 'inh') { mName = f.inhMilieuTest || f.nom; methodsArr = Array.isArray(f.inhMethode) ? f.inhMethode : [f.inhMethode || 'surfusion']; }
+                    
+                    if (methodsArr.length === 0) methodsArr = ['surfusion'];
 
-                // Pour chaque souche :
-                //   - Gélose/Agar : 2 boites dilution ciblée (Test) + 2 boites (Réf) + 2 témoins par souche (TSA ou GS) = 6 boites/souche
-                //   - Diluant : idem (2 TSA Test + 2 TSA Réf + 2 témoins) = 6 boites/souche
-                //   - Bouillon/Enrichissement : 1 tube (Test) + 1 tube (Réf) = 2 tubes/souche
-                //   + Stérilité TESTÉ SEULEMENT : 2 boites (géloses) ou 3 tubes (bouillons)
-
-                if (isBouillon) {
-                     tubes = (mStrainsCount * 2) + 3; // 1 tube/souche (Test+Ref), + 3 stérilité MC testé uniquement
-                } else {
-                     // 6 boites/souche (2 dilution Test + 2 dilution Ref + 2 témoins TSA/GS) + 2 stérilité (MC testé seulement)
-                     boites = (mStrainsCount * 6) + 2;
-                     flacons = Math.ceil(boites / 10);
-                }
+                    methodsArr.forEach(mMethod => {
+                        let key = mName.toLowerCase() + '_' + mMethod;
+                        if (!sectionGroupMap[key]) {
+                            sectionGroupMap[key] = {
+                                nom: f.nom,
+                                milieuTest: mName,
+                                methode: mMethod,
+                                souches: new Set(),
+                                isGelose: mName.toLowerCase().includes('gélose') || mName.toLowerCase().includes('gelose') || mName.toLowerCase().includes('agar') || mName.toLowerCase().includes('tsa') || mName.toLowerCase().includes('pca') || mName.toLowerCase().includes('sda') || mName.toLowerCase().includes('bea') || f.categorie === 'gelose',
+                                isEnrichissement: f.categorie === 'enrichissement' && mName === f.nom
+                            };
+                        }
+                        strains.forEach(s => sectionGroupMap[key].souches.add(s));
+                    });
+                };
                 
-                totalBoites += boites;
-                totalFlacons += flacons;
-                totalTubesMC += tubes;
+                processStrains(f.souches, 'fert');
+                processStrains(f.indSouches, 'ind');
+                processStrains(f.inhSouches, 'inh');
 
                 let testLotStr = '—';
                 if (useLots === true) {
@@ -10399,14 +10484,48 @@
                     }
                 }
                 
-                recapMC.push({
-                    nom: f.nom,
-                    lot: testLotStr,
-                    souchesCount: mStrainsCount,
-                    souchesList: allS.length > 0 ? allS.join(', ') : '—',
-                    boites: boites,
-                    flacons: flacons,
-                    tubes: tubes
+                Object.values(sectionGroupMap).forEach(group => {
+                    let mStrainsCount = group.souches.size;
+                    let lBoites = 0; let lTubes = 0; let lFlacons = 0; let lPrecoulees = 0;
+                    
+                    let needsSter = false;
+                    let sterKey = group.milieuTest.toLowerCase();
+                    if (!globalSterilityMarked.has(sterKey)) {
+                        globalSterilityMarked.add(sterKey);
+                        needsSter = true; // Apply sterility on the first time we encouter this medium!
+                    }
+
+                    if (group.isEnrichissement || group.methode === 'direct') {
+                         lTubes = mStrainsCount * 2;
+                         if (needsSter) lTubes += 1;
+                    } else {
+                         let totalPlatesNeeded = mStrainsCount * 4;
+                         
+                         if (group.methode === 'surface') {
+                             lPrecoulees = totalPlatesNeeded;
+                             if (needsSter && group.isGelose) lPrecoulees += 2;
+                         } else { // Surfusion
+                             lBoites = totalPlatesNeeded;
+                             if (needsSter && group.isGelose) lBoites += 2;
+                             lFlacons = Math.ceil(lBoites / 10);
+                         }
+                    }
+                    
+                    totalBoites += lBoites;
+                    totalFlacons += lFlacons;
+                    totalTubesMC += lTubes;
+                    totalBoites += lPrecoulees; // adds to overall boites
+                    
+                    recapMC.push({
+                        nom: group.nom,
+                        milieuTest: group.milieuTest,
+                        lot: testLotStr,
+                        souchesCount: mStrainsCount,
+                        boites: lBoites,
+                        precoulees: lPrecoulees,
+                        flacons: lFlacons,
+                        tubes: lTubes
+                    });
                 });
                 
                 (f.souches || []).forEach(s => { allStrainsMap[s] = true; });
@@ -10447,47 +10566,63 @@
             });
             
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+            const pgW = doc.internal.pageSize.getWidth();
             
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(16);
             doc.text('RAPPORT RECAPITULATIF : FERTILITE', 15, 20);
             doc.setFontSize(8); doc.setTextColor(0,0,0); doc.setFont('helvetica', 'normal');
-            doc.text(`Imprime le : ${new Date().toLocaleString('fr-FR')}`, 15, 26);
+            doc.text(`Imprime le : ${new Date().toLocaleString('fr-FR')}`, pgW - 15, 20, { align: 'right' });
             
             doc.setFontSize(10); doc.setTextColor(0,0,0); doc.setFont('helvetica', 'bold');
-            doc.text('1. PREPARATION DES MILIEUX (Consommables par MC)', 15, 36);
+            doc.text('1. PREPARATION DES MILIEUX (Consommables par MC)', 15, 30);
             
-            let headCols = ['Milieu de Culture', 'Lot Testé', 'Souches', 'Boites incubées', 'Flacons 190mL*', 'Tubes'];
+            let headCols = ['Protocole (MC)', 'Milieu Utilisé', 'Lot Testé', 'Nb Test', 'Boîtes Vides', 'Pré-coulées', 'Flacons 190mL', 'Tubes MC'];
             
             doc.autoTable({
-                startY: 40,
+                startY: 34,
                 head: [headCols],
                 body: recapMC.map(r => {
                       let lotStr = (useLots && r.lot) ? r.lot : '';
                       const flaconsStr = r.flacons > 0 ? r.flacons + ' fl. (~' + (r.flacons * 190) + 'mL)' : '--';
-                      return [r.nom, lotStr, r.souchesList, r.boites > 0 ? r.boites : '--', flaconsStr, r.tubes > 0 ? r.tubes : '--'];
+                      return [
+                          r.nom, 
+                          r.milieuTest, 
+                          lotStr, 
+                          r.souchesCount, 
+                          r.boites > 0 ? r.boites : '--', 
+                          r.precoulees > 0 ? r.precoulees : '--', 
+                          flaconsStr, 
+                          r.tubes > 0 ? r.tubes : '--'
+                      ];
                 }),
                 theme: 'grid',
-                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 7 },
-                styles: { fontSize: 7, cellPadding: 2, lineColor: [0,0,0], textColor: 0 },
+                headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', lineColor: [0,0,0], fontSize: 8, halign: 'center', valign: 'middle' },
+                styles: { fontSize: 8, cellPadding: 3, lineColor: [0,0,0], textColor: 0, valign: 'middle' },
+                margin: { left: 12, right: 12 },
                 columnStyles: {
-                    0: { cellWidth: 35 },
-                    1: { cellWidth: 22 },
-                    2: { cellWidth: 55 },
-                    3: { cellWidth: 22, halign: 'center' },
-                    4: { cellWidth: 30, halign: 'center' },
-                    5: { cellWidth: 18, halign: 'center' }
+                    0: { halign: 'left', cellWidth: 55 },
+                    1: { halign: 'left', cellWidth: 45 },
+                    2: { halign: 'center', cellWidth: 30 },
+                    3: { halign: 'center', cellWidth: 18 },
+                    4: { halign: 'center', cellWidth: 28 },
+                    5: { halign: 'center', cellWidth: 28 },
+                    6: { halign: 'center', cellWidth: 38 },
+                    7: { halign: 'center', cellWidth: 20 }
                 },
                 didDrawPage: function(data) {
+                    const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 80;
                     doc.setFontSize(6.5);
                     doc.setFont('helvetica', 'italic');
-                    doc.setTextColor(100,100,100);
-                    doc.text('* 1 flacon gélose fondue 190mL = 10 boites de Petri', 15, doc.lastAutoTable ? doc.lastAutoTable.finalY + 4 : 80);
+                    doc.setTextColor(120,120,120);
+                    doc.text('* 1 flacon gélose fondue 190mL = 10 boites de Petri', 12, finalY + 4);
                 }
             });
             
-            let y = doc.lastAutoTable.finalY + 12;
+            let y = doc.lastAutoTable.finalY + 14;
+
+            if (y > 175) { doc.addPage(); y = 20; }
             
             doc.setFont('helvetica', 'bold');
             doc.text('2. PREPARATION DES SOUCHES UNIQUES (Consommables partages - Aucun doublon)', 15, y);

@@ -2118,6 +2118,28 @@
                     </div>
                 </div>
 
+                <!-- Statut Fertilité -->
+                <div style="background: rgba(251,146,60,0.07); border: 2px solid rgba(251,146,60,0.3); border-radius: 14px; padding: 12px; margin-bottom: 15px;">
+                    <label style="font-size:0.65rem; font-weight:800; color:#ea580c; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; display:block;">🧫 Statut Fertilité</label>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" id="statusBtnQuarantaine"
+                            onclick="window.setPrepStatut('quarantaine')"
+                            style="flex:1; padding:10px; border-radius:10px; border:2px solid #f97316; background:rgba(249,115,22,0.15); color:#c2410c; font-weight:800; font-size:0.7rem; cursor:pointer; transition:all 0.2s;">
+                            🔶 EN QUARANTAINE
+                        </button>
+                        <button type="button" id="statusBtnFertile"
+                            onclick="window.setPrepStatut('fertile')"
+                            style="flex:1; padding:10px; border-radius:10px; border:2px solid #d1d5db; background:#f8fafc; color:#9ca3af; font-weight:800; font-size:0.7rem; cursor:pointer; transition:all 0.2s;">
+                            ✅ FERTILE
+                        </button>
+                    </div>
+                    <input type="hidden" id="prepStatut" value="quarantaine">
+                    <div id="prepStatutDateBlock" style="display:none; margin-top:10px;">
+                        <label style="font-size:0.6rem; color:#059669; font-weight:700;">📅 Date de libération (validation)</label>
+                        <input type="date" id="prepDateFertilite" class="form-input" style="margin-top:4px; border-color:rgba(5,150,105,0.4); background:rgba(5,150,105,0.05);">
+                    </div>
+                </div>
+
                 <div style="background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: 14px; padding: 12px; margin-bottom: 18px;">
                     <label style="font-size: 0.65rem; font-weight: 800; color: #d97706; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">📦 Flacon(s) Dé-stocker</label>
                     <div id="flaconEntameContainer" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
@@ -3051,6 +3073,134 @@
     <script>
         // === VERSION 4.5.0 - STABLE ===
 
+        // ---- PDF Export : MC Quarantaine / Fertile ----
+        window.generatePrepPdf = function(statut, sourcePreps) {
+            const allPreps = sourcePreps || (typeof preps !== 'undefined' ? preps : []);
+            const targetStatus = statut || 'quarantaine';
+            const list = allPreps.filter(p => (p.statut || 'quarantaine') === targetStatus);
+
+            if (list.length === 0) {
+                window.showToast(`Aucune MC avec statut "${targetStatus}" à exporter.`, 'info', 3000);
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const isQ = targetStatus === 'quarantaine';
+                const title = isQ ? 'Liste des MC en QUARANTAINE' : 'Liste des MC FERTILES';
+                const dateNow = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+                // ── HEADER BOX ──────────────────────────────────────────────
+                // Boîte de 22mm de haut, texte bien à l'intérieur
+                const headerTop = 8;
+                const headerH   = 20;
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.6);
+                doc.rect(10, headerTop, 190, headerH, 'S');          // border only, pas de fill
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(13);
+                doc.setFont('helvetica', 'bold');
+                doc.text(title, 14, headerTop + 9);                   // centré en hauteur
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Édité le ${dateNow}  —  ${list.length} milieu(x)`, 14, headerTop + 16);
+
+                // ── EN-TÊTE DE TABLEAU ───────────────────────────────────────
+                // Colonnes : Désignation, Lot Int., Préparé le, Péremption, Date de libération.
+                const headers = ['Désignation / Milieu', 'Lot Int.', 'Préparé le', 'Péremption', 'libération.'];
+                const colW    = [80, 28, 30, 30, 30];
+                const ROW_H   = 8;   // hauteur ligne (mm)
+
+                let y = headerTop + headerH + 8;   // départ du tableau bien en dessous du header
+
+                // Fond grisé pour l'en-tête de tableau
+                doc.setFillColor(230, 230, 230);
+                doc.rect(10, y, 190, ROW_H, 'F');
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.4);
+                doc.rect(10, y, 190, ROW_H, 'S');
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.setTextColor(0, 0, 0);
+                let x = 10;
+                headers.forEach((h, i) => {
+                    doc.text(h, x + 2, y + 5.5);    // texte centré verticalement dans la ligne
+                    x += colW[i];
+                    if (i < headers.length - 1) {
+                        doc.setDrawColor(0, 0, 0);
+                        doc.setLineWidth(0.2);
+                        doc.line(x, y, x, y + ROW_H);
+                    }
+                });
+
+                // ── LIGNES DE DONNÉES ────────────────────────────────────────
+                y += ROW_H;   // on part juste en dessous de l'en-tête
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(0, 0, 0);
+
+                const fmtDate = (d) => {
+                    if (!d) return '-';
+                    try {
+                        const dt = (typeof d === 'object' && d.toDate) ? d.toDate() : new Date(d);
+                        if (isNaN(dt.getTime())) return String(d);
+                        return dt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    } catch(e) { return String(d); }
+                };
+
+                list.forEach((p) => {
+                    if (y > 268) {
+                        doc.addPage();
+                        y = 15;
+                    }
+
+                    // Bordure de la ligne
+                    doc.setDrawColor(160, 160, 160);
+                    doc.setLineWidth(0.2);
+                    doc.rect(10, y, 190, ROW_H, 'S');
+
+                    const cols = [
+                        (p.designation || '-').substring(0, 48),
+                        (p.lot || '-'),
+                        fmtDate(p.datePrep),
+                        fmtDate(p.datePeremption),
+                        ''   // Date de libération. : vide — à remplir à la main
+                    ];
+
+                    x = 10;
+                    cols.forEach((c, i) => {
+                        doc.text(c, x + 2, y + 5.5);
+                        x += colW[i];
+                        if (i < cols.length - 1) {
+                            doc.setDrawColor(160, 160, 160);
+                            doc.setLineWidth(0.15);
+                            doc.line(x, y, x, y + ROW_H);
+                        }
+                    });
+                    y += ROW_H;
+                });
+
+                // ── FOOTER ───────────────────────────────────────────────────
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.4);
+                doc.line(10, y + 3, 200, y + 3);
+                doc.setFontSize(7);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Total : ${list.length} milieu(x)`, 10, y + 8);
+
+                const filename = `MC_${targetStatus.toUpperCase()}_${dateNow.replace(/ /g, '_')}.pdf`;
+                doc.save(filename);
+                window.showToast(`✅ PDF "${filename}" généré !`, 'success', 3000);
+            } catch(err) {
+                console.error('generatePrepPdf error:', err);
+                window.showToast('❌ Erreur génération PDF: ' + err.message, 'error', 5000);
+            }
+        };
+
+
         // --- DATE UTILS ---
         window.formatStringToDate = function (dateStr, fallback = '-') {
             if (!dateStr) return fallback;
@@ -3269,7 +3419,12 @@
                     searchInput.placeholder = "Chercher un milieu, souche, méthode...";
                 }
             }
-            if (typeof render === 'function') render();
+            try {
+                if (typeof window.render === 'function') window.render();
+                else if (typeof render === 'function') render();
+            } catch(e) {
+                console.error('Erreur render() dans switchTab:', e);
+            }
         };
 
         // --- GESTION DU SWIPE POUR CHANGER D'ONGLET ---
@@ -3897,12 +4052,52 @@
             } else {
                 window.addFlaconEntame(); // Vide par défaut
             }
+            // Statut par défaut : quarantaine pour nouveaux, charger si édition
+            if (isEdit) {
+                const p2 = preps.find(x => x.id === id);
+                window.setPrepStatut(p2 && p2.statut ? p2.statut : 'quarantaine');
+                const dfEl = document.getElementById('prepDateFertilite');
+                if (dfEl && p2 && p2.dateFertilite) dfEl.value = p2.dateFertilite;
+            } else {
+                window.setPrepStatut('quarantaine');
+            }
             window.openModal('prepModalOverlay');
         };
 
         window.closePrepModal = function () {
             window.closeModal('prepModalOverlay');
         };
+
+        window.setPrepStatut = function(statut) {
+            const hiddenEl = document.getElementById('prepStatut');
+            const btnQ = document.getElementById('statusBtnQuarantaine');
+            const btnF = document.getElementById('statusBtnFertile');
+            const dateBlock = document.getElementById('prepStatutDateBlock');
+            if (!hiddenEl || !btnQ || !btnF) return;
+            hiddenEl.value = statut;
+            if (statut === 'fertile') {
+                btnF.style.background = 'rgba(5,150,105,0.15)';
+                btnF.style.borderColor = '#059669';
+                btnF.style.color = '#065f46';
+                btnQ.style.background = '#f8fafc';
+                btnQ.style.borderColor = '#d1d5db';
+                btnQ.style.color = '#9ca3af';
+                if (dateBlock) {
+                    dateBlock.style.display = 'block';
+                    const dfEl = document.getElementById('prepDateFertilite');
+                    if (dfEl && !dfEl.value) dfEl.value = new Date().toISOString().split('T')[0];
+                }
+            } else {
+                btnQ.style.background = 'rgba(249,115,22,0.15)';
+                btnQ.style.borderColor = '#f97316';
+                btnQ.style.color = '#c2410c';
+                btnF.style.background = '#f8fafc';
+                btnF.style.borderColor = '#d1d5db';
+                btnF.style.color = '#9ca3af';
+                if (dateBlock) dateBlock.style.display = 'none';
+            }
+        };
+
 
         window.addFlaconEntame = function(num = '', info = '') {
             const container = document.getElementById('flaconEntameContainer');
@@ -4237,6 +4432,8 @@
                     datePrep: document.getElementById('datePrep').value,
                     datePeremption: document.getElementById('datePeremption').value,
                     type: document.getElementById('prepType').value || '',
+                    statut: document.getElementById('prepStatut').value || 'quarantaine',
+                    dateFertilite: document.getElementById('prepDateFertilite').value || '',
                     additifs: additifs,
                     flaconEntames: flaconEntames,
                     updatedAt: Date.now()
@@ -5315,7 +5512,7 @@
                                 <span style="flex: 1;">${val}</span>
                                 ${type === 'consommables' ? `<input type="number" class="qty-input" data-for="${val}" value="${currentState[val]?.qty || 1}" min="1" onClick="event.stopPropagation()">` : ''}
                             </label>
-                            <button type="button" class="delete-item-btn" onclick="deleteFromCatalog('${type}', '${val.replace(/'/g, "\\'")}')">✕</button>
+                            <button type="button" class="delete-item-btn" onclick="deleteFromCatalog('${type}', '${String(val).replace(/'/g, "\\'")}')">✕</button>
                         </div>
                     `).join('');
                 }
@@ -5334,7 +5531,7 @@
                     return `
                     <span class="mini-tag" style="cursor:pointer; background:rgba(79, 70, 229, 0.05); border:1px solid rgba(79, 70, 229, 0.1); display:flex; align-items:center; gap:8px;">
                         <span onclick="window.selectAdditifFromCatalogByIndex(${idx})">${name}</span>
-                        <span onclick="deleteFromCatalog('additifs', '${name.replace(/'/g, "\\'")}')" style="color:#ef4444; font-weight:800; cursor:pointer; padding:2px;">✕</span>
+                        <span onclick="deleteFromCatalog('additifs', '${String(name).replace(/'/g, "\\'")}')" style="color:#ef4444; font-weight:800; cursor:pointer; padding:2px;">✕</span>
                     </span>
                     `;
                 }).join('') || '<span style="font-size:0.6rem; color:var(--text-dim);">Catalogue vide. Ajoutez vos additifs ci-dessous.</span>';
@@ -5563,7 +5760,7 @@
                                                 ${sTitle ? `<span style="font-weight:800; color:var(--text-main); font-size:0.75rem;">${sTitle}</span>` : ''}
                                             </div>
                                             <div style="padding-left: 2px; color:var(--text-main);">
-                                                ${window.formatProtocolStep(sText).replace(/ -> /g, ' <span style="color:var(--primary); font-weight:bold; margin:0 4px;">→</span> ')}
+                                                ${(sText || '').replace(/ -> /g, ' <span style="color:var(--primary); font-weight:bold; margin:0 4px;">→</span> ')}
                                             </div>
                                         </div>
                                     `}).join('')}
@@ -5607,10 +5804,12 @@
                 window.currentFilteredPreps = allFiltered; // Save for Excel Export
 
                 // Compteurs pour la barre de filtres
-                const countExpired  = allFiltered.filter(p => getExpStatus(p).isExpired).length;
-                const countSoon     = allFiltered.filter(p => { const s = getExpStatus(p); return s.isSoon && !s.isExpired; }).length;
-                const countValid    = allFiltered.filter(p => { const s = getExpStatus(p); return !s.isExpired && !s.isSoon; }).length;
-                const activeFilter  = window.prepExpiryFilter || 'all';
+                const countExpired       = allFiltered.filter(p => getExpStatus(p).isExpired).length;
+                const countSoon          = allFiltered.filter(p => { const s = getExpStatus(p); return s.isSoon && !s.isExpired; }).length;
+                const countValid         = allFiltered.filter(p => { const s = getExpStatus(p); return !s.isExpired && !s.isSoon; }).length;
+                const countQuarantaine   = allFiltered.filter(p => (p.statut || 'quarantaine') === 'quarantaine').length;
+                const countFertile       = allFiltered.filter(p => p.statut === 'fertile').length;
+                const activeFilter       = window.prepExpiryFilter || 'all';
 
                 // Barre de filtres
                 const prepFilterBarId = 'prep-expiry-filter-bar';
@@ -5662,15 +5861,21 @@
                         ${countSoon  > 0 ? `<button onclick="window.prepExpiryFilter='soon';    render();" style="background:${activeFilter==='soon'   ?'rgba(245,158,11,0.9)':'rgba(245,158,11,0.1)'}; color:${activeFilter==='soon'   ?'white':'#d97706'}; border:1.5px solid rgba(245,158,11,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">⚠️ Bientôt (${countSoon})</button>` : ''}
                         <button onclick="window.prepExpiryFilter='valid'; render();" style="background:${activeFilter==='valid'?'var(--success)':'rgba(34,197,94,0.08)'}; color:${activeFilter==='valid'?'white':'var(--success)'}; border:1.5px solid rgba(34,197,94,0.25); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">✅ Valides (${countValid})</button>
                         <button onclick="window.prepExpiryFilter='all';   render();" style="background:${activeFilter==='all'  ?'var(--text-main)':'rgba(0,0,0,0.05)'}; color:${activeFilter==='all'  ?'white':'var(--text-dim)'}; border:1.5px solid rgba(0,0,0,0.1); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 Tous (${allFiltered.length})</button>
+                        <button onclick="window.prepExpiryFilter='quarantaine'; render();" style="background:${activeFilter==='quarantaine'?'rgba(249,115,22,0.9)':'rgba(249,115,22,0.1)'}; color:${activeFilter==='quarantaine'?'white':'#c2410c'}; border:1.5px solid rgba(249,115,22,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🔶 Quarantaine (${countQuarantaine})</button>
+                        <button onclick="window.prepExpiryFilter='fertile'; render();" style="background:${activeFilter==='fertile'?'#059669':'rgba(5,150,105,0.1)'}; color:${activeFilter==='fertile'?'white':'#059669'}; border:1.5px solid rgba(5,150,105,0.3); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🧫 Fertile (${countFertile})</button>
+                        <button onclick="window.generatePrepPdf('quarantaine')" style="background:rgba(249,115,22,0.1); color:#c2410c; border:1.5px solid rgba(249,115,22,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📄 PDF Quarantaine</button>
+                        <button onclick="window.generatePrepPdf('fertile', window.currentFilteredPreps)" style="background:rgba(5,150,105,0.1); color:#059669; border:1.5px solid rgba(5,150,105,0.3); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 PDF Fertiles</button>
                         <div style="margin-left:auto; background:rgba(16,185,129,0.1); border:1.5px solid #10b981; padding:6px 12px; border-radius:10px; color:#10b981; font-weight:900; font-size:0.7rem;">🧫 TOTAL MC = ${totalUnits}</div>
                     </div>`;
 
                 // Filtrage selon le filtre actif
                 let filtered = allFiltered.filter(p => {
                     const s = getExpStatus(p);
-                    if (activeFilter === 'expired') return s.isExpired;
-                    if (activeFilter === 'soon')    return s.isSoon && !s.isExpired;
-                    if (activeFilter === 'valid')   return !s.isExpired && !s.isSoon;
+                    if (activeFilter === 'expired')      return s.isExpired;
+                    if (activeFilter === 'soon')         return s.isSoon && !s.isExpired;
+                    if (activeFilter === 'valid')        return !s.isExpired && !s.isSoon;
+                    if (activeFilter === 'quarantaine')  return (p.statut || 'quarantaine') === 'quarantaine';
+                    if (activeFilter === 'fertile')      return p.statut === 'fertile';
                     return true;
                 });
 
@@ -5704,12 +5909,17 @@
 
                     const isSelected = selectedFiches.has(p.id);
 
+                    const isQuarantaine = (p.statut || 'quarantaine') === 'quarantaine';
                     return `
-                        <div class="${ isSelected ? 'fiche-card selected' : 'fiche-card'}" onclick="${isSelectionMode ? `toggleFicheSelection('${p.id}', event)` : `openPrepModal('${p.id}')`}" style="border-left: 5px solid var(--secondary);">
+                        <div class="${ isSelected ? 'fiche-card selected' : 'fiche-card'}" onclick="${isSelectionMode ? `toggleFicheSelection('${p.id}', event)` : `openPrepModal('${p.id}')`}" style="border-left: 5px solid ${isQuarantaine ? '#f97316' : '#059669'};">
                             <div class="card-header">
                                 <div class="designation">${p.designation}</div>
-                                <div class="code-badge" style="background:rgba(99,102,241,0.15); color:var(--secondary); border-color:rgba(99,102,241,0.2);">${p.code || 'N/A'}</div>
+                                <div style="display:flex; gap:5px; align-items:center; flex-shrink:0;">
+                                    <span style="background:${isQuarantaine ? 'rgba(249,115,22,0.12)' : 'rgba(5,150,105,0.12)'}; color:${isQuarantaine ? '#c2410c' : '#059669'}; border:1px solid ${isQuarantaine ? 'rgba(249,115,22,0.4)' : 'rgba(5,150,105,0.4)'}; padding:2px 7px; border-radius:8px; font-size:0.55rem; font-weight:800;">${isQuarantaine ? '🔶 QUARANTAINE' : '✅ FERTILE'}</span>
+                                    <div class="code-badge" style="background:rgba(99,102,241,0.15); color:var(--secondary); border-color:rgba(99,102,241,0.2);">${p.code || 'N/A'}</div>
+                                </div>
                             </div>
+                            ${p.statut === 'fertile' && p.dateFertilite ? `<div style="font-size:0.55rem; color:#059669; font-weight:700; margin-bottom:4px;">📅 Fertil. validée le : ${window.formatStringToDate(p.dateFertilite)}</div>` : ''}
                             
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                                 <div style="background:rgba(0,0,0,0.02); padding:8px; border-radius:10px; text-align:center;">
@@ -10032,10 +10242,10 @@
         };
 
         window.goToResultsStep2 = function() {
-            const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
+            const checkedIds = Array.from(window._fertCheckedIds || new Set());
             const fertiliteData = window._fertiliteData || [];
             const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
-            if (selectedFiches.length === 0) return;
+            if (selectedFiches.length === 0) { window.showToast('⚠️ Sélectionnez au moins un MC.', 'warning', 2500); return; }
 
             // Collecter toutes les souches uniques et tous les milieux où on les teste
             const souchesMap = {}; // { 'Souche 1': [ { f: fiche, secKey: 'fert', secLabel: 'Fertilite' }, ... ] }
@@ -10191,7 +10401,7 @@
 
         window.confirmAndGenerateFertFeuillesResultats = function() {
             window.closeModal('feuillesResultatsModalOverlay');
-            const checkedIds = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(c => c.value);
+            const checkedIds = Array.from(window._fertCheckedIds || new Set());
             const fertiliteData = window._fertiliteData || [];
             const selectedFiches = fertiliteData.filter(f => checkedIds.includes(String(f.id)));
             if (selectedFiches.length === 0) return;

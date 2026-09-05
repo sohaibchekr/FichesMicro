@@ -3077,10 +3077,17 @@
         window.generatePrepPdf = function(statut, sourcePreps) {
             const allPreps = sourcePreps || (typeof preps !== 'undefined' ? preps : []);
             const targetStatus = statut || 'quarantaine';
-            const list = allPreps.filter(p => (p.statut || 'quarantaine') === targetStatus);
+            
+            // Filtrer par statut par défaut
+            let list = allPreps.filter(p => (p.statut || 'quarantaine') === targetStatus);
+            
+            // Si l'utilisateur a effectué une sélection, on filtre pour n'afficher que les MC sélectionnés
+            if (typeof selectedFiches !== 'undefined' && selectedFiches.size > 0) {
+                list = list.filter(p => selectedFiches.has(p.id));
+            }
 
             if (list.length === 0) {
-                window.showToast(`Aucune MC avec statut "${targetStatus}" à exporter.`, 'info', 3000);
+                window.showToast(`Aucune MC sélectionnée avec statut "${targetStatus}" à exporter.`, 'info', 3000);
                 return;
             }
 
@@ -3167,7 +3174,7 @@
                         (p.lot || '-'),
                         fmtDate(p.datePrep),
                         fmtDate(p.datePeremption),
-                        ''   // Date de libération. : vide — à remplir à la main
+                        fmtDate(p.dateFertilite) // Affiche la date de libération
                     ];
 
                     x = 10;

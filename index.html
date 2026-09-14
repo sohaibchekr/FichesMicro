@@ -39,14 +39,17 @@
 
         body {
             font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-            color: #0f172a;
+            color: #000000;
             user-select: none;
             display: flex;
             flex-direction: column;
+            font-weight: bold;
         }
 
         input, textarea, select {
             user-select: text !important;
+            font-weight: bold;
+            color: #000000;
         }
 
         input[type="text"], textarea {
@@ -95,8 +98,8 @@
             --secondary-dark: #6d28d9;
             --glass: rgba(255, 255, 255, 0.85);
             --glass-border: rgba(0, 0, 0, 0.06);
-            --text-main: #0f172a;
-            --text-dim: #64748b;
+            --text-main: #000000;
+            --text-dim: #1a1a1a;
             --success: #059669;
             --danger: #dc2626;
             --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
@@ -113,6 +116,7 @@
             font-family: 'Outfit', sans-serif;
             color: var(--text-main);
             min-height: 100vh;
+            font-weight: bold;
         }
 
         /* App Layout */
@@ -1381,12 +1385,16 @@
     </button>
     <script>
         function toggleMainRibbon() {
-            var header = document.querySelector('.header');
-            if (header.style.display === 'none') {
-                header.style.display = 'flex';
+            var elTop = document.querySelector('.header-top');
+            var elTabs = document.getElementById('mainTabs');
+            
+            if (elTop.style.display === 'none') {
+                elTop.style.display = '';
+                if(elTabs) elTabs.style.display = '';
                 if(window.showToast) window.showToast('Ruban affiché', 'info');
             } else {
-                header.style.display = 'none';
+                elTop.style.display = 'none';
+                if(elTabs) elTabs.style.display = 'none';
                 if(window.showToast) window.showToast('Ruban masqué', 'info');
             }
         }

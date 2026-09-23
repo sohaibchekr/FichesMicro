@@ -10251,7 +10251,7 @@
             setVal(base + '_tmoy', tmoy);
 
             var ratioEl = document.getElementById(base + '_ratio');
-            if (ratioEl) ratioEl.value = (rmoy !== null && tmoy !== null && rmoy !== 0) ? (tmoy / rmoy).toFixed(2) : '';
+            if (ratioEl) ratioEl.value = (rmoy !== null && tmoy !== null && rmoy !== 0) ? (tmoy / rmoy) : '';
 
             window._syncFrInoculumReadouts();
         };

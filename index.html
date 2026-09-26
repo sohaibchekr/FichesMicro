@@ -7267,70 +7267,75 @@
                     try {
                         const data = evt.target.result;
                         const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        const json = XLSX.utils.sheet_to_json(worksheet);
-                        
-                        if (json.length === 0) {
-                            window.showToast("Fichier vide ou mal formaté.", 'error');
-                            return;
-                        }
                         
                         const reg = registres.find(r => r.id === regId);
+                        if(!reg) return window.showToast("Registre introuvable", 'error');
+
                         const batch = window.db.batch();
                         let count = 0;
 
-                        // Build a normalised map of Excel column headers
-                        const excelHeaders = Object.keys(json[0]);
-                        const normExcelHeaders = {};
-                        excelHeaders.forEach(h => { normExcelHeaders[normalizeKey(h)] = h; });
-                        
-                        json.forEach(row => {
-                            let entryData = {};
+                        workbook.SheetNames.forEach(sheetName => {
+                            const worksheet = workbook.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(worksheet);
                             
-                            reg.columns.forEach(col => {
-                                const colName = typeof col === 'string' ? col : col.name;
-                                const normColName = normalizeKey(colName);
+                            if (json.length === 0) return;
+                            
+                            // Build a normalised map of Excel column headers
+                            const excelHeaders = Object.keys(json[0]);
+                            const normExcelHeaders = {};
+                            excelHeaders.forEach(h => { normExcelHeaders[normalizeKey(h)] = h; });
+                            
+                            json.forEach((row, i) => {
+                                let entryData = {};
                                 
-                                // Try exact normalised match first, then fallback to partial
-                                let matchedKey = normExcelHeaders[normColName];
-                                if (!matchedKey) {
-                                    // partial: find any header containing or contained in colName
-                                    Object.entries(normExcelHeaders).forEach(([normH, origH]) => {
-                                        if (!matchedKey && (normH.includes(normColName) || normColName.includes(normH))) {
-                                            matchedKey = origH;
-                                        }
-                                    });
-                                }
-
-                                if (matchedKey !== undefined && row[matchedKey] !== undefined && row[matchedKey] !== null) {
-                                    let val = row[matchedKey];
-                                    if (val instanceof Date) {
-                                        const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
-                                        val = offsetDate.toISOString().split('T')[0];
-                                    } else if (typeof val === 'string' && val.includes('/')) {
-                                        const p = val.split('/');
-                                        if (p.length === 3) {
-                                            let y = p[2], m = p[1].padStart(2, '0'), d = p[0].padStart(2, '0');
-                                            if (y.length === 2) y = '20' + y;
-                                            if (y.length === 4) val = `${y}-${m}-${d}`;
-                                        }
+                                reg.columns.forEach(col => {
+                                    const colName = typeof col === 'string' ? col : col.name;
+                                    const normColName = normalizeKey(colName);
+                                    
+                                    // Try exact normalised match first, then fallback to partial
+                                    let matchedKey = normExcelHeaders[normColName];
+                                    if (!matchedKey) {
+                                        // partial: find any header containing or contained in colName
+                                        Object.entries(normExcelHeaders).forEach(([normH, origH]) => {
+                                            if (!matchedKey && (normH.includes(normColName) || normColName.includes(normH))) {
+                                                matchedKey = origH;
+                                            }
+                                        });
                                     }
-                                    entryData[colName] = val;
+
+                                    if (matchedKey !== undefined && row[matchedKey] !== undefined && row[matchedKey] !== null) {
+                                        let val = row[matchedKey];
+                                        if (val instanceof Date) {
+                                            const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
+                                            val = offsetDate.toISOString().split('T')[0];
+                                        } else if (typeof val === 'string' && val.includes('/')) {
+                                            const p = val.split('/');
+                                            if (p.length === 3) {
+                                                let y = p[2], m = p[1].padStart(2, '0'), d = p[0].padStart(2, '0');
+                                                if (y.length === 2) y = '20' + y;
+                                                if (y.length === 4) val = `${y}-${m}-${d}`;
+                                            }
+                                        }
+                                        entryData[colName] = val;
+                                    }
+                                });
+                                
+                                if (Object.keys(entryData).length > 0) {
+                                    const newRef = window.db.collection(R_ENTRIES_COL).doc();
+                                    batch.set(newRef, {
+                                        regId: regId,
+                                        data: entryData,
+                                        updatedAt: Date.now() - ((count + i) * 1000)
+                                    });
+                                    count++;
                                 }
                             });
-                            
-                            if (Object.keys(entryData).length > 0) {
-                                const newRef = window.db.collection(R_ENTRIES_COL).doc();
-                                batch.set(newRef, {
-                                    regId: regId,
-                                    data: entryData,
-                                    updatedAt: Date.now() - (count * 1000)
-                                });
-                                count++;
-                            }
                         });
                         
+                        if (count === 0) {
+                            return window.showToast("Fichier vide ou données non reconnues (colonnes non correspondantes).", 'error');
+                        }
+
                         batch.commit().then(() => {
                             window.showToast(count + " lignes importées avec succès !", 'success');
                         }).catch(err => {
@@ -7356,7 +7361,6 @@
                 const file = e.target.files[0];
                 if (!file) return;
 
-                // Detect column type from sample values
                 function detectColType(colName, values) {
                     const dateKeywords = /(date|expir|périm|peremp|validit|limite|dlc|dluo|libér|fin)/i;
                     if (dateKeywords.test(colName)) return 'date';
@@ -7372,79 +7376,172 @@
                     try {
                         const data = evt.target.result;
                         const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        const sheets = workbook.SheetNames;
                         
-                        if (json.length === 0) { return window.showToast("Fichier vide ou mal formaté.", 'error'); }
-                        
-                        // Extraire les colonnes de la première ligne
-                        const headerKeys = Object.keys(json[0]);
-                        const colNames = headerKeys.map(k => k.trim()).filter(k => k);
-                        
-                        if (colNames.length === 0) { return window.showToast("Aucune colonne détectée.", 'error'); }
+                        if (sheets.length === 0) { return window.showToast("Fichier vide ou mal formaté.", 'error'); }
 
-                        // Auto-detect column types from first 10 rows
-                        const sampleRows = json.slice(0, 10);
-                        const colsToCreate = colNames.map(colName => {
-                            const sampleVals = sampleRows.map(r => r[colName]);
-                            const type = detectColType(colName, sampleVals);
-                            if (type === 'text') return colName; // keep simple string for text cols
-                            return { name: colName, type: type };
-                        });
-                        
-                        const title = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
-                        const newRegRef = window.db.collection(REGISTRES_COL).doc();
-                        const regId = newRegRef.id;
-                        
-                        const batch = window.db.batch();
-                        batch.set(newRegRef, {
-                            name: title,
-                            icon: '📓',
-                            columns: colsToCreate,
-                            updatedAt: Date.now()
-                        });
-                        
-                        let count = 0;
-                        json.forEach(row => {
-                            let entryData = {};
-                            colNames.forEach(colName => {
-                                let val = row[colName];
-                                if (val === '' || val === null || val === undefined) return;
-                                if (val instanceof Date) {
-                                    const offsetDate = new Date(val.getTime() - (val.getTimezoneOffset() * 60000));
-                                    val = offsetDate.toISOString().split('T')[0];
-                                } else if (typeof val === 'string' && val.includes('/')) {
-                                    const p = val.split('/');
-                                    if (p.length === 3) {
-                                        let y = p[2], m = p[1].padStart(2, '0'), d = p[0].padStart(2, '0');
-                                        if (y.length === 2) y = '20' + y;
-                                        if (y.length === 4) val = `${y}-${m}-${d}`;
-                                    }
-                                }
-                                entryData[colName] = val;
+                        // Fetch existing registries to prompt user
+                        window.db.collection(REGISTRES_COL).get().then(function(snapshot) {
+                            var existingRegs = [];
+                            snapshot.forEach(function(doc) {
+                                existingRegs.push({id: doc.id, name: doc.data().name || 'Sans Nom'});
                             });
-                            
-                            if (Object.keys(entryData).length > 0) {
-                                const newEntryRef = window.db.collection(R_ENTRIES_COL).doc();
-                                batch.set(newEntryRef, {
-                                    regId: regId,
-                                    data: entryData,
-                                    updatedAt: Date.now() - (count * 1000)
+                            existingRegs.sort(function(a,b) { return a.name.localeCompare(b.name); });
+
+                            var mid = 'eim_' + Date.now();
+                            var opts = '<option value="NEW">➕ Nouveau registre (1 par classeur)</option>';
+                            existingRegs.forEach(function(r) {
+                                opts += '<option value="' + r.id + '">📁 Ajouter à : ' + r.name + '</option>';
+                            });
+
+                            // Build per-sheet diagnostic info
+                            var sheetDiag = sheets.map(function(sn) {
+                                var rawWs = workbook.Sheets[sn];
+                                var rawJson = XLSX.utils.sheet_to_json(rawWs, { defval: '' });
+                                var color = rawJson.length > 0 ? '#059669' : '#dc2626';
+                                return '<span style="display:inline-block;background:#f1f5f9;border-radius:8px;padding:4px 10px;margin:3px;font-size:0.8rem;border:1px solid #e2e8f0;">📄 <b>' + sn + '</b> : <span style="color:' + color + ';">' + rawJson.length + ' lignes</span></span>';
+                            }).join('');
+
+                            var ov = document.createElement('div');
+                            ov.className = 'modal-overlay active';
+                            ov.id = mid;
+                            ov.innerHTML = '<div class="modal-content" style="max-width:480px;">'
+                                + '<button class="close-modal" onclick="document.getElementById(\'' + mid + '\').remove()">×</button>'
+                                + '<h2 style="font-size:1.2rem;color:var(--primary);margin-bottom:16px;">📥 Importation Excel</h2>'
+                                + '<p style="margin-bottom:10px;font-size:0.9rem;">Fichier : <b>' + file.name + '</b></p>'
+                                + '<div style="margin-bottom:20px;padding:12px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;"><p style="font-size:0.8rem;font-weight:bold;margin-bottom:8px;">Feuilles détectées :</p>' + sheetDiag + '</div>'
+                                + '<label style="display:block;margin-bottom:8px;font-weight:bold;font-size:0.85rem;">Destination :</label>'
+                                + '<select id="' + mid + '_sel" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--glass-border);margin-bottom:20px;font-family:inherit;">' + opts + '</select>'
+                                + '<button id="' + mid + '_ok" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--primary),var(--secondary));border:none;border-radius:14px;color:white;font-weight:bold;cursor:pointer;">✅ Confirmer l\'importation</button>'
+                                + '</div>';
+                            document.body.appendChild(ov);
+
+                            document.getElementById(mid + '_ok').onclick = function() {
+                                var destId = document.getElementById(mid + '_sel').value;
+                                document.getElementById(mid).remove();
+
+                                var titleBase = file.name.replace(/\.[^/.]+$/, '').toUpperCase();
+
+                                // Build one task object per sheet
+                                var tasks = [];
+                                sheets.forEach(function(sheetName) {
+                                    var ws = workbook.Sheets[sheetName];
+                                    // Try both with and without header:1 to catch all formats
+                                    var json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                                    if (!json.length) {
+                                        // Fallback: try raw array, check if there's actual data beyond row 1
+                                        var raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                                        if (raw.length <= 1) return; // truly empty
+                                        // Re-build json manually using first row as header
+                                        var headers = (raw[0] || []).map(function(h){ return String(h).trim(); }).filter(function(h){ return h; });
+                                        if (!headers.length) return;
+                                        json = raw.slice(1).map(function(row) {
+                                            var obj = {};
+                                            headers.forEach(function(h, i) { obj[h] = row[i] !== undefined ? row[i] : ''; });
+                                            return obj;
+                                        });
+                                        if (!json.length) return;
+                                    }
+                                    var colNames = Object.keys(json[0]).map(function(k){ return k.trim(); }).filter(function(k){ return k; });
+                                    if (!colNames.length) return;
+
+                                    var entries = [];
+                                    json.forEach(function(row) {
+                                        var entry = {};
+                                        colNames.forEach(function(col) {
+                                            var val = row[col];
+                                            if (val === '' || val === null || val === undefined) return;
+                                            if (val instanceof Date) {
+                                                var d = new Date(val.getTime() - val.getTimezoneOffset() * 60000);
+                                                val = d.toISOString().split('T')[0];
+                                            } else if (typeof val === 'string' && val.indexOf('/') !== -1) {
+                                                var p = val.split('/');
+                                                if (p.length === 3) {
+                                                    var y = p[2], m = p[1].padStart(2,'0'), d2 = p[0].padStart(2,'0');
+                                                    if (y.length === 2) y = '20' + y;
+                                                    if (y.length === 4) val = y + '-' + m + '-' + d2;
+                                                }
+                                            }
+                                            entry[col] = val;
+                                        });
+                                        if (Object.keys(entry).length) entries.push(entry);
+                                    });
+
+                                    var regId = destId;
+                                    var regRef = null;
+                                    var regData = null;
+
+                                    if (destId === 'NEW') {
+                                        var sample = json.slice(0, 10);
+                                        var cols = colNames.map(function(col) {
+                                            var vals = sample.map(function(r){ return r[col]; });
+                                            var t = detectColType(col, vals);
+                                            return t === 'text' ? col : { name: col, type: t };
+                                        });
+                                        regRef = window.db.collection(REGISTRES_COL).doc();
+                                        regId = regRef.id;
+                                        regData = {
+                                            name: (sheets.length > 1 ? titleBase + ' — ' + sheetName : titleBase),
+                                            icon: '📓',
+                                            columns: cols,
+                                            updatedAt: Date.now()
+                                        };
+                                    }
+
+                                    tasks.push({ regId: regId, regRef: regRef, regData: regData, entries: entries });
                                 });
-                                count++;
-                            }
-                        });
-                        
-                        batch.commit().then(() => {
-                            window.showToast(`Registre "${title}" auto-généré avec ${count} lignes !`, 'success');
-                        }).catch(err => {
+
+                                if (!tasks.length) return window.showToast('Aucune donnée à importer.', 'error');
+
+                                // Chain promises: for each task, set registry then add entries in chunks
+                                var CHUNK = 400;
+                                var totalLines = 0;
+                                var chain = Promise.resolve();
+
+                                tasks.forEach(function(task) {
+                                    chain = chain.then(function() {
+                                        // Step 1: create registry doc
+                                        var p = task.regRef ? task.regRef.set(task.regData) : Promise.resolve();
+                                        // Step 2: add entries in chunks
+                                        return p.then(function() {
+                                            var sub = Promise.resolve();
+                                            for (var i = 0; i < task.entries.length; i += CHUNK) {
+                                                (function(chunk) {
+                                                    sub = sub.then(function() {
+                                                        var b = window.db.batch();
+                                                        chunk.forEach(function(entry, j) {
+                                                            var r = window.db.collection(R_ENTRIES_COL).doc();
+                                                            b.set(r, { regId: task.regId, data: entry, updatedAt: Date.now() - j });
+                                                        });
+                                                        return b.commit();
+                                                    });
+                                                })(task.entries.slice(i, i + CHUNK));
+                                            }
+                                            totalLines += task.entries.length;
+                                            return sub;
+                                        });
+                                    });
+                                });
+
+                                chain.then(function() {
+                                    if (destId === 'NEW') {
+                                        window.showToast(tasks.length + ' registre(s) créé(s) — ' + totalLines + ' lignes importées !', 'success');
+                                    } else {
+                                        window.showToast(totalLines + ' lignes ajoutées au registre !', 'success');
+                                    }
+                                }).catch(function(err) {
+                                    console.error(err);
+                                    window.showToast('Erreur : ' + (err.message || err), 'error');
+                                });
+                            };
+
+                        }).catch(function(err) {
                             console.error(err);
-                            window.showToast("Erreur d'enregistrement", 'error');
+                            window.showToast('Erreur récupération registres', 'error');
                         });
-                    } catch (err) {
+                    } catch(err) {
                         console.error(err);
-                        window.showToast("Erreur de lecture Excel", 'error');
+                        window.showToast('Erreur lecture Excel', 'error');
                     }
                 };
                 reader.readAsBinaryString(file);

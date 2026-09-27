@@ -11544,43 +11544,20 @@
                         const pid = p.id;
                         const name = (p.designation || '-').replace(/'/g, "\'");
                         const lot = (p.lot || '-').replace(/'/g, "\'");
-                        const dateP = window.formatStringToDate(p.datePrep) || '-';
                         return `<tr id="row_${pid}" style="border-top:1px solid #ddd; cursor:pointer;" onclick="window.rf_toggleRow('${pid}')">
                             <td style="padding:10px; vertical-align:middle; text-align:center;">
                                 <input type="checkbox" id="chk_${pid}" onchange="window.rf_onChkChange('${pid}')" style="width:18px;height:18px;cursor:pointer;" onclick="event.stopPropagation()">
                             </td>
                             <td style="padding:10px; color:#111; font-weight:500;">${p.designation || '-'}</td>
                             <td style="padding:10px; color:#444;">${p.lot || '-'}</td>
-                            <td style="padding:10px; color:#444;">${dateP}</td>
-                            <td style="padding:10px; text-align:center; vertical-align:middle;">
-                                <div style="display:flex; flex-direction:column; gap:4px;">
-                                    <label style="font-size:0.7rem; color:#444;">F (fertilité)</label>
-                                    <input type="date" id="dateTest_${pid}" style="padding:5px; border-radius:6px; border:1px solid #bbb; background:#fff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()" onchange="(function(){ var s=document.getElementById('dateSt_${pid}'); if(s && !s.value) s.value=this.value; }).call(this)">
-                                    <label style="font-size:0.7rem; color:#444;">S (stérilité)</label>
-                                    <input type="date" id="dateSt_${pid}" style="padding:5px; border-radius:6px; border:1px solid #3b82f6; background:#eff6ff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()">
-                                    <button onclick="event.stopPropagation(); var f=document.getElementById('dateTest_${pid}'); var s=document.getElementById('dateSt_${pid}'); if(f) s.value=f.value;" style="font-size:0.65rem; background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; border-radius:4px; padding:2px 6px; cursor:pointer;">= Copier F→S</button>
-                                </div>
-                            </td>
-                            <td style="padding:10px; text-align:center; vertical-align:middle;">
-                                <div style="display:flex; gap:5px; justify-content:center; flex-wrap:wrap;">
-                                    <button onclick="event.stopPropagation(); window.rf_addDaysRow('${pid}', 5)" style="background:#111; color:#fff; border:none; padding:4px 8px; border-radius:5px; cursor:pointer; font-size:0.75rem;">+5j</button>
-                                    <button onclick="event.stopPropagation(); window.rf_addDaysRow('${pid}', 7)" style="background:#444; color:#fff; border:none; padding:4px 8px; border-radius:5px; cursor:pointer; font-size:0.75rem;">+7j</button>
-                                    <input type="date" id="dateLecture_${pid}" style="padding:5px; border-radius:6px; border:1px solid #bbb; background:#fff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()">
-                                </div>
-                            </td>
-                            <td style="padding:10px; text-align:center; vertical-align:middle;">
-                                <select id="res_${pid}" style="padding:5px; border-radius:6px; border:1px solid #bbb; background:#fff; color:#111; font-size:0.82rem;" onclick="event.stopPropagation()">
-                                    <option value="CONFORME">CONFORME</option>
-                                    <option value="NON CONFORME">NON CONFORME</option>
-                                </select>
-                            </td>
+                            <td style="padding:10px; color:#444;"></td>
                         </tr>`;
                     }).join('');
 
                     container.innerHTML = `
                         <div style="padding:20px; font-family:Arial, sans-serif;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #111; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
-                                <h2 style="color:#111; margin:0; font-size:1.3rem;">🧪 Milieux Libérés — Résultats de Fertilité</h2>
+                                <h2 style="color:#111; margin:0; font-size:1.3rem;">🧪 Suivi des lots de milieux de culture fertiles libérés</h2>
                                 <button onclick="window.switchTab('preps')" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">
                                     ← Aller aux Préparations
                                 </button>
@@ -11601,7 +11578,7 @@
                                     ✕ Tout désélectionner
                                 </button>
                                 <button onclick="window.rf_generatePDF()" style="background:#fff; color:#111; border:2px solid #111; padding:9px 20px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:bold; margin-left:auto;">
-                                    📄 LIBÉRER LES MILIEUX SÉLECTIONNÉS (PDF)
+                                    📄 IMPRIMER LE SUIVI (PDF)
                                 </button>
                             </div>
 
@@ -11612,14 +11589,11 @@
                                             <th style="padding:11px; width:40px;"></th>
                                             <th style="padding:11px;">Milieu (MC)</th>
                                             <th style="padding:11px;">Lot</th>
-                                            <th style="padding:11px;">Date Préparation</th>
-                                            <th style="padding:11px; text-align:center;">Dates (Fertilité & Stérilité)</th>
-                                            <th style="padding:11px; text-align:center;">Date Lecture (+5j / +7j / Manuel)</th>
-                                            <th style="padding:11px; text-align:center;">Résultat</th>
+                                            <th style="padding:11px;">Remarque</th>
                                         </tr>
                                     </thead>
                                     <tbody id="rf_tbody">
-                                        ${tableRows || '<tr><td colspan="7" style="padding:20px; text-align:center; color:#888;">Aucune préparation trouvée</td></tr>'}
+                                        ${tableRows || '<tr><td colspan="4" style="padding:20px; text-align:center; color:#888;">Aucune préparation trouvée</td></tr>'}
                                     </tbody>
                                 </table>
                             </div>
@@ -11689,11 +11663,7 @@
                         const pid = chk.id.replace('chk_', '');
                         const p = (window.preps || []).find(x => x.id === pid);
                         if (!p) return;
-                        const dateTest = (document.getElementById('dateTest_' + pid) || {}).value || '';
-                        const dateSt = (document.getElementById('dateSt_' + pid) || {}).value || '';
-                        const dateLecture = (document.getElementById('dateLecture_' + pid) || {}).value || '';
-                        const res = (document.getElementById('res_' + pid) || {}).value || 'CONFORME';
-                        checked.push({ p, dateTest, dateSt, dateLecture, res });
+                        checked.push({ p });
                     }
                 });
 
@@ -11705,29 +11675,28 @@
                 try {
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF('p', 'mm', 'a4');
-                    const fw = window.formatStringToDate;
 
                     // Title page header
                     doc.setFont("helvetica", "bold");
-                    doc.setFontSize(18);
+                    doc.setFontSize(16);
                     doc.setTextColor(0, 0, 0);
-                    doc.text("Milieux libérés - RESULTATS DE FERTILITE", 105, 22, null, null, "center");
+                    doc.text("Suivi des lots de milieux de culture fertiles libérés", 105, 22, null, null, "center");
                     doc.setLineWidth(0.8);
                     doc.line(10, 26, 200, 26);
                     doc.setFontSize(9);
                     doc.setFont("helvetica", "normal");
                     const today = new Date().toLocaleDateString('fr-FR');
-                    doc.text("Date d'edition : " + today, 200, 33, null, null, "right");
+                    doc.text("Date d'édition : " + today, 200, 33, null, null, "right");
                     doc.line(10, 35, 200, 35);
 
                     // Table header
-                    const colX = [12, 52, 73, 98, 123, 148, 173];
-                    const headers = ["Milieu (MC)", "Lot", "Date Prep.", "Fertilité", "Stérilité", "Date Lecture", "Résultat"];
-                    const colW  = [38, 19, 23, 23, 23, 23, 20];
+                    const colX = [12, 110, 155];
+                    const headers = ["Milieu (MC)", "Lot", "Remarque"];
+                    const colW  = [93, 40, 40];
 
                     let y = 42;
                     doc.setFont("helvetica", "bold");
-                    doc.setFontSize(8);
+                    doc.setFontSize(9);
                     doc.setFillColor(220, 220, 220);
                     doc.rect(10, y - 5, 190, 8, 'F');
                     doc.setDrawColor(0);
@@ -11735,53 +11704,36 @@
                     headers.forEach((h, i) => doc.text(h, colX[i], y, { maxWidth: colW[i] - 2 }));
                     y += 5;
                     doc.line(10, y, 200, y);
-                    y += 5;
+                    y += 6;
 
                     doc.setFont("helvetica", "normal");
-                    doc.setFontSize(8);
+                    doc.setFontSize(9);
 
                     checked.forEach((item, idx) => {
-                        const { p, dateTest, dateLecture, res } = item;
+                        const { p } = item;
                         const nom = p.designation || '-';
                         const lot = p.lot || '-';
-                        const dateP = fw(p.datePrep) || '-';
-                        const dTest = fw(dateTest) || '-';
-                        const dLec = fw(dateLecture) || '-';
 
-                        if (y > 265) {
+                        if (y > 275) {
                             doc.addPage();
                             y = 20;
                         }
 
-                        // Alternate rows
-                        if (idx % 2 === 0) {
-                            // doc.setFillColor(248, 248, 248);
-                            // doc.rect(10, y - 4, 190, 9, 'F');
-                        }
-
                         doc.setTextColor(0, 0, 0);
-                        // Nom MC (wrap if needed)
                         const nomLines = doc.splitTextToSize(nom, colW[0] - 2);
                         doc.text(nomLines[0], colX[0], y);
                         doc.text(lot, colX[1], y);
-                        doc.text(dateP, colX[2], y);
-                        doc.text(dTest, colX[3], y);
-                        doc.text(item.dateSt || '-', colX[4], y);
-                        doc.text(dLec, colX[5], y);
+                        // Remarque is left empty physically in PDF
                         
-                        // Result - bold
-                        doc.setFont("helvetica", "bold");
-                        doc.text(res === 'CONFORME' ? 'OK' : 'NON', colX[6], y);
-                        doc.setFont("helvetica", "normal");
                         y += 10;
                     });
 
                     // Signature section
-                    y += 10;
+                    y += 5;
                     if (y > 250) { doc.addPage(); y = 20; }
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(9);
-                    doc.text("Fait par :", 12, y);
+                    doc.text("", 12, y);
                     doc.setLineWidth(0.5);
                     doc.line(12, y + 15, 90, y + 15);
 
@@ -11789,7 +11741,7 @@
                     doc.line(120, y + 15, 198, y + 15);
 
                     const d = new Date();
-                    const fname = "Milieux_Liberes_" + d.getFullYear() + (d.getMonth()+1).toString().padStart(2,'0') + d.getDate().toString().padStart(2,'0') + ".pdf";
+                    const fname = "Suivi_Lots_Milieux_" + d.getFullYear() + (d.getMonth()+1).toString().padStart(2,'0') + d.getDate().toString().padStart(2,'0') + ".pdf";
                     doc.save(fname);
                     if (window.showToast) window.showToast("PDF généré : " + fname, "success");
 

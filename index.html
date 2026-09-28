@@ -1424,6 +1424,7 @@
             <button onclick="window.switchTab('bulletins')" id="tab-bulletins" class="main-tab" draggable="true" data-tab-id="bulletins">📄 Stabilité</button>
             <button onclick="window.switchTab('germes')" id="tab-germes" class="main-tab" draggable="true" data-tab-id="germes">🦠 Germes</button>
             <button onclick="window.switchTab('fertilite')" id="tab-fertilite" class="main-tab" draggable="true" data-tab-id="fertilite"> Fertilité</button>
+            <button onclick="window.switchTab('taches')" id="tab-taches" class="main-tab" draggable="true" data-tab-id="taches">📝 Tâches</button>
             <button onclick="window.open('excel.html','_blank')" id="tab-excel" class="main-tab" draggable="true" data-tab-id="excel">📊 Excel</button>
         </div>
 
@@ -1464,11 +1465,13 @@
             <span id="selectedCount" style="color: #ef4444; font-weight: 800; font-size: 0.8rem;">0 sélectionnée(s)</span>
             <div style="display:flex; gap:8px; flex-wrap: wrap;">
                 <button onclick="window.selectAllVisible()"
-                    style="background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">TOUT SÉLECTIONNER</button>
+                    style="background: hsl(217, 91%, 60%); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">TOUT SÉLECTIONNER</button>
                 <button onclick="window.runBatchPDF()"
                     style="background: #10b981; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">📄 EXPORTER PDF</button>
                 <button onclick="window.runBatchDelete()"
                     style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">SUPPRIMER DÉFINITIVEMENT</button>
+                <button id="btnTracaManualPreps" onclick="window.saveManualFertiliteTracaFromPreps()"
+                    style="display:none; background: #059669; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 0.65rem; cursor: pointer;">💾 TRAÇABILITÉ MANUELLE</button>
             </div>
         </div>
     </header>
@@ -5623,6 +5626,9 @@
             toggleSelectBtn.innerText = isSelectionMode ? "ANNULER" : "SÉLECTIONNER";
             toggleSelectBtn.style.background = isSelectionMode ? "#ef4444" : "rgba(255,255,255,0.1)";
             selectionActions.style.display = isSelectionMode ? "flex" : "none";
+            const btnTraca = document.getElementById('btnTracaManualPreps');
+            if (btnTraca) btnTraca.style.display = (window.currentTab === 'preps') ? 'inline-block' : 'none';
+
             if (!isSelectionMode) {
                 selectedFiches.clear();
                 updateSelectionUI();
@@ -9308,12 +9314,18 @@
 
             const recapHtml = `
             <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px; background:rgba(59,130,246,0.05); padding:10px; border-radius:10px; border:1px solid rgba(59,130,246,0.2);">
-                <div style="font-size:0.75rem; color:#1e40af; font-weight:800;">Cochez les milieux et choisissez votre document :</div>
+                <div style="font-size:0.75rem; color:#1e40af; font-weight:800;">Cochez les milieux et choisissez votre action :</div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button class="menu-btn" onclick="window.openPlanTravailModal()" style="background:transparent; color:#3b82f6; border:2px solid #3b82f6;">📝 Plan de Travail</button>
                     <button class="menu-btn" onclick="window.generateFertGlobalRecap()" style="background:linear-gradient(to right, #3b82f6, #2563eb); color:white;">📊 Cons. (Sans Lots)</button>
                     <button class="menu-btn" onclick="window.generateFertFeuillesResultats()" style="background:linear-gradient(to right, #f59e0b, #d97706); color:white;">📊 Cons. (Avec Lots)</button>
                     <button class="menu-btn" onclick="window.generateFertFeuillesResultats()" style="background:linear-gradient(to right, #059669, #047857); color:white;">📋 Feuilles Résultats</button>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:5px; padding-top:10px; border-top:1px dashed rgba(59,130,246,0.3); align-items:center;">
+                    <span style="font-size:0.75rem; color:#1e40af; font-weight:800;">Traçabilité Manuelle :</span>
+                    <input type="date" id="tracaManualDate" style="padding:6px; border-radius:6px; border:1px solid #ccc; font-size:0.8rem;" value="${new Date().toISOString().split('T')[0]}">
+                    <button class="menu-btn" onclick="window.saveManualFertiliteTraca()" style="background:#059669; color:white; font-weight:bold;">💾 Enregistrer</button>
+                    <button class="menu-btn" onclick="window.showFertiliteTraca()" style="background:var(--success); color:white; border:none; margin-left:auto; font-weight:bold;">🔍 Historique Traçabilité</button>
                 </div>
             </div>`;
 
@@ -11493,7 +11505,7 @@
                 btn.setAttribute('draggable', 'true');
                 btn.setAttribute('data-tab-id', 'resfert');
                 btn.setAttribute('onclick', "window.switchTab('resfert')");
-                btn.textContent = '🧪 Milieux Libérés';
+                btn.textContent = '🧪 Suivi des lots de milieux';
                 tabsContainer.appendChild(btn);
             }
             if (typeof tabsOrder !== 'undefined' && !tabsOrder.includes('resfert')) {
@@ -11502,6 +11514,225 @@
 
             // === INTERCEPT RENDER ===
             const _oldRenderML = window.render;
+
+            window.deleteFertiliteTraca = function(id) {
+                if (!confirm("Voulez-vous supprimer cette ligne de traçabilité ?")) return;
+                let history = JSON.parse(localStorage.getItem('micro_traca_fert_log')) || [];
+                history = history.filter(x => x.id !== id);
+                localStorage.setItem('micro_traca_fert_log', JSON.stringify(history));
+                window.showFertiliteTraca();
+            };
+
+            window.showFertiliteTraca = function() {
+                const container = document.getElementById('fiches-list');
+
+                let history = JSON.parse(localStorage.getItem('micro_traca_fert_log')) || [];
+                // Trier par date décroissante
+                history.sort((a, b) => b.timestamp - a.timestamp);
+
+                let html = `
+                    <div style="padding:20px; font-family:Arial, sans-serif;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #059669; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
+                            <h2 style="color:#059669; margin:0; font-size:1.3rem;">🔍 Historique Traçabilité Fertilité (Manuelle)</h2>
+                            <button onclick="window.render()" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour aux Spécifications</button>
+                        </div>`;
+
+                if (history.length === 0) {
+                    html += `<div style="padding:20px; text-align:center; color:#888; font-size:0.95rem;">Aucun historique de traçabilité. Veuillez enregistrer depuis l'onglet Fertilité.</div>`;
+                } else {
+                    // Grouper par date
+                    const groups = {};
+                    history.forEach(h => {
+                        const d = h.date || 'Sans date';
+                        if (!groups[d]) groups[d] = [];
+                        groups[d].push(h);
+                    });
+
+                    // Trier les dates décroissantes
+                    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+                    sortedDates.forEach(dateKey => {
+                        const entries = groups[dateKey];
+                        const dateLabel = window.formatStringToDate ? window.formatStringToDate(dateKey) : dateKey;
+                        const count = entries.length;
+
+                        html += `
+                        <div style="margin-bottom:22px; border-radius:12px; overflow:hidden; border:1.5px solid #d1fae5; box-shadow:0 2px 8px rgba(5,150,105,0.07);">
+                            <!-- En-tête du groupe -->
+                            <div style="background:linear-gradient(90deg,#059669 0%,#10b981 100%); color:#fff; padding:10px 18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <span style="font-size:1.1rem;">📅</span>
+                                <span style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">${dateLabel}</span>
+                                <span style="background:rgba(255,255,255,0.25); border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700;">${count} MC validé${count > 1 ? 's' : ''}</span>
+                            </div>
+                            <!-- Tableau des MC de ce jour -->
+                            <div style="overflow-x:auto; background:#fff;">
+                                <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#111;">
+                                    <thead>
+                                        <tr style="background:#f0fdf4; color:#065f46; border-bottom:1px solid #d1fae5;">
+                                            <th style="padding:9px 12px; font-size:0.75rem; font-weight:800; white-space:nowrap;">Milieu (MC)</th>
+                                            <th style="padding:9px 12px; font-size:0.75rem; font-weight:800; white-space:nowrap;">Lot</th>
+                                            <th style="padding:9px 12px; font-size:0.75rem; font-weight:800; white-space:nowrap;">Incubation</th>
+                                            <th style="padding:9px 12px; font-size:0.75rem; font-weight:800; max-width:200px;">Souches Testées</th>
+                                            <th style="padding:9px 12px; width:40px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>`;
+
+                        entries.forEach((h, idx) => {
+                            const bg = idx % 2 === 0 ? '#fff' : '#f9fafb';
+                            html += `
+                                        <tr style="border-bottom:1px solid #e5e7eb; background:${bg};">
+                                            <td style="padding:10px 12px; font-weight:700; color:#111;">${h.milieu || '-'}</td>
+                                            <td style="padding:10px 12px;">
+                                                <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:6px; padding:3px 9px; font-size:0.78rem; font-weight:700;">${h.lot || '-'}</span>
+                                            </td>
+                                            <td style="padding:10px 12px; color:#444; font-size:0.75rem;">${h.incubation || '-'}</td>
+                                            <td style="padding:10px 12px; font-size:0.75rem; color:#444; max-width:200px;">${h.souches || '-'}</td>
+                                            <td style="padding:10px 12px; text-align:center;">
+                                                <button onclick="window.deleteFertiliteTraca('${h.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1rem;" title="Supprimer">🗑️</button>
+                                            </td>
+                                        </tr>`;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>`;
+                    });
+                }
+
+                html += `</div>`;
+                container.innerHTML = html;
+            };
+
+
+            window.saveManualFertiliteTraca = function() {
+                const checkedIds = Array.from(window._fertCheckedIds || new Set());
+                if (checkedIds.length === 0) {
+                    if (window.showToast) window.showToast("Cochez au moins un MC pour l'enregistrer.", "error");
+                    return;
+                }
+                const dateVal = document.getElementById('tracaManualDate').value;
+                if (!dateVal) {
+                    if (window.showToast) window.showToast("Veuillez choisir une date.", "error");
+                    return;
+                }
+
+                let history = JSON.parse(localStorage.getItem('micro_traca_fert_log')) || [];
+                const fertiliteData = window._fertiliteData || [];
+                
+                let added = 0;
+                checkedIds.forEach(id => {
+                    const f = fertiliteData.find(x => x.id === id);
+                    if (!f) return;
+                    
+                    const inc = ((f.incubConditions && f.incubConditions.length > 0) ? f.incubConditions.map(c=>c.temp+' / '+c.duree).join(', ') : (f.incubTemp ? (f.incubTemp + ' / ' + f.incubDuree) : '-'));
+                    const strains = [];
+                    if (f.souches && f.souches.length) strains.push(...f.souches);
+                    if (f.indSouches && f.indSouches.length) strains.push(...f.indSouches);
+                    if (f.inhSouches && f.inhSouches.length) strains.push(...f.inhSouches);
+                    const souchStr = strains.length ? [...new Set(strains)].join(', ') : '-';
+
+                    // Auto-récupérer le(s) lot(s) depuis l'onglet Préparations
+                    const prepsList = window.preps || [];
+                    const fName = (f.nom || '').toLowerCase().trim();
+                    const matchingPreps = prepsList.filter(p =>
+                        (p.designation || '').toLowerCase().trim() === fName && p.lot
+                    );
+
+                    let lotStr = '';
+                    if (matchingPreps.length === 1) {
+                        // Un seul lot trouvé → on le prend directement
+                        lotStr = matchingPreps[0].lot || '';
+                    } else if (matchingPreps.length > 1) {
+                        // Plusieurs lots → on propose un choix
+                        const options = matchingPreps.map((p, i) => `${i+1}. Lot: ${p.lot} (préparé le ${window.formatStringToDate ? window.formatStringToDate(p.datePrep) : p.datePrep || '?'})`).join('\n');
+                        const choice = prompt(`Plusieurs lots trouvés pour "${f.nom || ''}".\nChoisissez un numéro (1 à ${matchingPreps.length}) ou tapez un lot manuellement :\n\n${options}`, '1');
+                        if (choice === null) return; // annuler
+                        const idx = parseInt(choice) - 1;
+                        if (!isNaN(idx) && idx >= 0 && idx < matchingPreps.length) {
+                            lotStr = matchingPreps[idx].lot || '';
+                        } else {
+                            lotStr = choice; // saisie manuelle
+                        }
+                    } else {
+                        // Aucun lot trouvé → saisie manuelle
+                        const manual = prompt(`Aucune préparation trouvée pour "${f.nom || ''}".\nSaisir le numéro de lot manuellement (optionnel) :`, '');
+                        if (manual === null) return;
+                        lotStr = manual;
+                    }
+
+                    history.push({
+                        id: Date.now().toString() + Math.random().toString(),
+                        date: dateVal,
+                        milieu: f.nom || '-',
+                        lot: lotStr,
+                        incubation: inc,
+                        souches: souchStr,
+                        timestamp: Date.now()
+                    });
+                    added++;
+                });
+
+                localStorage.setItem('micro_traca_fert_log', JSON.stringify(history));
+                if (window.showToast && added > 0) window.showToast(`${added} enregistrement(s) de traçabilité ajouté(s) !`, "success", 4000);
+            };
+
+            window.saveManualFertiliteTracaFromPreps = function() {
+                const checkedIds = Array.from(window.selectedFiches || new Set());
+                if (checkedIds.length === 0) {
+                    if (window.showToast) window.showToast("Cochez au moins une préparation.", "error");
+                    return;
+                }
+                
+                const dateVal = prompt("Choisir la date pour la traçabilité manuelle (AAAA-MM-JJ) :", new Date().toISOString().split('T')[0]);
+                if (!dateVal) return;
+
+                let history = JSON.parse(localStorage.getItem('micro_traca_fert_log')) || [];
+                const fertiliteData = window._fertiliteData || [];
+                const prepsList = window.preps || [];
+                
+                let added = 0;
+                checkedIds.forEach(id => {
+                    const p = prepsList.find(x => x.id === id);
+                    if (!p) return;
+                    
+                    const pName = (p.designation || '').toLowerCase().trim();
+                    const f = fertiliteData.find(x => (x.nom || '').toLowerCase().trim() === pName);
+                    
+                    const inc = (f && f.incubConditions && f.incubConditions.length > 0) 
+                                ? f.incubConditions.map(c => c.temp + ' / ' + c.duree).join(', ') 
+                                : (f && f.incubTemp ? (f.incubTemp + ' / ' + f.incubDuree) : '-');
+                    
+                    let souchStr = '-';
+                    if (f) {
+                        const strains = [];
+                        if (f.souches && f.souches.length) strains.push(...f.souches);
+                        if (f.indSouches && f.indSouches.length) strains.push(...f.indSouches);
+                        if (f.inhSouches && f.inhSouches.length) strains.push(...f.inhSouches);
+                        if (strains.length > 0) {
+                            souchStr = [...new Set(strains)].join(', ');
+                        }
+                    }
+
+                    history.push({
+                        id: Date.now().toString() + Math.random().toString(),
+                        date: dateVal,
+                        milieu: p.designation || '-',
+                        lot: p.lot || '-',
+                        incubation: inc,
+                        souches: souchStr,
+                        timestamp: Date.now()
+                    });
+                    added++;
+                });
+
+                localStorage.setItem('micro_traca_fert_log', JSON.stringify(history));
+                if (window.showToast && added > 0) window.showToast(`${added} enregistrement(s) de traçabilité ajouté(s) !`, "success", 4000);
+                window.toggleSelectionMode(false);
+            };
+
             window.render = function() {
                 const viewExcel = document.getElementById('view-excel');
                 if (window.currentTab === 'excel') {
@@ -11513,6 +11744,139 @@
                 } else {
                     document.getElementById('fiches-list').style.display = '';
                     if(viewExcel) viewExcel.style.display = 'none';
+                }
+
+                if (window.currentTab === 'taches') {
+                    const container = document.getElementById('fiches-list');
+                    if (!container) return;
+                    if (document.getElementById('addBtn')) document.getElementById('addBtn').style.display = 'none';
+                    if (document.getElementById('excelPrepBtn')) document.getElementById('excelPrepBtn').style.display = 'none';
+                    if (document.getElementById('importDirectBtn')) document.getElementById('importDirectBtn').style.display = 'none';
+
+                    window.tachesJournalieres = JSON.parse(localStorage.getItem('micro_taches')) || [];
+                    const todayDate = new Date().toISOString().split('T')[0];
+
+                    window.saveTache = function(id) {
+                        const t = window.tachesJournalieres.find(x => x.id === id);
+                        if(t) {
+                            t.texte = document.getElementById('tache_texte_' + id).value;
+                            t.debut = document.getElementById('tache_debut_' + id).value;
+                            t.fin = document.getElementById('tache_fin_' + id).value;
+                            t.date = document.getElementById('tache_date_' + id).value;
+                            localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
+                        }
+                    };
+                    window.addTache = function() {
+                        const now = new Date();
+                        const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                        window.tachesJournalieres.push({ id: Date.now().toString(), texte: '', debut: time, fin: '', date: todayDate });
+                        localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
+                        window.render();
+                    };
+                    window.deleteTache = function(id) {
+                        if (confirm("Supprimer cette tâche ?")) {
+                            window.tachesJournalieres = window.tachesJournalieres.filter(x => x.id !== id);
+                            localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
+                            window.render();
+                        }
+                    };
+                    window.tacheFilterQuery = window.tacheFilterQuery || '';
+                    window.filterTaches = function() {
+                        window.tacheFilterQuery = (document.getElementById('tacheSearchInput') || {}).value || '';
+                        window.render();
+                    };
+                    window.printTaches = function() {
+                        try {
+                            const { jsPDF } = window.jspdf;
+                            const doc = new jsPDF('p', 'mm', 'a4');
+                            const printDate = new Date().toLocaleDateString('fr-FR');
+
+                            // Collect checked IDs
+                            const allChecked = [];
+                            document.querySelectorAll('.tache-chk').forEach(chk => {
+                                if (chk.checked) allChecked.push(chk.dataset.id);
+                            });
+                            const fq = (window.tacheFilterQuery || '').toLowerCase().trim();
+                            let candidate = [...window.tachesJournalieres].sort((a,b) => (a.date+a.debut).localeCompare(b.date+b.debut));
+                            let toPrint;
+                            if (allChecked.length > 0) {
+                                toPrint = candidate.filter(t => allChecked.includes(t.id));
+                            } else {
+                                toPrint = candidate.filter(t => !fq || (t.texte && t.texte.toLowerCase().includes(fq)) || (t.date && t.date.includes(fq)));
+                            }
+                            if (toPrint.length === 0) {
+                                if(window.showToast) window.showToast("Aucune tâche à imprimer.", "info");
+                                return;
+                            }
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(16);
+                            doc.text("Tâches journalières du " + printDate, 105, 22, null, null, "center");
+                            doc.setLineWidth(0.8); doc.line(10, 26, 200, 26);
+                            const headers = ["Date", "Heure", "Description de la tâche"];
+                            const colX = [12, 42, 80]; const colW = [28, 36, 110];
+                            let y = 35;
+                            doc.setFontSize(10); doc.setFillColor(220, 220, 220); doc.rect(10, y - 5, 190, 8, 'F');
+                            doc.setFont("helvetica", "bold");
+                            headers.forEach((h, i) => doc.text(h, colX[i], y));
+                            y += 5; doc.line(10, y, 200, y); y += 6;
+                            doc.setFont("helvetica", "normal");
+                            toPrint.forEach((t) => {
+                                if (y > 275) { doc.addPage(); y = 20; }
+                                const dateFmt = t.date ? t.date.split('-').reverse().join('/') : '-';
+                                const timeStr = `${t.debut || '-'} à ${t.fin || '-'}`;
+                                const txtLines = doc.splitTextToSize(t.texte || '-', colW[2]);
+                                doc.text(dateFmt, colX[0], y);
+                                doc.text(timeStr, colX[1], y);
+                                doc.text(txtLines, colX[2], y);
+                                y += Math.max(8, txtLines.length * 5 + 3);
+                            });
+                            const fname = "Taches_Journalieres_" + printDate.replace(/\//g,'-') + ".pdf";
+                            doc.save(fname);
+                            if(window.showToast) window.showToast("PDF Généré : " + fname + " (" + toPrint.length + " tâche(s))", "success");
+                        } catch(e) { console.error(e); }
+                    };
+
+                    // Build filtered list
+                    const query = (window.tacheFilterQuery || '').toLowerCase().trim();
+                    let sorted = [...window.tachesJournalieres].sort((a,b) => (b.date+b.debut).localeCompare(a.date+a.debut));
+                    let filtered = sorted.filter(t =>
+                        !query ||
+                        (t.texte && t.texte.toLowerCase().includes(query)) ||
+                        (t.date && t.date.includes(query))
+                    );
+
+                    let html = `<div style="padding:20px; font-family:Arial, sans-serif;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:2px solid #111; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
+                            <h2 style="color:#111; margin:0; font-size:1.3rem;">📝 Tâches Journalières</h2>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button onclick="window.addTache()" style="background:#059669; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem;">+ Ajouter</button>
+                                <button onclick="document.querySelectorAll('.tache-chk').forEach(c=>c.checked=true)" style="background:#555; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;">✅ Tout cocher</button>
+                                <button onclick="document.querySelectorAll('.tache-chk').forEach(c=>c.checked=false)" style="background:#888; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;">✕ Décocher</button>
+                                <button onclick="window.printTaches()" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">📄 Imprimer sélection (PDF)</button>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <input id="tacheSearchInput" type="text" value="${window.tacheFilterQuery || ''}" oninput="window.filterTaches()" placeholder="🔍 Filtrer les tâches (description, date...)..." style="width:100%; box-sizing:border-box; padding:9px 12px; border-radius:8px; border:1px solid #ccc; font-size:0.9rem;">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:10px;">`;
+                    if(filtered.length === 0) html += `<div style="color:#888; padding:10px;">Aucune tâche trouvée. ${window.tachesJournalieres.length === 0 ? 'Ajoutez-en une.' : 'Essayez un autre filtre.'}</div>`;
+
+                    filtered.forEach(t => {
+                        html += `<div style="display:flex; gap:10px; background:#f9fafb; border:1px solid #e5e7eb; padding:10px; border-radius:8px; align-items:center;">
+                            <input type="checkbox" class="tache-chk" data-id="${t.id}" style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
+                            <input type="date" id="tache_date_${t.id}" value="${t.date}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #ccc; font-size:0.85rem;">
+                            <input type="time" id="tache_debut_${t.id}" value="${t.debut}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #ccc; font-size:0.85rem;">
+                            <span style="color:#888;">à</span>
+                            <input type="time" id="tache_fin_${t.id}" value="${t.fin}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #ccc; font-size:0.85rem;">
+                            <input type="text" id="tache_texte_${t.id}" value="${(t.texte||'').replace(/"/g,'&quot;')}" oninput="window.saveTache('${t.id}')" style="flex:1; padding:6px; border-radius:4px; border:1px solid #ccc; font-size:0.9rem;" placeholder="Description de la tâche...">
+                            <button onclick="window.deleteTache('${t.id}')" style="background:none; border:none; color:red; cursor:pointer; font-size:1.1rem;">🗑️</button>
+                        </div>`;
+                    });
+                    html += `</div></div>`;
+                    container.innerHTML = html;
+                    const si = document.getElementById('tacheSearchInput');
+                    if(si && query) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
+                    return;
                 }
                 
                 if (window.currentTab === 'resfert') {
@@ -11540,24 +11904,46 @@
                         prepsList.sort((a, b) => (a.designation || '').localeCompare(b.designation || ''));
                     }
 
+                    window.rfState = JSON.parse(localStorage.getItem('micro_rfState')) || {};
+                    window.rf_onRowInputChange = function(pid) {
+                        const chk = document.getElementById('chk_' + pid);
+                        const lot = document.getElementById('lot_' + pid);
+                        const rem = document.getElementById('remarque_' + pid);
+                        window.rfState[pid] = { checked: chk?.checked||false, lot: lot?.value||'', remarque: rem?.value||'' };
+                        localStorage.setItem('micro_rfState', JSON.stringify(window.rfState));
+                    };
+                    window.rf_toggleRow = function(pid, event) {
+                        if (event && (event.target.tagName==='INPUT' || event.target.tagName==='SELECT')) return;
+                        const chk = document.getElementById('chk_' + pid);
+                        if (chk) { chk.checked = !chk.checked; window.rf_onRowInputChange(pid); window.rf_onChkChange(pid); }
+                    };
+
                     let tableRows = prepsList.map(p => {
                         const pid = p.id;
-                        const name = (p.designation || '-').replace(/'/g, "\'");
-                        const lot = (p.lot || '-').replace(/'/g, "\'");
-                        return `<tr id="row_${pid}" style="border-top:1px solid #ddd; cursor:pointer;" onclick="window.rf_toggleRow('${pid}')">
+                        const state = window.rfState[pid] || {};
+                        const checkedAttr = state.checked ? 'checked' : '';
+                        // Pré-remplir avec le lot de la préparation, sauf si l'utilisateur l'a déjà modifié manuellement
+                        const currentLot = (state.lot !== undefined && state.lot !== '') ? state.lot : (p.lot || '');
+                        const currentRem = (state.remarque !== undefined) ? state.remarque : '';
+                        
+                        return `<tr id="row_${pid}" style="border-top:1px solid #ddd; cursor:pointer;" onclick="window.rf_toggleRow('${pid}', event)">
                             <td style="padding:10px; vertical-align:middle; text-align:center;">
-                                <input type="checkbox" id="chk_${pid}" onchange="window.rf_onChkChange('${pid}')" style="width:18px;height:18px;cursor:pointer;" onclick="event.stopPropagation()">
+                                <input type="checkbox" id="chk_${pid}" ${checkedAttr} onchange="window.rf_onRowInputChange('${pid}'); window.rf_onChkChange('${pid}')" style="width:18px;height:18px;cursor:pointer;" onclick="event.stopPropagation()">
                             </td>
                             <td style="padding:10px; color:#111; font-weight:500;">${p.designation || '-'}</td>
-                            <td style="padding:10px; color:#444;">${p.lot || '-'}</td>
-                            <td style="padding:10px; color:#444;"></td>
+                            <td style="padding:10px; color:#444;">
+                                <input type="text" id="lot_${pid}" value="${currentLot}" onchange="window.rf_onRowInputChange('${pid}')" oninput="window.rf_onRowInputChange('${pid}')" style="width:120px; padding:6px; border-radius:4px; border:1px solid #ccc; text-align:center; font-weight:bold;" onclick="event.stopPropagation()">
+                            </td>
+                            <td style="padding:10px; color:#444;">
+                                <input type="text" id="remarque_${pid}" value="${currentRem}" onchange="window.rf_onRowInputChange('${pid}')" oninput="window.rf_onRowInputChange('${pid}')" style="width:90%; padding:6px; border-radius:4px; border:1px solid #ccc; font-size:0.85rem;" placeholder="Remarque libre..." onclick="event.stopPropagation()">
+                            </td>
                         </tr>`;
                     }).join('');
 
                     container.innerHTML = `
                         <div style="padding:20px; font-family:Arial, sans-serif;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #111; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
-                                <h2 style="color:#111; margin:0; font-size:1.3rem;">🧪 Suivi des lots de milieux de culture fertiles libérés</h2>
+                                <h2 style="color:#111; margin:0; font-size:1.3rem;">🧪 LISTE DES MILIEUX DE CULTURE FERTILES LIBÉRÉS POUR UTILISATION</h2>
                                 <button onclick="window.switchTab('preps')" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">
                                     ← Aller aux Préparations
                                 </button>
@@ -11627,6 +12013,7 @@
                 tbody.querySelectorAll('input[type="checkbox"]').forEach(chk => {
                     chk.checked = true;
                     const pid = chk.id.replace('chk_', '');
+                    if(window.rf_onRowInputChange) window.rf_onRowInputChange(pid);
                     window.rf_onChkChange(pid);
                 });
             };
@@ -11637,6 +12024,7 @@
                 tbody.querySelectorAll('input[type="checkbox"]').forEach(chk => {
                     chk.checked = false;
                     const pid = chk.id.replace('chk_', '');
+                    if(window.rf_onRowInputChange) window.rf_onRowInputChange(pid);
                     window.rf_onChkChange(pid);
                 });
             };
@@ -11663,7 +12051,12 @@
                         const pid = chk.id.replace('chk_', '');
                         const p = (window.preps || []).find(x => x.id === pid);
                         if (!p) return;
-                        checked.push({ p });
+                        
+                        const state = (window.rfState || {})[pid] || {};
+                        const editedLot = (state.lot !== undefined && state.lot !== '') ? state.lot : (p.lot || '-');
+                        const editedRem = (state.remarque !== undefined) ? state.remarque : '';
+                        
+                        checked.push({ p, editedLot, editedRem });
                     }
                 });
 
@@ -11680,7 +12073,7 @@
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(16);
                     doc.setTextColor(0, 0, 0);
-                    doc.text("Suivi des lots de milieux de culture fertiles libérés", 105, 22, null, null, "center");
+                    doc.text("LISTE DES MILIEUX DE CULTURE FERTILES LIBÉRÉS POUR UTILISATION", 105, 22, null, null, "center");
                     doc.setLineWidth(0.8);
                     doc.line(10, 26, 200, 26);
                     doc.setFontSize(9);
@@ -11710,9 +12103,8 @@
                     doc.setFontSize(9);
 
                     checked.forEach((item, idx) => {
-                        const { p } = item;
+                        const { p, editedLot, editedRem } = item;
                         const nom = p.designation || '-';
-                        const lot = p.lot || '-';
 
                         if (y > 275) {
                             doc.addPage();
@@ -11722,10 +12114,12 @@
                         doc.setTextColor(0, 0, 0);
                         const nomLines = doc.splitTextToSize(nom, colW[0] - 2);
                         doc.text(nomLines[0], colX[0], y);
-                        doc.text(lot, colX[1], y);
-                        // Remarque is left empty physically in PDF
+                        doc.text(editedLot, colX[1], y);
                         
-                        y += 10;
+                        const remLines = doc.splitTextToSize(editedRem, colW[2] - 2);
+                        doc.text(remLines, colX[2], y);
+                        
+                        y += Math.max(10, remLines.length * 4 + 2);
                     });
 
                     // Signature section

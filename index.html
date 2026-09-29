@@ -5371,6 +5371,16 @@
             console.error("Germes Catalog Sync Error:", err);
         });
 
+        window._tracaFertHistory = [];
+        window.db.collection('Traca_Fertilite').orderBy('timestamp', 'desc').onSnapshot(snap => {
+            window._tracaFertHistory = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (document.getElementById('fiches-list') && document.getElementById('fiches-list').innerHTML.includes('Historique Traçabilité')) {
+                if (typeof window.showFertiliteTraca === 'function') window.showFertiliteTraca();
+            }
+        }, err => {
+            console.error("Traca Fertilite Sync Error:", err);
+        });
+
         window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
                 catalogs = doc.data() || {};
@@ -11515,18 +11525,20 @@
             // === INTERCEPT RENDER ===
             const _oldRenderML = window.render;
 
-            window.deleteFertiliteTraca = function(id) {
+            window.deleteFertiliteTraca = async function(id) {
                 if (!confirm("Voulez-vous supprimer cette ligne de traçabilité ?")) return;
-                let history = JSON.parse(localStorage.getItem('micro_traca_fert_log')) || [];
-                history = history.filter(x => x.id !== id);
-                localStorage.setItem('micro_traca_fert_log', JSON.stringify(history));
-                window.showFertiliteTraca();
+                try {
+                    await window.db.collection('Traca_Fertilite').doc(id).delete();
+                } catch(e) {
+                    console.error(e);
+                    if (window.showToast) window.showToast("Erreur suppression: " + e.message, "error");
+                }
             };
 
             window.showFertiliteTraca = function() {
                 const container = document.getElementById('fiches-list');
 
-                let history = JSON.parse(localStorage.getItem('micro_traca_fert_log')) || [];
+                let history = window._tracaFertHistory || [];
                 // Trier par date décroissante
                 history.sort((a, b) => b.timestamp - a.timestamp);
 
@@ -11619,10 +11631,8 @@
                     return;
                 }
 
-                let history = JSON.parse(localStorage.getItem('micro_traca_fert_log')) || [];
-                const fertiliteData = window._fertiliteData || [];
-                
                 let added = 0;
+                let promises = [];
                 checkedIds.forEach(id => {
                     const f = fertiliteData.find(x => x.id === id);
                     if (!f) return;
@@ -11663,7 +11673,7 @@
                         lotStr = manual;
                     }
 
-                    history.push({
+                    promises.push(window.db.collection('Traca_Fertilite').add({
                         id: Date.now().toString() + Math.random().toString(),
                         date: dateVal,
                         milieu: f.nom || '-',
@@ -11671,12 +11681,16 @@
                         incubation: inc,
                         souches: souchStr,
                         timestamp: Date.now()
-                    });
+                    }));
                     added++;
                 });
 
-                localStorage.setItem('micro_traca_fert_log', JSON.stringify(history));
-                if (window.showToast && added > 0) window.showToast(`${added} enregistrement(s) de traçabilité ajouté(s) !`, "success", 4000);
+                Promise.all(promises).then(() => {
+                    if (window.showToast && added > 0) window.showToast(`${added} enregistrement(s) de traçabilité ajouté(s) !`, "success", 4000);
+                }).catch(err => {
+                    console.error(err);
+                    if (window.showToast) window.showToast("Erreur d'ajout de la traçabilité.", "error");
+                });
             };
 
             window.saveManualFertiliteTracaFromPreps = function() {
@@ -11689,11 +11703,11 @@
                 const dateVal = prompt("Choisir la date pour la traçabilité manuelle (AAAA-MM-JJ) :", new Date().toISOString().split('T')[0]);
                 if (!dateVal) return;
 
-                let history = JSON.parse(localStorage.getItem('micro_traca_fert_log')) || [];
                 const fertiliteData = window._fertiliteData || [];
                 const prepsList = window.preps || [];
                 
                 let added = 0;
+                let promises = [];
                 checkedIds.forEach(id => {
                     const p = prepsList.find(x => x.id === id);
                     if (!p) return;
@@ -11716,7 +11730,7 @@
                         }
                     }
 
-                    history.push({
+                    promises.push(window.db.collection('Traca_Fertilite').add({
                         id: Date.now().toString() + Math.random().toString(),
                         date: dateVal,
                         milieu: p.designation || '-',
@@ -11724,13 +11738,17 @@
                         incubation: inc,
                         souches: souchStr,
                         timestamp: Date.now()
-                    });
+                    }));
                     added++;
                 });
 
-                localStorage.setItem('micro_traca_fert_log', JSON.stringify(history));
-                if (window.showToast && added > 0) window.showToast(`${added} enregistrement(s) de traçabilité ajouté(s) !`, "success", 4000);
-                window.toggleSelectionMode(false);
+                Promise.all(promises).then(() => {
+                    if (window.showToast && added > 0) window.showToast(`${added} enregistrement(s) de traçabilité ajouté(s) !`, "success", 4000);
+                    window.toggleSelectionMode(false);
+                }).catch(err => {
+                    console.error(err);
+                    if (window.showToast) window.showToast("Erreur d'ajout de la traçabilité.", "error");
+                });
             };
 
             window.render = function() {
@@ -12171,6 +12189,7 @@ window.triggerSyncExport = async function() {
             'bulletins_stabilite':'Bulletins Stabilite',
             'germes_catalog':     'Germes',
             'fertilite_mc':       'Fertilite MC',
+            'Traca_Fertilite':    'Historique Traca Fertilite',
             'settings':           'Parametres',
             'laboratoires':       'Laboratoires'
         };

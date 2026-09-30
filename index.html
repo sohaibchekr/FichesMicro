@@ -5372,10 +5372,11 @@
         });
 
         window._tracaFertHistory = [];
+        window._showingFertTraca = false;
         window.db.collection('Traca_Fertilite').orderBy('timestamp', 'desc').onSnapshot(snap => {
-            window._tracaFertHistory = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (document.getElementById('fiches-list') && document.getElementById('fiches-list').innerHTML.includes('Historique Traçabilité')) {
-                if (typeof window.showFertiliteTraca === 'function') window.showFertiliteTraca();
+            window._tracaFertHistory = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            if (window._showingFertTraca && typeof window.showFertiliteTraca === 'function') {
+                window.showFertiliteTraca();
             }
         }, err => {
             console.error("Traca Fertilite Sync Error:", err);
@@ -11515,7 +11516,7 @@
                 btn.setAttribute('draggable', 'true');
                 btn.setAttribute('data-tab-id', 'resfert');
                 btn.setAttribute('onclick', "window.switchTab('resfert')");
-                btn.textContent = '🧪 Suivi des lots de milieux';
+                btn.textContent = '🧪 Suivi des lots de milieux de culture fertiles libérés';
                 tabsContainer.appendChild(btn);
             }
             if (typeof tabsOrder !== 'undefined' && !tabsOrder.includes('resfert')) {
@@ -11535,48 +11536,91 @@
                 }
             };
 
+            // --- helper: date ISO 'YYYY-MM-DD' -> 'Mardi 29 septembre 2026' ---
+            window._fullDateLabel = function(iso) {
+                if (!iso || iso === 'Sans date') return iso || 'Sans date';
+                const [y, m, d] = iso.split('-').map(Number);
+                if (!y || !m || !d) return iso;
+                const dt = new Date(y, m - 1, d);
+                return dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                           .replace(/^./, c => c.toUpperCase());
+            };
+
+            // Origines des souches : stockage local, modifiable
+            window._soucheOrigines = JSON.parse(localStorage.getItem('micro_souche_origines') || '{}');
+            window.saveSoucheOrigine = function(souche, origine) {
+                window._soucheOrigines[souche.trim()] = origine.trim();
+                localStorage.setItem('micro_souche_origines', JSON.stringify(window._soucheOrigines));
+            };
+            window.deleteSoucheOrigine = function(souche) {
+                delete window._soucheOrigines[souche.trim()];
+                localStorage.setItem('micro_souche_origines', JSON.stringify(window._soucheOrigines));
+                window.showFertiliteTraca();
+            };
+            window.updateSoucheOrigineInput = function(souche) {
+                const val = document.getElementById('orig_' + souche.replace(/[^a-z0-9]/gi,'_'));
+                if (val) window.saveSoucheOrigine(souche, val.value);
+            };
+
             window.showFertiliteTraca = function() {
+                window._showingFertTraca = true;
                 const container = document.getElementById('fiches-list');
 
+                const _ftStart = window._fertTracaStart || '';
+                const _ftEnd   = window._fertTracaEnd   || '';
+
                 let history = window._tracaFertHistory || [];
-                // Trier par date décroissante
                 history.sort((a, b) => b.timestamp - a.timestamp);
+
+                if (_ftStart || _ftEnd) {
+                    history = history.filter(h => {
+                        const d = h.date || '';
+                        if (_ftStart && d < _ftStart) return false;
+                        if (_ftEnd   && d > _ftEnd)   return false;
+                        return true;
+                    });
+                }
+
+                const filterBar = `
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px; background:#f0fdf4; padding:10px 14px; border-radius:10px; border:1px solid #d1fae5;">
+                    <span style="font-size:0.8rem; font-weight:bold; color:#065f46;">📅 Filtrer par période :</span>
+                    <input type="date" id="ftStart" value="${_ftStart}" onchange="window._fertTracaStart=this.value; window.showFertiliteTraca()" style="padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
+                    <span style="font-size:0.8rem; color:#6b7280;">au</span>
+                    <input type="date" id="ftEnd" value="${_ftEnd}" onchange="window._fertTracaEnd=this.value; window.showFertiliteTraca()" style="padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
+                    ${(_ftStart||_ftEnd) ? '<button onclick="window._fertTracaStart=\'\'; window._fertTracaEnd=\'\'; window.showFertiliteTraca()" style="background:#ef4444; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:0.8rem; cursor:pointer;">✕ Réinitialiser</button>' : ''}
+                </div>`;
 
                 let html = `
                     <div style="padding:20px; font-family:Arial, sans-serif;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #059669; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
-                            <h2 style="color:#059669; margin:0; font-size:1.3rem;">🔍 Historique Traçabilité Fertilité (Manuelle)</h2>
-                            <button onclick="window.render()" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour aux Spécifications</button>
-                        </div>`;
+                            <h2 style="color:#059669; margin:0; font-size:1.3rem;">🔍 Historique Traçabilité Fertilité</h2>
+                            <button onclick="window._showingFertTraca=false; window.render()" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour</button>
+                        </div>
+                        ${filterBar}`;
 
                 if (history.length === 0) {
-                    html += `<div style="padding:20px; text-align:center; color:#888; font-size:0.95rem;">Aucun historique de traçabilité. Veuillez enregistrer depuis l'onglet Fertilité.</div>`;
+                    html += `<div style="padding:20px; text-align:center; color:#888; font-size:0.95rem;">Aucun enregistrement trouvé${(_ftStart||_ftEnd) ? ' pour la période sélectionnée' : ''}.</div>`;
                 } else {
-                    // Grouper par date
                     const groups = {};
                     history.forEach(h => {
                         const d = h.date || 'Sans date';
                         if (!groups[d]) groups[d] = [];
                         groups[d].push(h);
                     });
-
-                    // Trier les dates décroissantes
                     const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
                     sortedDates.forEach(dateKey => {
                         const entries = groups[dateKey];
-                        const dateLabel = window.formatStringToDate ? window.formatStringToDate(dateKey) : dateKey;
+                        const dateLabel = window._fullDateLabel(dateKey);
                         const count = entries.length;
 
                         html += `
                         <div style="margin-bottom:22px; border-radius:12px; overflow:hidden; border:1.5px solid #d1fae5; box-shadow:0 2px 8px rgba(5,150,105,0.07);">
-                            <!-- En-tête du groupe -->
                             <div style="background:linear-gradient(90deg,#059669 0%,#10b981 100%); color:#fff; padding:10px 18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                                 <span style="font-size:1.1rem;">📅</span>
                                 <span style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">${dateLabel}</span>
                                 <span style="background:rgba(255,255,255,0.25); border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700;">${count} MC validé${count > 1 ? 's' : ''}</span>
                             </div>
-                            <!-- Tableau des MC de ce jour -->
                             <div style="overflow-x:auto; background:#fff;">
                                 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; color:#111;">
                                     <thead>
@@ -11584,14 +11628,29 @@
                                             <th style="padding:9px 12px; font-size:0.75rem; font-weight:800; white-space:nowrap;">Milieu (MC)</th>
                                             <th style="padding:9px 12px; font-size:0.75rem; font-weight:800; white-space:nowrap;">Lot</th>
                                             <th style="padding:9px 12px; font-size:0.75rem; font-weight:800; white-space:nowrap;">Incubation</th>
-                                            <th style="padding:9px 12px; font-size:0.75rem; font-weight:800; max-width:200px;">Souches Testées</th>
-                                            <th style="padding:9px 12px; width:40px;"></th>
+                                            <th style="padding:9px 12px; font-size:0.75rem; font-weight:800;">Souches &amp; Origines</th>
+                                            <th style="padding:9px 12px; width:60px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody>`;
 
                         entries.forEach((h, idx) => {
                             const bg = idx % 2 === 0 ? '#fff' : '#f9fafb';
+                            // Origines specifiques a cet enregistrement
+                            const recOrig = h.souchesOrigines || {};
+                            const souchesList = h.souches && h.souches !== '-'
+                                ? h.souches.split(',').map(s => {
+                                    const st = s.trim();
+                                    const orig = recOrig[st] || '';
+                                    return `<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+                                        <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:5px; padding:2px 8px; font-size:0.75rem; font-weight:700;">${st}</span>
+                                        ${orig
+                                            ? `<span style="background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:5px; padding:2px 7px; font-size:0.72rem; font-weight:700;">${orig}</span>`
+                                            : '<span style="font-size:0.7rem; color:#bbb; font-style:italic;">origine ?</span>'}
+                                    </div>`;
+                                }).join('')
+                                : '<span style="color:#aaa; font-size:0.75rem;">-</span>';
+
                             html += `
                                         <tr style="border-bottom:1px solid #e5e7eb; background:${bg};">
                                             <td style="padding:10px 12px; font-weight:700; color:#111;">${h.milieu || '-'}</td>
@@ -11599,18 +11658,15 @@
                                                 <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:6px; padding:3px 9px; font-size:0.78rem; font-weight:700;">${h.lot || '-'}</span>
                                             </td>
                                             <td style="padding:10px 12px; color:#444; font-size:0.75rem;">${h.incubation || '-'}</td>
-                                            <td style="padding:10px 12px; font-size:0.75rem; color:#444; max-width:200px;">${h.souches || '-'}</td>
-                                            <td style="padding:10px 12px; text-align:center;">
+                                            <td style="padding:10px 12px; font-size:0.75rem;">${souchesList}</td>
+                                            <td style="padding:10px 12px; text-align:center; white-space:nowrap;">
+                                                <button onclick="window.editTracaOrigines('${h.id}')" style="background:none; border:none; color:#059669; cursor:pointer; font-size:1rem;" title="Modifier origines">✏️</button>
                                                 <button onclick="window.deleteFertiliteTraca('${h.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1rem;" title="Supprimer">🗑️</button>
                                             </td>
                                         </tr>`;
                         });
 
-                        html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>`;
+                        html += `</tbody></table></div></div>`;
                     });
                 }
 
@@ -11618,6 +11674,56 @@
                 container.innerHTML = html;
             };
 
+            // Modifier les origines d'un enregistrement existant
+            window.editTracaOrigines = function(docId) {
+                const rec = (window._tracaFertHistory || []).find(x => x.id === docId);
+                if (!rec) return;
+                const souches = (rec.souches && rec.souches !== '-') ? rec.souches.split(',').map(s => s.trim()).filter(Boolean) : [];
+                if (souches.length === 0) { if(window.showToast) window.showToast('Pas de souches pour cet enregistrement.', 'info'); return; }
+                const recOrig = rec.souchesOrigines || {};
+
+                // Construire la modale
+                let modalRows = souches.map(s => `
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:6px; padding:4px 10px; font-size:0.82rem; font-weight:800; min-width:140px;">${s}</span>
+                        <input id="oedit_${s.replace(/[^a-z0-9]/gi,'_')}" type="text" value="${(recOrig[s]||'').replace(/"/g,'&quot;')}" placeholder="ex: CS:04" style="flex:1; padding:7px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
+                    </div>`).join('');
+
+                const overlay = document.createElement('div');
+                overlay.id = 'origEditOverlay';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+                overlay.innerHTML = `
+                    <div style="background:#fff; border-radius:16px; padding:24px; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                        <h3 style="margin:0 0 6px; color:#059669; font-size:1.1rem;">🧬 Modifier les Origines</h3>
+                        <p style="margin:0 0 16px; font-size:0.8rem; color:#6b7280;">Enregistrement du ${window._fullDateLabel(rec.date)} &mdash; ${rec.milieu || ''}</p>
+                        <div>${modalRows}</div>
+                        <div style="display:flex; gap:10px; margin-top:16px; justify-content:flex-end;">
+                            <button onclick="document.getElementById('origEditOverlay').remove()" style="background:#f3f4f6; color:#374151; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem;">Annuler</button>
+                            <button onclick="window._confirmEditOrigines('${docId}')" style="background:#059669; color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:bold;">💾 Sauvegarder</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+            };
+
+            window._confirmEditOrigines = function(docId) {
+                const rec = (window._tracaFertHistory || []).find(x => x.id === docId);
+                const souches = (rec && rec.souches && rec.souches !== '-') ? rec.souches.split(',').map(s => s.trim()).filter(Boolean) : [];
+                const newOrigines = {};
+                souches.forEach(s => {
+                    const inputEl = document.getElementById('oedit_' + s.replace(/[^a-z0-9]/gi,'_'));
+                    if (inputEl && inputEl.value.trim()) {
+                        newOrigines[s] = inputEl.value.trim();
+                        window._soucheOrigines[s] = inputEl.value.trim();
+                    }
+                });
+                localStorage.setItem('micro_souche_origines', JSON.stringify(window._soucheOrigines));
+                window.db.collection('Traca_Fertilite').doc(docId).update({ souchesOrigines: newOrigines })
+                    .then(() => {
+                        document.getElementById('origEditOverlay').remove();
+                        if(window.showToast) window.showToast('Origines mises à jour !', 'success');
+                    })
+                    .catch(e => { if(window.showToast) window.showToast('Erreur: ' + e.message, 'error'); });
+            };
 
             window.saveManualFertiliteTraca = function() {
                 const checkedIds = Array.from(window._fertCheckedIds || new Set());
@@ -11631,65 +11737,110 @@
                     return;
                 }
 
-                let added = 0;
-                let promises = [];
-                checkedIds.forEach(id => {
+                // Préparer les entrees
+                const entries = [];
+                for (const id of checkedIds) {
                     const f = fertiliteData.find(x => x.id === id);
-                    if (!f) return;
-                    
+                    if (!f) continue;
+
                     const inc = ((f.incubConditions && f.incubConditions.length > 0) ? f.incubConditions.map(c=>c.temp+' / '+c.duree).join(', ') : (f.incubTemp ? (f.incubTemp + ' / ' + f.incubDuree) : '-'));
                     const strains = [];
                     if (f.souches && f.souches.length) strains.push(...f.souches);
                     if (f.indSouches && f.indSouches.length) strains.push(...f.indSouches);
                     if (f.inhSouches && f.inhSouches.length) strains.push(...f.inhSouches);
                     const souchStr = strains.length ? [...new Set(strains)].join(', ') : '-';
+                    const uniqueSouches = [...new Set(strains)];
 
-                    // Auto-récupérer le(s) lot(s) depuis l'onglet Préparations
                     const prepsList = window.preps || [];
                     const fName = (f.nom || '').toLowerCase().trim();
-                    const matchingPreps = prepsList.filter(p =>
-                        (p.designation || '').toLowerCase().trim() === fName && p.lot
-                    );
-
+                    const matchingPreps = prepsList.filter(p => (p.designation || '').toLowerCase().trim() === fName && p.lot);
                     let lotStr = '';
                     if (matchingPreps.length === 1) {
-                        // Un seul lot trouvé → on le prend directement
                         lotStr = matchingPreps[0].lot || '';
                     } else if (matchingPreps.length > 1) {
-                        // Plusieurs lots → on propose un choix
                         const options = matchingPreps.map((p, i) => `${i+1}. Lot: ${p.lot} (préparé le ${window.formatStringToDate ? window.formatStringToDate(p.datePrep) : p.datePrep || '?'})`).join('\n');
                         const choice = prompt(`Plusieurs lots trouvés pour "${f.nom || ''}".\nChoisissez un numéro (1 à ${matchingPreps.length}) ou tapez un lot manuellement :\n\n${options}`, '1');
-                        if (choice === null) return; // annuler
-                        const idx = parseInt(choice) - 1;
-                        if (!isNaN(idx) && idx >= 0 && idx < matchingPreps.length) {
-                            lotStr = matchingPreps[idx].lot || '';
-                        } else {
-                            lotStr = choice; // saisie manuelle
-                        }
+                        if (choice === null) return;
+                        const cidx = parseInt(choice) - 1;
+                        lotStr = (!isNaN(cidx) && cidx >= 0 && cidx < matchingPreps.length) ? (matchingPreps[cidx].lot || '') : choice;
                     } else {
-                        // Aucun lot trouvé → saisie manuelle
                         const manual = prompt(`Aucune préparation trouvée pour "${f.nom || ''}".\nSaisir le numéro de lot manuellement (optionnel) :`, '');
                         if (manual === null) return;
                         lotStr = manual;
                     }
 
-                    promises.push(window.db.collection('Traca_Fertilite').add({
-                        id: Date.now().toString() + Math.random().toString(),
-                        date: dateVal,
-                        milieu: f.nom || '-',
-                        lot: lotStr,
-                        incubation: inc,
-                        souches: souchStr,
-                        timestamp: Date.now()
-                    }));
-                    added++;
+                    entries.push({ f, inc, souchStr, uniqueSouches, lotStr });
+                }
+                if (entries.length === 0) return;
+
+                // Afficher modale pour saisir les origines par souche
+                const allUniqueSouches = [...new Set(entries.flatMap(e => e.uniqueSouches))];
+                window._pendingTracaEntries = entries;
+                window._pendingTracaDate = dateVal;
+
+                if (allUniqueSouches.length === 0) {
+                    window._confirmSaveTraca({});
+                    return;
+                }
+
+                // Construire la modale d'origines
+                const prevOrig = window._lastUsedOrigines || window._soucheOrigines || {};
+                const rows = allUniqueSouches.map(s => `
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:6px; padding:4px 10px; font-size:0.82rem; font-weight:800; min-width:140px;">${s}</span>
+                        <input id="newOrig_${s.replace(/[^a-z0-9]/gi,'_')}" type="text" value="${(prevOrig[s]||'').replace(/"/g,'&quot;')}" placeholder="ex: CS:04" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
+                    </div>`).join('');
+
+                const overlay = document.createElement('div');
+                overlay.id = 'origPickerOverlay';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+                overlay.innerHTML = `
+                    <div style="background:#fff; border-radius:16px; padding:24px; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.35); max-height:90vh; overflow-y:auto;">
+                        <h3 style="margin:0 0 6px; color:#059669; font-size:1.1rem;">🧬 Origines des Souches</h3>
+                        <p style="margin:0 0 16px; font-size:0.8rem; color:#6b7280;">Ces origines seront enregistrées uniquement pour cette session (${dateVal}). Vous pourrez les modifier après dans l'historique.</p>
+                        <div>${rows}</div>
+                        <div style="display:flex; gap:10px; margin-top:18px; justify-content:flex-end; flex-wrap:wrap;">
+                            <button onclick="document.getElementById('origPickerOverlay').remove()" style="background:#f3f4f6; color:#374151; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem;">Annuler</button>
+                            <button onclick="window._confirmSaveTraca()" style="background:#059669; color:#fff; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:bold;">💾 Enregistrer</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+            };
+
+            window._confirmSaveTraca = function() {
+                const entries = window._pendingTracaEntries || [];
+                const dateVal = window._pendingTracaDate;
+                // Lire les origines saisies
+                const allUniqueSouches = [...new Set(entries.flatMap(e => e.uniqueSouches))];
+                const origines = {};
+                allUniqueSouches.forEach(s => {
+                    const el = document.getElementById('newOrig_' + s.replace(/[^a-z0-9]/gi,'_'));
+                    if (el && el.value.trim()) {
+                        origines[s] = el.value.trim();
+                        window._soucheOrigines[s] = el.value.trim();
+                    }
                 });
+                localStorage.setItem('micro_souche_origines', JSON.stringify(window._soucheOrigines));
+                window._lastUsedOrigines = { ...origines }; // mémoriser pour la prochaine fois
+                const overlay = document.getElementById('origPickerOverlay');
+                if (overlay) overlay.remove();
+
+                const promises = entries.map(e => window.db.collection('Traca_Fertilite').add({
+                    date: dateVal,
+                    milieu: e.f.nom || '-',
+                    lot: e.lotStr,
+                    incubation: e.inc,
+                    souches: e.souchStr,
+                    souchesOrigines: origines,
+                    timestamp: Date.now()
+                }));
 
                 Promise.all(promises).then(() => {
-                    if (window.showToast && added > 0) window.showToast(`${added} enregistrement(s) de traçabilité ajouté(s) !`, "success", 4000);
+                    if (window.showToast) window.showToast(`${entries.length} enregistrement(s) ajouté(s) !`, 'success', 4000);
+                    window._pendingTracaEntries = null;
                 }).catch(err => {
                     console.error(err);
-                    if (window.showToast) window.showToast("Erreur d'ajout de la traçabilité.", "error");
+                    if (window.showToast) window.showToast("Erreur d'ajout de la traçabilité.", 'error');
                 });
             };
 
@@ -11737,6 +11888,7 @@
                         lot: p.lot || '-',
                         incubation: inc,
                         souches: souchStr,
+                        souchesOrigines: window._soucheOrigines || {},
                         timestamp: Date.now()
                     }));
                     added++;
@@ -11772,6 +11924,7 @@
                     if (document.getElementById('importDirectBtn')) document.getElementById('importDirectBtn').style.display = 'none';
 
                     window.tachesJournalieres = JSON.parse(localStorage.getItem('micro_taches')) || [];
+                    window.tacheShortcuts = JSON.parse(localStorage.getItem('micro_tache_shortcuts')) || ['Nettoyage paillasse', 'Relevé des températures', 'Contrôle sté & fertilité'];
                     const todayDate = new Date().toISOString().split('T')[0];
 
                     window.saveTache = function(id) {
@@ -11784,10 +11937,10 @@
                             localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
                         }
                     };
-                    window.addTache = function() {
+                    window.addTache = function(texte = '') {
                         const now = new Date();
                         const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-                        window.tachesJournalieres.push({ id: Date.now().toString(), texte: '', debut: time, fin: '', date: todayDate });
+                        window.tachesJournalieres.push({ id: Date.now().toString() + Math.random().toString().slice(2,5), texte: texte, debut: time, fin: '', date: todayDate });
                         localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
                         window.render();
                     };
@@ -11795,6 +11948,21 @@
                         if (confirm("Supprimer cette tâche ?")) {
                             window.tachesJournalieres = window.tachesJournalieres.filter(x => x.id !== id);
                             localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
+                            window.render();
+                        }
+                    };
+                    window.addShortcutFromInput = function() {
+                        const v = document.getElementById('new_shortcut_text').value.trim();
+                        if(v) {
+                            window.tacheShortcuts.push(v);
+                            localStorage.setItem('micro_tache_shortcuts', JSON.stringify(window.tacheShortcuts));
+                            window.render();
+                        }
+                    };
+                    window.removeShortcut = function(idx) {
+                        if(confirm('Supprimer ce raccourci ?')) {
+                            window.tacheShortcuts.splice(idx, 1);
+                            localStorage.setItem('micro_tache_shortcuts', JSON.stringify(window.tacheShortcuts));
                             window.render();
                         }
                     };
@@ -11808,24 +11976,13 @@
                             const { jsPDF } = window.jspdf;
                             const doc = new jsPDF('p', 'mm', 'a4');
                             const printDate = new Date().toLocaleDateString('fr-FR');
-
-                            // Collect checked IDs
                             const allChecked = [];
-                            document.querySelectorAll('.tache-chk').forEach(chk => {
-                                if (chk.checked) allChecked.push(chk.dataset.id);
-                            });
+                            document.querySelectorAll('.tache-chk').forEach(chk => { if (chk.checked) allChecked.push(chk.dataset.id); });
                             const fq = (window.tacheFilterQuery || '').toLowerCase().trim();
                             let candidate = [...window.tachesJournalieres].sort((a,b) => (a.date+a.debut).localeCompare(b.date+b.debut));
-                            let toPrint;
-                            if (allChecked.length > 0) {
-                                toPrint = candidate.filter(t => allChecked.includes(t.id));
-                            } else {
-                                toPrint = candidate.filter(t => !fq || (t.texte && t.texte.toLowerCase().includes(fq)) || (t.date && t.date.includes(fq)));
-                            }
-                            if (toPrint.length === 0) {
-                                if(window.showToast) window.showToast("Aucune tâche à imprimer.", "info");
-                                return;
-                            }
+                            let toPrint = allChecked.length > 0 ? candidate.filter(t => allChecked.includes(t.id)) : candidate.filter(t => !fq || (t.texte && t.texte.toLowerCase().includes(fq)) || (t.date && t.date.includes(fq)));
+                            if (toPrint.length === 0) { if(window.showToast) window.showToast("Aucune tâche à imprimer.", "info"); return; }
+                            
                             doc.setFont("helvetica", "bold");
                             doc.setFontSize(16);
                             doc.text("Tâches journalières du " + printDate, 105, 22, null, null, "center");
@@ -11850,46 +12007,97 @@
                             });
                             const fname = "Taches_Journalieres_" + printDate.replace(/\//g,'-') + ".pdf";
                             doc.save(fname);
-                            if(window.showToast) window.showToast("PDF Généré : " + fname + " (" + toPrint.length + " tâche(s))", "success");
+                            if(window.showToast) window.showToast("PDF Généré.", "success");
                         } catch(e) { console.error(e); }
                     };
 
-                    // Build filtered list
                     const query = (window.tacheFilterQuery || '').toLowerCase().trim();
+                    // Filtre du ruban de dates
+                    const _tdStart = (document.getElementById('dateFilterStart') || {}).value || '';
+                    const _tdEnd   = (document.getElementById('dateFilterEnd')   || {}).value || '';
                     let sorted = [...window.tachesJournalieres].sort((a,b) => (b.date+b.debut).localeCompare(a.date+a.debut));
-                    let filtered = sorted.filter(t =>
-                        !query ||
-                        (t.texte && t.texte.toLowerCase().includes(query)) ||
-                        (t.date && t.date.includes(query))
-                    );
+                    let filtered = sorted.filter(t => {
+                        if (query && !(t.texte && t.texte.toLowerCase().includes(query)) && !(t.date && t.date.includes(query))) return false;
+                        if (_tdStart && (t.date || '') < _tdStart) return false;
+                        if (_tdEnd   && (t.date || '') > _tdEnd)   return false;
+                        return true;
+                    });
+
+                    const groups = {};
+                    filtered.forEach(t => {
+                        const d = t.date || 'Sans date';
+                        if (!groups[d]) groups[d] = [];
+                        groups[d].push(t);
+                    });
+                    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a)); // desc
+
+                    const shortcutsHtml = window.tacheShortcuts.map((s, idx) => 
+                        `<div style="display:flex; align-items:stretch; background:#e0e7ff; border:1px solid #c7d2fe; border-radius:15px; overflow:hidden;">
+                            <button onclick="window.addTache('${s.replace(/'/g, "\\'")}')" style="background:transparent; color:#4338ca; border:none; padding:6px 10px; font-size:0.75rem; font-weight:bold; cursor:pointer;" title="Ajouter cette tâche">➕ ${s}</button>
+                            <button onclick="window.removeShortcut(${idx})" style="background:rgba(239, 68, 68, 0.1); color:#ef4444; border:none; border-left:1px solid #c7d2fe; padding:6px 8px; cursor:pointer; font-size:0.75rem;">✕</button>
+                        </div>`
+                    ).join('');
 
                     let html = `<div style="padding:20px; font-family:Arial, sans-serif;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:2px solid #111; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
                             <h2 style="color:#111; margin:0; font-size:1.3rem;">📝 Tâches Journalières</h2>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                <button onclick="window.addTache()" style="background:#059669; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem;">+ Ajouter</button>
-                                <button onclick="document.querySelectorAll('.tache-chk').forEach(c=>c.checked=true)" style="background:#555; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;">✅ Tout cocher</button>
-                                <button onclick="document.querySelectorAll('.tache-chk').forEach(c=>c.checked=false)" style="background:#888; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;">✕ Décocher</button>
-                                <button onclick="window.printTaches()" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">📄 Imprimer sélection (PDF)</button>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; width:100%;">
+                                <button onclick="window.addTache()" style="background:#059669; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.8rem; flex:1; min-width:80px;">+ Nouvelle</button>
+                                <button onclick="document.querySelectorAll('.tache-chk').forEach(c=>c.checked=true)" style="background:#555; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.8rem; flex:1; min-width:80px;">✅ Tous</button>
+                                <button onclick="window.printTaches()" style="background:#111; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.8rem; flex:1; min-width:80px;">📄 Imprimer</button>
                             </div>
                         </div>
-                        <div style="margin-bottom:12px;">
-                            <input id="tacheSearchInput" type="text" value="${window.tacheFilterQuery || ''}" oninput="window.filterTaches()" placeholder="🔍 Filtrer les tâches (description, date...)..." style="width:100%; box-sizing:border-box; padding:9px 12px; border-radius:8px; border:1px solid #ccc; font-size:0.9rem;">
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:10px;">`;
-                    if(filtered.length === 0) html += `<div style="color:#888; padding:10px;">Aucune tâche trouvée. ${window.tachesJournalieres.length === 0 ? 'Ajoutez-en une.' : 'Essayez un autre filtre.'}</div>`;
 
-                    filtered.forEach(t => {
-                        html += `<div style="display:flex; gap:10px; background:#f9fafb; border:1px solid #e5e7eb; padding:10px; border-radius:8px; align-items:center;">
-                            <input type="checkbox" class="tache-chk" data-id="${t.id}" style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
-                            <input type="date" id="tache_date_${t.id}" value="${t.date}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #ccc; font-size:0.85rem;">
-                            <input type="time" id="tache_debut_${t.id}" value="${t.debut}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #ccc; font-size:0.85rem;">
-                            <span style="color:#888;">à</span>
-                            <input type="time" id="tache_fin_${t.id}" value="${t.fin}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #ccc; font-size:0.85rem;">
-                            <input type="text" id="tache_texte_${t.id}" value="${(t.texte||'').replace(/"/g,'&quot;')}" oninput="window.saveTache('${t.id}')" style="flex:1; padding:6px; border-radius:4px; border:1px solid #ccc; font-size:0.9rem;" placeholder="Description de la tâche...">
-                            <button onclick="window.deleteTache('${t.id}')" style="background:none; border:none; color:red; cursor:pointer; font-size:1.1rem;">🗑️</button>
-                        </div>`;
-                    });
+                        <!-- Bar de recherche -->
+                        <div style="margin-bottom:12px;">
+                            <input id="tacheSearchInput" type="text" value="${window.tacheFilterQuery || ''}" oninput="window.filterTaches()" placeholder="🔍 Chercher une tâche ou une date..." style="width:100%; box-sizing:border-box; padding:9px 12px; border-radius:8px; border:1px solid #ccc; font-size:0.9rem;">
+                        </div>
+
+                        <!-- Raccourcis Rapides -->
+                        <div style="margin-bottom:20px; padding:12px; background:#f9fafb; border:1px dashed #d1d5db; border-radius:10px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <span style="font-size:0.8rem; font-weight:bold; color:#6b7280;">⚡ Raccourcis Rapides</span>
+                                <div style="display:flex; gap:5px; align-items:center; flex:1; min-width:200px;">
+                                    <input id="new_shortcut_text" type="text" placeholder="Nouveau raccourci..." style="flex:1; padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.8rem; min-width:100px;">
+                                    <button onclick="window.addShortcutFromInput()" style="background:#10b981; color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;">+</button>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                ${shortcutsHtml || '<span style="font-size:0.75rem; color:#9ca3af;">Aucun raccourci. Entrez-en un ci-dessus.</span>'}
+                            </div>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:15px;">`;
+
+                    if (filtered.length === 0) {
+                        html += `<div style="color:#888; padding:10px;">Aucune tâche trouvée.</div>`;
+                    } else {
+                        sortedDates.forEach(d => {
+                            const dateLabel = window._fullDateLabel ? window._fullDateLabel(d) : d;
+                            html += `
+                            <div style="border-radius:10px; border:1px solid #e5e7eb; overflow:hidden;">
+                                <div style="background:#f3f4f6; padding:8px 12px; font-weight:bold; color:#374151; font-size:0.9rem; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>📅 ${dateLabel}</span>
+                                    <span style="font-size:0.75rem; font-weight:normal; background:white; padding:2px 8px; border-radius:12px; border:1px solid #d1d5db;">${groups[d].length} tâche(s)</span>
+                                </div>
+                                <div style="display:flex; flex-direction:column; background:#fff;">`;
+                            
+                            groups[d].forEach(t => {
+                                html += `<div style="display:flex; gap:10px; padding:8px 12px; align-items:center; border-bottom:1px dotted #e5e7eb;">
+                                            <input type="checkbox" class="tache-chk" data-id="${t.id}" style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
+                                            <input type="date" id="tache_date_${t.id}" value="${t.date}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #e5e7eb; background:#f9fafb; font-size:0.85rem; width:125px;">
+                                            <input type="time" id="tache_debut_${t.id}" value="${t.debut}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #e5e7eb; background:#f9fafb; font-size:0.85rem;">
+                                            <span style="color:#888;">à</span>
+                                            <input type="time" id="tache_fin_${t.id}" value="${t.fin}" onchange="window.saveTache('${t.id}')" style="padding:5px; border-radius:4px; border:1px solid #e5e7eb; background:#f9fafb; font-size:0.85rem;">
+                                            <input type="text" id="tache_texte_${t.id}" value="${(t.texte||'').replace(/"/g,'&quot;')}" oninput="window.saveTache('${t.id}')" style="flex:1; padding:6px; border-radius:4px; border:1px solid #ccc; font-size:0.9rem;" placeholder="Description de la tâche...">
+                                            <button onclick="window.deleteTache('${t.id}')" style="background:none; border:none; color:red; cursor:pointer; font-size:1.1rem;">🗑️</button>
+                                        </div>`;
+                            });
+                            
+                            html += `</div></div>`;
+                        });
+                    }
+
                     html += `</div></div>`;
                     container.innerHTML = html;
                     const si = document.getElementById('tacheSearchInput');
@@ -11961,7 +12169,7 @@
                     container.innerHTML = `
                         <div style="padding:20px; font-family:Arial, sans-serif;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #111; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
-                                <h2 style="color:#111; margin:0; font-size:1.3rem;">🧪 LISTE DES MILIEUX DE CULTURE FERTILES LIBÉRÉS POUR UTILISATION</h2>
+                                <h2 style="color:#111; margin:0; font-size:1.3rem;">🧪 Suivi des lots de milieux de culture fertiles libérés</h2>
                                 <button onclick="window.switchTab('preps')" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">
                                     ← Aller aux Préparations
                                 </button>
@@ -12091,7 +12299,7 @@
                     doc.setFont("helvetica", "bold");
                     doc.setFontSize(16);
                     doc.setTextColor(0, 0, 0);
-                    doc.text("LISTE DES MILIEUX DE CULTURE FERTILES LIBÉRÉS POUR UTILISATION", 105, 22, null, null, "center");
+                    doc.text("Suivi des lots de milieux de culture fertiles libérés", 105, 22, null, null, "center");
                     doc.setLineWidth(0.8);
                     doc.line(10, 26, 200, 26);
                     doc.setFontSize(9);

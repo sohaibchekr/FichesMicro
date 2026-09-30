@@ -5382,6 +5382,29 @@
             console.error("Traca Fertilite Sync Error:", err);
         });
 
+        window.tachesJournalieres = [];
+        window.db.collection('taches').onSnapshot(snap => {
+            window.tachesJournalieres = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            
+            // Migration locale vers Firebase si la collection est vide
+            if (window.tachesJournalieres.length === 0) {
+                const localTaches = JSON.parse(localStorage.getItem('micro_taches')) || [];
+                if (localTaches.length > 0) {
+                    localTaches.forEach(lt => {
+                        const newId = lt.id || (Date.now().toString() + Math.random().toString().slice(2,5));
+                        window.db.collection('taches').doc(newId).set(lt);
+                    });
+                    localStorage.removeItem('micro_taches');
+                }
+            }
+
+            if (window.currentTab === 'taches' && typeof window.render === 'function') {
+                window.render();
+            }
+        }, err => {
+            console.error("Taches Sync Error:", err);
+        });
+
         window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
                 catalogs = doc.data() || {};
@@ -11923,32 +11946,30 @@
                     if (document.getElementById('excelPrepBtn')) document.getElementById('excelPrepBtn').style.display = 'none';
                     if (document.getElementById('importDirectBtn')) document.getElementById('importDirectBtn').style.display = 'none';
 
-                    window.tachesJournalieres = JSON.parse(localStorage.getItem('micro_taches')) || [];
+                    // Ne pas écraser depuis localStorage si on gère par Firebase
                     window.tacheShortcuts = JSON.parse(localStorage.getItem('micro_tache_shortcuts')) || ['Nettoyage paillasse', 'Relevé des températures', 'Contrôle sté & fertilité'];
                     const todayDate = new Date().toISOString().split('T')[0];
 
                     window.saveTache = function(id) {
                         const t = window.tachesJournalieres.find(x => x.id === id);
                         if(t) {
-                            t.texte = document.getElementById('tache_texte_' + id).value;
-                            t.debut = document.getElementById('tache_debut_' + id).value;
-                            t.fin = document.getElementById('tache_fin_' + id).value;
-                            t.date = document.getElementById('tache_date_' + id).value;
-                            localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
+                            const newT = { ...t };
+                            newT.texte = document.getElementById('tache_texte_' + id).value;
+                            newT.debut = document.getElementById('tache_debut_' + id).value;
+                            newT.fin = document.getElementById('tache_fin_' + id).value;
+                            newT.date = document.getElementById('tache_date_' + id).value;
+                            window.db.collection('taches').doc(id).set(newT);
                         }
                     };
                     window.addTache = function(texte = '') {
                         const now = new Date();
                         const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-                        window.tachesJournalieres.push({ id: Date.now().toString() + Math.random().toString().slice(2,5), texte: texte, debut: time, fin: '', date: todayDate });
-                        localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
-                        window.render();
+                        const id = Date.now().toString() + Math.random().toString().slice(2,5);
+                        window.db.collection('taches').doc(id).set({ texte: texte, debut: time, fin: '', date: todayDate });
                     };
                     window.deleteTache = function(id) {
                         if (confirm("Supprimer cette tâche ?")) {
-                            window.tachesJournalieres = window.tachesJournalieres.filter(x => x.id !== id);
-                            localStorage.setItem('micro_taches', JSON.stringify(window.tachesJournalieres));
-                            window.render();
+                            window.db.collection('taches').doc(id).delete();
                         }
                     };
                     window.addShortcutFromInput = function() {
@@ -12398,6 +12419,7 @@ window.triggerSyncExport = async function() {
             'germes_catalog':     'Germes',
             'fertilite_mc':       'Fertilite MC',
             'Traca_Fertilite':    'Historique Traca Fertilite',
+            'taches':             'Tâches Journalières',
             'settings':           'Parametres',
             'laboratoires':       'Laboratoires'
         };

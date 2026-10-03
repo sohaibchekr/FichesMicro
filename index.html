@@ -5399,7 +5399,17 @@
             }
 
             if (window.currentTab === 'taches' && typeof window.render === 'function') {
-                window.render();
+                // Ne pas re-rendre si l'utilisateur est en train de taper dans un champ tâche
+                const active = document.activeElement;
+                const isEditingTache = active && (
+                    (active.id && active.id.startsWith('tache_texte_')) ||
+                    (active.id && active.id.startsWith('tache_debut_')) ||
+                    (active.id && active.id.startsWith('tache_fin_')) ||
+                    (active.id && active.id.startsWith('tache_date_'))
+                );
+                if (!isEditingTache) {
+                    window.render();
+                }
             }
         }, err => {
             console.error("Taches Sync Error:", err);
@@ -11950,16 +11960,32 @@
                     window.tacheShortcuts = JSON.parse(localStorage.getItem('micro_tache_shortcuts')) || ['Nettoyage paillasse', 'Relevé des températures', 'Contrôle sté & fertilité'];
                     const todayDate = new Date().toISOString().split('T')[0];
 
+                    window._tacheSaveTimers = window._tacheSaveTimers || {};
                     window.saveTache = function(id) {
+                        // Lire les valeurs immédiatement depuis le DOM
+                        const texteEl = document.getElementById('tache_texte_' + id);
+                        const debutEl = document.getElementById('tache_debut_' + id);
+                        const finEl   = document.getElementById('tache_fin_'   + id);
+                        const dateEl  = document.getElementById('tache_date_'  + id);
+                        if (!texteEl) return;
+
+                        // Mettre à jour le cache local immédiatement (pas de re-render)
                         const t = window.tachesJournalieres.find(x => x.id === id);
-                        if(t) {
-                            const newT = { ...t };
-                            newT.texte = document.getElementById('tache_texte_' + id).value;
-                            newT.debut = document.getElementById('tache_debut_' + id).value;
-                            newT.fin = document.getElementById('tache_fin_' + id).value;
-                            newT.date = document.getElementById('tache_date_' + id).value;
-                            window.db.collection('taches').doc(id).set(newT);
+                        if (t) {
+                            t.texte = texteEl.value;
+                            if (debutEl) t.debut = debutEl.value;
+                            if (finEl)   t.fin   = finEl.value;
+                            if (dateEl)  t.date  = dateEl.value;
                         }
+
+                        // Debounce : n'envoyer à Firebase qu'après 1.2 secondes d'inactivité
+                        clearTimeout(window._tacheSaveTimers[id]);
+                        window._tacheSaveTimers[id] = setTimeout(function() {
+                            const rec = window.tachesJournalieres.find(x => x.id === id);
+                            if (rec) {
+                                window.db.collection('taches').doc(id).set({ ...rec });
+                            }
+                        }, 1200);
                     };
                     window.addTache = function(texte = '') {
                         const now = new Date();

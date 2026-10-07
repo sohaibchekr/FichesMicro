@@ -5796,8 +5796,18 @@
                 const temp = row.querySelector('.mil-temp').value;
                 const format = row.querySelector('.mil-format').value;
                 const hasNeg = row.querySelector('.mil-neg').checked;
-
-                const count = (pts * mult) + (hasNeg ? 1 : 0); // +1 si témoin négatif coché
+                let addedNeg = 0;
+                if (hasNeg) {
+                    const baseBoites = pts * mult;
+                    if (format.includes('Boîte') && baseBoites > 0) {
+                        // Un flacon de 180ml coule 9 à 10 boîtes. 
+                        // Donc pour chaque 10 boîtes, on compte 1 témoin négatif.
+                        addedNeg = Math.ceil(baseBoites / 10);
+                    } else {
+                        addedNeg = 1;
+                    }
+                }
+                const count = (pts * mult) + addedNeg;
 
                 if (!tempSummary[temp]) tempSummary[temp] = 0;
                 tempSummary[temp] += count;

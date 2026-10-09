@@ -1777,6 +1777,8 @@
                 </div>
             </div>
             <div style="display: flex; gap: 8px;">
+                <button onclick="window.switchTab('accueil')" title="Accueil" class="main-tab"
+                    style="padding: 8px 12px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color:white; border: none; min-width: 0; font-size:1.2rem;">🏠</button>
                 <button id="openCalcBtn" class="main-tab"
                     style="padding: 8px 12px; background: var(--glass); border: 1px solid var(--glass-border); min-width: 0;">🧮</button>
                 <button id="toggleSelectBtn" class="main-tab"
@@ -1785,7 +1787,9 @@
         </div>
 
         <div class="main-tabs" id="mainTabs">
-            <button onclick="window.switchTab('fiches')" id="tab-fiches" class="main-tab active" draggable="true"
+            <button onclick="window.switchTab('accueil')" id="tab-accueil" class="main-tab active" draggable="true"
+                data-tab-id="accueil">🏠 Accueil</button>
+            <button onclick="window.switchTab('fiches')" id="tab-fiches" class="main-tab" draggable="true"
                 data-tab-id="fiches">📋 Fiches</button>
             <button onclick="window.switchTab('analyses')" id="tab-analyses" class="main-tab" draggable="true"
                 data-tab-id="analyses">🧪 Analyses</button>
@@ -1803,8 +1807,6 @@
                 data-tab-id="fertilite"> Fertilité</button>
             <button onclick="window.switchTab('taches')" id="tab-taches" class="main-tab" draggable="true"
                 data-tab-id="taches">📝 Tâches</button>
-            <button onclick="window.open('excel.html','_blank')" id="tab-excel" class="main-tab" draggable="true"
-                data-tab-id="excel">📊 Excel</button>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
@@ -4130,8 +4132,8 @@
                 m.classList.remove('active');
             });
             initMainTabsOnce();
-            // Automatically switch to the last visited tab on load
-            window.switchTab(window.currentTab);
+            // Toujours démarrer sur l'écran Accueil
+            window.switchTab('accueil');
         });
 
         // Global State & Functions
@@ -4167,7 +4169,7 @@
             }
         });
 
-        window.currentTab = localStorage.getItem('microbio_last_visit_tab') || 'fiches';
+        window.currentTab = 'accueil'; // Toujours démarrer sur Accueil
         window.switchTab = function (tab) {
             console.log("Switching to " + tab);
             localStorage.setItem('microbio_last_visit_tab', tab);
@@ -4202,7 +4204,11 @@
             }
 
             if (addBtn && searchInput) {
-                if (tab === 'fiches') {
+                if (tab === 'accueil') {
+                    addBtn.innerText = "+ NOUVELLE FICHE"; 
+                    searchInput.placeholder = "Navigation accueil...";
+                    // optionally hide the add/search bar on Home screen
+                } else if (tab === 'fiches') {
                     addBtn.innerText = "+ NOUVELLE FICHE";
                     searchInput.placeholder = "Chercher un produit ou un code...";
                 } else if (tab === 'analyses') {
@@ -4239,7 +4245,7 @@
         // --- GESTION DU SWIPE POUR CHANGER D'ONGLET ---
         let touchstartX = 0;
         let touchendX = 0;
-        const tabsOrder = ['fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite'];
+        const tabsOrder = ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite'];
 
         // ===========================
         // REORDER DES ONGLETs PRINCIPAUX (SortableJS)
@@ -4247,7 +4253,7 @@
         window.mainTabsOrderStorageKey = 'microbio_main_tabs_order';
 
         function getMainTabsDefaultOrder() {
-            return ['fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite'];
+            return ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite'];
         }
 
         window.__mainTabsInitDone = false;
@@ -6536,6 +6542,217 @@
         window.render = function render() {
             const query = searchInput.value.toLowerCase().trim();
             const container = fichesList;
+
+            if (window.currentTab === 'accueil') {
+                const ACCUEIL_STORAGE_KEY = 'microbio_accueil_order';
+                const allBtns = [
+                    { id: 'fiches',    icon: '📋', label: 'Fiches',        sub: 'Gestion fiches',      bg: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', shadow: '0 12px 28px rgba(59,130,246,0.45)' },
+                    { id: 'analyses',  icon: '🧪', label: 'Analyses',      sub: 'Contrôles qualité',   bg: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', shadow: '0 12px 28px rgba(16,185,129,0.45)' },
+                    { id: 'preps',     icon: '⚗️', label: 'Préparations',  sub: 'Milieux & réactifs',  bg: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)', shadow: '0 12px 28px rgba(245,158,11,0.45)' },
+                    { id: 'photos',    icon: '📸', label: 'Photos',        sub: 'Galerie labo',        bg: 'linear-gradient(135deg, #ec4899 0%, #9d174d 100%)', shadow: '0 12px 28px rgba(236,72,153,0.45)' },
+                    { id: 'registres', icon: '📓', label: 'Registres',     sub: 'Données & registres', bg: 'linear-gradient(135deg, #8b5cf6 0%, #5b21b6 100%)', shadow: '0 12px 28px rgba(139,92,246,0.45)' },
+                    { id: 'bulletins', icon: '📄', label: 'Stabilité',     sub: 'Bulletins & rapports',bg: 'linear-gradient(135deg, #06b6d4 0%, #0e7490 100%)', shadow: '0 12px 28px rgba(6,182,212,0.45)' },
+                    { id: 'germes',    icon: '🦠', label: 'Germes',        sub: 'Base germes',         bg: 'linear-gradient(135deg, #6366f1 0%, #3730a3 100%)', shadow: '0 12px 28px rgba(99,102,241,0.45)' },
+                    { id: 'fertilite', icon: '🧫', label: 'Fertilité',     sub: 'Test de fertilité',   bg: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)', shadow: '0 12px 28px rgba(20,184,166,0.45)' },
+                    { id: 'taches',    icon: '📝', label: 'Tâches',        sub: 'Suivi des tâches',    bg: 'linear-gradient(135deg, #f43f5e 0%, #9f1239 100%)', shadow: '0 12px 28px rgba(244,63,94,0.45)' },
+                ];
+
+                // Load saved order
+                let savedOrder = null;
+                try { savedOrder = JSON.parse(localStorage.getItem(ACCUEIL_STORAGE_KEY)); } catch(_){}
+                let orderedBtns = allBtns;
+                if (savedOrder && Array.isArray(savedOrder)) {
+                    const map = Object.fromEntries(allBtns.map(b => [b.id, b]));
+                    orderedBtns = savedOrder.map(id => map[id]).filter(Boolean);
+                    allBtns.forEach(b => { if (!savedOrder.includes(b.id)) orderedBtns.push(b); });
+                }
+
+                // Live time & greeting
+                const now = new Date();
+                const hh = now.getHours();
+                const greeting = hh < 6 ? 'Bonne nuit' : hh < 12 ? 'Bonjour' : hh < 18 ? 'Bon après-midi' : 'Bonsoir';
+                const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                const dateStr = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+                container.innerHTML = `
+                    <style>
+                        .accueil-hero {
+                            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #0c2340 100%);
+                            border-radius: 0 0 32px 32px;
+                            padding: 28px 22px 36px;
+                            margin-bottom: -18px;
+                            position: relative;
+                            overflow: hidden;
+                        }
+                        .accueil-hero::before {
+                            content: '';
+                            position: absolute;
+                            top: -60px; left: -60px;
+                            width: 220px; height: 220px;
+                            background: radial-gradient(circle, rgba(99,102,241,0.35) 0%, transparent 70%);
+                            border-radius: 50%;
+                        }
+                        .accueil-hero::after {
+                            content: '';
+                            position: absolute;
+                            bottom: -40px; right: -40px;
+                            width: 180px; height: 180px;
+                            background: radial-gradient(circle, rgba(14,165,233,0.3) 0%, transparent 70%);
+                            border-radius: 50%;
+                        }
+                        .accueil-hero-content { position: relative; z-index: 2; }
+                        .accueil-clock {
+                            font-size: 3.2rem;
+                            font-weight: 900;
+                            color: #fff;
+                            letter-spacing: -2px;
+                            line-height: 1;
+                            text-shadow: 0 4px 20px rgba(99,102,241,0.5);
+                        }
+                        .accueil-greeting {
+                            font-size: 1rem;
+                            font-weight: 700;
+                            color: rgba(255,255,255,0.75);
+                            margin-top: 4px;
+                        }
+                        .accueil-date-badge {
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 6px;
+                            background: rgba(255,255,255,0.1);
+                            backdrop-filter: blur(10px);
+                            border: 1px solid rgba(255,255,255,0.15);
+                            border-radius: 50px;
+                            padding: 5px 12px;
+                            color: rgba(255,255,255,0.9);
+                            font-size: 0.72rem;
+                            font-weight: 700;
+                            margin-top: 12px;
+                            text-transform: capitalize;
+                        }
+                        .accueil-labo-badge {
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 6px;
+                            background: rgba(99,102,241,0.25);
+                            border: 1px solid rgba(99,102,241,0.4);
+                            border-radius: 50px;
+                            padding: 5px 12px;
+                            color: #a5b4fc;
+                            font-size: 0.72rem;
+                            font-weight: 800;
+                            margin-top: 8px;
+                            margin-left: 8px;
+                        }
+                        .accueil-section-title {
+                            font-size: 0.7rem;
+                            font-weight: 800;
+                            color: #9ca3af;
+                            letter-spacing: 1.5px;
+                            text-transform: uppercase;
+                            margin: 28px 0 12px;
+                        }
+                        .accueil-card-new {
+                            border-radius: 22px;
+                            padding: 22px 14px 18px;
+                            text-align: center;
+                            cursor: pointer;
+                            position: relative;
+                            overflow: hidden;
+                            transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s;
+                            -webkit-user-select: none;
+                            user-select: none;
+                        }
+                        .accueil-card-new::after {
+                            content: '';
+                            position: absolute;
+                            top: 0; left: 0; right: 0;
+                            height: 50%;
+                            background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 100%);
+                            border-radius: 22px 22px 0 0;
+                            pointer-events: none;
+                        }
+                        .accueil-card-new:active { transform: scale(0.94) !important; }
+                        .accueil-card-icon { font-size: 2.6rem; margin-bottom: 10px; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25)); pointer-events: none; }
+                        .accueil-card-label { font-weight: 800; font-size: 0.92rem; color: #fff; pointer-events: none; }
+                        .accueil-card-sub { font-size: 0.65rem; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 3px; pointer-events: none; }
+                        .accueil-drag-hint {
+                            text-align: center;
+                            color: #9ca3af;
+                            font-size: 0.68rem;
+                            font-weight: 600;
+                            margin-top: 20px;
+                            padding-bottom: 60px;
+                        }
+                    </style>
+
+                    <div>
+                        <!-- HERO BANNER -->
+                        <div class="accueil-hero">
+                            <div class="accueil-hero-content">
+                                <div class="accueil-greeting">${greeting}, Sohaib 👨‍🔬</div>
+                                <div class="accueil-clock" id="accueil-live-clock">${timeStr}</div>
+                                <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:4px;">
+                                    <span class="accueil-date-badge">📅 ${dateStr}</span>
+                                    <span class="accueil-labo-badge">🔬 MICROBIO v4.5.0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CARDS GRID -->
+                        <div style="padding: 28px 16px 0;">
+                            <div class="accueil-section-title">Navigation rapide</div>
+                            <div id="accueil-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 13px;">
+                                ${orderedBtns.map(b => `
+                                    <div data-id="${b.id}" class="accueil-card-new accueil-card"
+                                        onclick="window.switchTab('${b.id}')"
+                                        style="background:${b.bg}; box-shadow:${b.shadow};">
+                                        <div class="accueil-card-icon">${b.icon}</div>
+                                        <div class="accueil-card-label">${b.label}</div>
+                                        <div class="accueil-card-sub">${b.sub}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="accueil-drag-hint">✋ Maintenez appuyé pour réorganiser</div>
+                    </div>
+                `;
+
+                // Live clock update
+                if (window._accueilClockInterval) clearInterval(window._accueilClockInterval);
+                window._accueilClockInterval = setInterval(() => {
+                    const el = document.getElementById('accueil-live-clock');
+                    if (el) el.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                    else clearInterval(window._accueilClockInterval);
+                }, 10000);
+
+                // SortableJS drag-to-reorder
+                if (typeof Sortable !== 'undefined') {
+                    const grid = document.getElementById('accueil-grid');
+                    new Sortable(grid, {
+                        animation: 200,
+                        delay: 250,
+                        delayOnTouchOnly: true,
+                        ghostClass: 'sortable-ghost',
+                        chosenClass: 'sortable-chosen',
+                        onEnd: function() {
+                            const newOrder = Array.from(grid.querySelectorAll('[data-id]')).map(el => el.dataset.id);
+                            localStorage.setItem(ACCUEIL_STORAGE_KEY, JSON.stringify(newOrder));
+                        }
+                    });
+                }
+
+                // Hover lift effect (desktop)
+                document.querySelectorAll('.accueil-card-new').forEach(card => {
+                    card.addEventListener('mouseenter', () => { card.style.transform = 'translateY(-6px) scale(1.04)'; });
+                    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+                });
+
+                return;
+            }
+
+
 
             if (window.currentTab === 'fiches') {
                 let filtered = fiches.filter(f =>

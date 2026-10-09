@@ -11618,8 +11618,15 @@
             let totalBoites = 0;
             let totalFlacons = 0;
             let totalTubesMC = 0;
+            let flaconsMap = {};
 
             let globalSterilityMarked = new Set();
+            let totalBoitesFertilite = 0;
+            let totalBoitesSterilite = 0;
+            let totalTubesFertilite = 0;
+            let totalTubesSterilite = 0;
+            let boitesMap = {};
+            let tubesMap = {};
 
             selectedFiches.forEach(f => {
                 let sectionGroupMap = {};
@@ -11675,19 +11682,61 @@
                         needsSter = true; // Apply sterility on the first time we encouter this medium!
                     }
 
+                    let fName = group.milieuTest.toUpperCase();
+
                     if (group.isEnrichissement || group.methode === 'direct') {
+                        if (!tubesMap[fName]) tubesMap[fName] = {fert: 0, ster: 0};
                         lTubes = mStrainsCount * 2;
-                        if (needsSter) lTubes += 1;
+                        totalTubesFertilite += lTubes;
+                        tubesMap[fName].fert += lTubes;
+
+                        if (needsSter) {
+                            lTubes += 3;
+                            totalTubesSterilite += 3;
+                            tubesMap[fName].ster += 3;
+                        }
                     } else {
-                        let totalPlatesNeeded = mStrainsCount * 4;
+                        let testPlatesNeeded = mStrainsCount * 2;
+                        let refPlatesNeeded = mStrainsCount * 2;
+                        let sterilityPlates = needsSter && group.isGelose ? 2 : 0;
+                        totalBoitesSterilite += sterilityPlates;
+
+                        if (!boitesMap[fName]) boitesMap[fName] = {fert: 0, ster: 0};
+                        if (!boitesMap['TSA']) boitesMap['TSA'] = {fert: 0, ster: 0};
+
+                        if (!group.isGelose) {
+                            boitesMap['TSA'].fert += testPlatesNeeded + refPlatesNeeded;
+                        } else {
+                            boitesMap[fName].fert += testPlatesNeeded;
+                            boitesMap['TSA'].fert += refPlatesNeeded;
+                            boitesMap[fName].ster += sterilityPlates;
+                        }
 
                         if (group.methode === 'surface') {
-                            lPrecoulees = totalPlatesNeeded;
-                            if (needsSter && group.isGelose) lPrecoulees += 2;
+                            lPrecoulees = testPlatesNeeded + refPlatesNeeded;
+                            totalBoitesFertilite += lPrecoulees;
+                            if (needsSter && group.isGelose) lPrecoulees += sterilityPlates;
                         } else { // Surfusion
-                            lBoites = totalPlatesNeeded;
-                            if (needsSter && group.isGelose) lBoites += 2;
-                            lFlacons = Math.ceil(lBoites / 10);
+                            let testFlacons = Math.ceil((testPlatesNeeded + sterilityPlates) / 10);
+                            let refFlacons = Math.ceil(refPlatesNeeded / 10);
+                            
+                            lBoites = testPlatesNeeded + sterilityPlates + refPlatesNeeded;
+                            totalBoitesFertilite += testPlatesNeeded + refPlatesNeeded;
+
+                            lFlacons = testFlacons + refFlacons;
+                            
+                            if (group.isGelose) {
+                                if (!flaconsMap[fName]) flaconsMap[fName] = 0;
+                                flaconsMap[fName] += testFlacons;
+                            } else {
+                                if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
+                                flaconsMap['TSA'] += testFlacons;
+                            }
+                            
+                            if (refFlacons > 0) {
+                                if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
+                                flaconsMap['TSA'] += refFlacons;
+                            }
                         }
                     }
 
@@ -11790,17 +11839,17 @@
                     5: { halign: 'center', cellWidth: 28 },
                     6: { halign: 'center', cellWidth: 38 },
                     7: { halign: 'center', cellWidth: 20 }
-                },
-                didDrawPage: function (data) {
-                    const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 80;
-                    doc.setFontSize(6.5);
-                    doc.setFont('helvetica', 'italic');
-                    doc.setTextColor(120, 120, 120);
-                    doc.text('* 1 flacon gélose fondue 190mL = 10 boites de Petri', 12, finalY + 4);
                 }
             });
 
-            let y = doc.lastAutoTable.finalY + 14;
+            let y = doc.lastAutoTable.finalY + 5;
+            doc.setFontSize(6.5);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(120, 120, 120);
+            if (totalFlacons > 0 || Object.keys(flaconsMap).length > 0) {
+                doc.text('* 1 flacon gélose fondue 190mL = 10 boites de Petri', 12, y);
+            }
+            y += 9;
 
             if (y > 175) { doc.addPage(); y = 20; }
 
@@ -11903,15 +11952,52 @@
             doc.setFontSize(11); doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
             const totalSectionNum = hasSomeSteps ? '4.' : '3.';
             doc.text(totalSectionNum + ' TOTAUX GENERAUX', 15, y); y += 7;
+            let boitesStr = totalBoitesFertilite + ' pour fertilité';
+            if (totalBoitesSterilite > 0) boitesStr += ' / ' + totalBoitesSterilite + ' pour stérilité';
+            let tubesStr = totalTubesFertilite + ' pour fertilité';
+            if (totalTubesSterilite > 0) tubesStr += ' / ' + totalTubesSterilite + ' pour stérilité';
+
+            let totalsBody = [];
+            
+            if (Object.keys(boitesMap).length > 0) {
+                for (let k in boitesMap) {
+                    let b = boitesMap[k];
+                    if (b.fert > 0 || b.ster > 0) {
+                        let bStr = b.fert + ' pour fertilité';
+                        if (b.ster > 0) bStr += ' / ' + b.ster + ' pour stérilité';
+                        totalsBody.push(['- Boîtes de Petri (' + k + ')', bStr]);
+                    }
+                }
+            }
+            totalsBody.push(['Boîtes de Petri (TOTAL)', boitesStr]);
+
+            if (Object.keys(flaconsMap).length > 0) {
+                for (let k in flaconsMap) {
+                    if (flaconsMap[k] > 0) {
+                        totalsBody.push(['- Flacons gélose fondue ' + k + ' 190mL *', flaconsMap[k] + ' flacon(s)']);
+                    }
+                }
+            } else {
+                totalsBody.push(['Flacons gélose fondue 190mL *', totalFlacons + ' flacon(s)']);
+            }
+
+            if (Object.keys(tubesMap).length > 0) {
+                for (let k in tubesMap) {
+                    let t = tubesMap[k];
+                    if (t.fert > 0 || t.ster > 0) {
+                        let tStr = t.fert + ' pour fertilité';
+                        if (t.ster > 0) tStr += ' / ' + t.ster + ' pour stérilité';
+                        totalsBody.push(['- Tubes MC (' + k + ')', tStr]);
+                    }
+                }
+            }
+            totalsBody.push(['Tubes MC Bouillons (TOTAL)', tubesStr]);
+            totalsBody.push(['Tubes de dilution pH 7 (9mL)', totalTubes + ' tubes']);
+
             doc.autoTable({
                 startY: y,
                 head: [['Consommable (Test + Réf)', 'Quantite (Dans l\'étuve)']],
-                body: [
-                    ['Boites de Petri (toutes test/réf/stérilité)', totalBoites + ' boites'],
-                    ['Flacons gélose fondue 190mL *', totalFlacons + ' flacon(s)'],
-                    ['Tubes MC (Bouillons, dont stérilité MC testé)', totalTubesMC + ' tube(s)'],
-                    ['Tubes de dilution pH 7 (9mL)', totalTubes + ' tubes'],
-                ],
+                body: totalsBody,
                 theme: 'grid',
                 headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', lineColor: [0, 0, 0], fontSize: 9 },
                 styles: { fontSize: 9, cellPadding: 3, lineColor: [0, 0, 0], textColor: 0 },

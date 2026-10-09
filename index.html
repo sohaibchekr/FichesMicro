@@ -12483,6 +12483,205 @@
                     if (val) window.saveSoucheOrigine(souche, val.value);
                 };
 
+                window.generateFertiliteTracaPdf = function() {
+                    const checkboxes = document.querySelectorAll('.cb-traca-print:checked');
+                    if (checkboxes.length === 0) {
+                        return window.showToast ? window.showToast("Cochez au moins un élément pour l'historique !", "error") : alert("Rien n'est coché.");
+                    }
+                    const checkedIds = Array.from(checkboxes).map(c => c.value);
+                    
+                    let toPrint = (window._tracaFertHistory || []).filter(h => checkedIds.includes(h.id));
+                    toPrint.sort((a,b) => b.timestamp - a.timestamp);
+                    
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+                    
+                    const _ftStart = window._fertTracaStart || '';
+                    const _ftEnd = window._fertTracaEnd || '';
+                    
+                    let title = "HISTORIQUE FERTILITE";
+                    if (_ftStart && _ftEnd) title += ` - DU ${_ftStart.split('-').reverse().join('/')} AU ${_ftEnd.split('-').reverse().join('/')}`;
+                    else if (_ftStart) title += ` - A PARTIR DU ${_ftStart.split('-').reverse().join('/')}`;
+                    else if (_ftEnd) title += ` - JUSQU'AU ${_ftEnd.split('-').reverse().join('/')}`;
+                    
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(15);
+                    doc.text(title, 15, 20);
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Imprimé le : ${new Date().toLocaleDateString('fr-FR')}`, doc.internal.pageSize.getWidth() - 15, 20, { align: 'right' });
+
+                    let body = [];
+                    let lastDateStr = null;
+
+                    toPrint.forEach(h => {
+                        const dStr = window._fullDateLabel ? window._fullDateLabel(h.date || '') : (h.date || '-');
+                        
+                        if (dStr !== lastDateStr) {
+                            body.push([{ 
+                                content: dStr, 
+                                colSpan: 4, 
+                                styles: { fillColor: [240, 240, 240], fontStyle: 'bold', halign: 'center' } 
+                            }]);
+                            lastDateStr = dStr;
+                        }
+
+                        const mStr = h.milieu || '-';
+                        const lotStr = h.lot || '-';
+                        const incStr = h.incubation || '-';
+                        
+                        let sList = [];
+                        const recOrig = h.souchesOrigines || {};
+                        if (h.souches && h.souches !== '-') {
+                            sList = h.souches.split(',').map(s => {
+                                const st = s.trim();
+                                const orig = recOrig[st];
+                                return orig ? `${st} (${orig})` : st;
+                            });
+                        }
+                        
+                        body.push([mStr, lotStr, incStr, sList.join('\n')]);
+                    });
+                    
+                    doc.autoTable({
+                        startY: 28,
+                        head: [['Milieu Validé', 'Lot Validé', 'Incubation', 'Souches & Origines']],
+                        body: body,
+                        theme: 'grid',
+                        headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', fontSize: 9, lineColor: [0, 0, 0] },
+                        styles: { fontSize: 8, cellPadding: 3, textColor: 0, valign: 'middle', lineColor: [0, 0, 0] },
+                        columnStyles: {
+                            0: { cellWidth: 55 },
+                            1: { cellWidth: 35 },
+                            2: { cellWidth: 35 },
+                            3: { cellWidth: 'auto' }
+                        }
+                    });
+                    
+                      doc.save('Historique_Fertilite.pdf');
+                };
+
+                window.generateSouchesRapportPdf = function() {
+                    const allHistory = window._tracaFertHistory || [];
+                    if (allHistory.length === 0) {
+                        return window.showToast ? window.showToast("Aucun historique disponible !", "error") : alert("Aucun historique.");
+                    }
+
+                    // Build per-strain usage map: { strainName: { date: origin } } - to deduplicate by date
+                    const soucheUsageMap = {}; 
+                    allHistory.forEach(h => {
+                        const recOrig = h.souchesOrigines || {};
+                        const dateStr = h.date || '';
+                        if (!dateStr) return;
+                        const allSouches = [
+                            ...(h.souches && h.souches !== '-' ? h.souches.split(',').map(s => s.trim()) : []),
+                        ];
+                        allSouches.forEach(st => {
+                            if (!st) return;
+                            const stLower = st.toLowerCase();
+                            if (stLower.includes('bacillus') || stLower.includes('aspergillus')) return;
+                            
+                            if (!soucheUsageMap[st]) soucheUsageMap[st] = {};
+                            // Use latest recorded origin for that day if there are multiple
+                            soucheUsageMap[st][dateStr] = recOrig[st] || 'Inconnue';
+                        });
+                    });
+
+                    const parseDate = (s) => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+                    const fmtDate = (s) => s ? s.split('-').reverse().join('/') : '-';
+                    const addDays = (s, n) => {
+                        const d = parseDate(s);
+                        d.setDate(d.getDate() + n);
+                        return d.toISOString().slice(0,10);
+                    };
+
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+                    const pgW = doc.internal.pageSize.getWidth();
+                    let y = 20;
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(15);
+                    doc.text("RAPPORT D'UTILISATION DES SOUCHES - FERTILITE", pgW / 2, y, { align: 'center' });
+                    y += 7;
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(9);
+                    doc.setTextColor(80,80,80);
+                    doc.text(`Imprimé le : ${new Date().toLocaleDateString('fr-FR')}`, pgW / 2, y, { align: 'center' });
+                    y += 4;
+                    doc.setTextColor(0,0,0);
+                    doc.setLineWidth(0.4);
+                    doc.line(12, y, pgW - 12, y);
+                    y += 6;
+
+                    const sortedSouches = Object.keys(soucheUsageMap).sort();
+                    const tableBody = [];
+
+                    sortedSouches.forEach(souche => {
+                        const usageByDate = soucheUsageMap[souche];
+                        const datesArray = Object.keys(usageByDate).sort();
+
+                        let currentChunkStart = null;
+                        let firstRowForSouche = true;
+
+                        datesArray.forEach((dateStr) => {
+                            if (!currentChunkStart) {
+                                currentChunkStart = dateStr;
+                            } else {
+                                const diffMs = parseDate(dateStr) - parseDate(currentChunkStart);
+                                const diffDays = diffMs / (1000 * 60 * 60 * 24);
+                                if (diffDays <= 7) {
+                                    // Test fait dans la même semaine, on ignore.
+                                    return;
+                                } else {
+                                    // Nouvelle boite, nouvelle semaine
+                                    currentChunkStart = dateStr;
+                                }
+                            }
+                            
+                            const limitStr = addDays(currentChunkStart, 7);
+                            const origin = usageByDate[currentChunkStart];
+                            
+                            const row = [
+                                firstRowForSouche ? souche : '',
+                                origin,
+                                fmtDate(currentChunkStart),
+                                fmtDate(limitStr)
+                            ];
+                            tableBody.push(row);
+                            firstRowForSouche = false;
+                        });
+                    });
+
+                    if (tableBody.length === 0) {
+                        return window.showToast ? window.showToast("Aucune donnée de souche trouvée.", "error") : alert("Vide.");
+                    }
+
+                    doc.autoTable({
+                        startY: y,
+                        head: [['Souche', 'CS / Origine', 'Date d\'Utilisation', 'Date Fin Validité (+7j)']],
+                        body: tableBody,
+                        theme: 'grid',
+                        headStyles: { fillColor: [255,255,255], textColor: 0, fontStyle: 'bold', fontSize: 9, lineColor: [0,0,0] },
+                        styles: { fontSize: 8, cellPadding: 3, textColor: 0, valign: 'middle', lineColor: [0,0,0] },
+                        columnStyles: {
+                            0: { cellWidth: 70, fontStyle: 'bold' },
+                            1: { cellWidth: 50 },
+                            2: { cellWidth: 50, halign: 'center' },
+                            3: { cellWidth: 50, halign: 'center', fontStyle: 'bold' }
+                        },
+                        didParseCell: function(data) {
+                            if (data.column.index === 0 && data.cell.raw && data.cell.raw.trim() !== '' && data.row.index > 0) {
+                                data.cell.styles.lineWidthTop = 0.5;
+                                data.cell.styles.lineColor = [0,0,0];
+                            }
+                        }
+                    });
+
+                    doc.save('Rapport_Souches_Fertilite.pdf');
+                };
+
                 window.showFertiliteTraca = function () {
                     window._showingFertTraca = true;
                     const container = document.getElementById('fiches-list');
@@ -12508,14 +12707,21 @@
                     <input type="date" id="ftStart" value="${_ftStart}" onchange="window._fertTracaStart=this.value; window.showFertiliteTraca()" style="padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
                     <span style="font-size:0.8rem; color:#6b7280;">au</span>
                     <input type="date" id="ftEnd" value="${_ftEnd}" onchange="window._fertTracaEnd=this.value; window.showFertiliteTraca()" style="padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
-                    ${(_ftStart || _ftEnd) ? '<button onclick="window._fertTracaStart=\'\'; window._fertTracaEnd=\'\'; window.showFertiliteTraca()" style="background:#ef4444; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:0.8rem; cursor:pointer;">✕ Réinitialiser</button>' : ''}
+                    ${(_ftStart || _ftEnd) ? '<button onclick="window._fertTracaStart=\'\'; window._fertTracaEnd=\'\'; window.showFertiliteTraca()" style="background:#ef4444; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:0.8rem; cursor:pointer;">✕ R\u00e9initialiser</button>' : ''}
+                    <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+                        <button id="btnSelectAll" onclick="(function(){ const boxes=document.querySelectorAll('.cb-traca-print'); const allChecked=[...boxes].every(b=>b.checked); boxes.forEach(b=>b.checked=!allChecked); document.getElementById('btnSelectAll').textContent=allChecked?'\u2611 Tout s\u00e9lectionner':'\u2610 Tout d\u00e9s\u00e9lectionner'; })()" style="background:#059669; color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:0.8rem; font-weight:bold; cursor:pointer;">&#9745; Tout s&#233;lectionner</button>
+                    </div>
                 </div>`;
 
                     let html = `
                     <div style="padding:20px; font-family:Arial, sans-serif;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #059669; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
                             <h2 style="color:#059669; margin:0; font-size:1.3rem;">🔍 Historique Traçabilité Fertilité</h2>
-                            <button onclick="window._showingFertTraca=false; window.render()" style="background:#111; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour</button>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button onclick="window.generateSouchesRapportPdf()" style="background:#0369a1; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">🧬 Rapport Souches PDF</button>
+                                <button onclick="window.generateFertiliteTracaPdf()" style="background:#111; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📄 Exporter Historique PDF</button>
+                                <button onclick="window._showingFertTraca=false; window.render()" style="background:#6b7280; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour</button>
+                            </div>
                         </div>
                         ${filterBar}`;
 
@@ -12538,6 +12744,7 @@
                             html += `
                         <div style="margin-bottom:22px; border-radius:12px; overflow:hidden; border:1.5px solid #d1fae5; box-shadow:0 2px 8px rgba(5,150,105,0.07);">
                             <div style="background:linear-gradient(90deg,#059669 0%,#10b981 100%); color:#fff; padding:10px 18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <input type="checkbox" onchange="const list=this.closest('div').nextElementSibling.querySelectorAll('.cb-traca-print'); for(let i=0;i<list.length;i++) list[i].checked=this.checked;" title="Tout cocher" style="width:18px;height:18px;cursor:pointer; accent-color:#059669;">
                                 <span style="font-size:1.1rem;">📅</span>
                                 <span style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">${dateLabel}</span>
                                 <span style="background:rgba(255,255,255,0.25); border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700;">${count} MC validé${count > 1 ? 's' : ''}</span>
@@ -12561,8 +12768,11 @@
                                     : '<span style="color:#aaa; font-size:0.75rem;">-</span>';
 
                                 html += `
-                            <div style="border-bottom:1px solid #e5e7eb; background:${bg}; padding:10px 14px;">
-                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+                            <div style="border-bottom:1px solid #e5e7eb; background:${bg}; padding:10px 14px; display:flex; gap:12px; align-items:stretch;">
+                                <div style="display:flex; align-items:flex-start; padding-top:4px;">
+                                    <input type="checkbox" class="cb-traca-print" value="${h.id}" style="width:18px;height:18px;cursor:pointer; accent-color:#059669;" title="Imprimer ce MC">
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; flex:1;">
                                     <div style="flex:1; min-width:0;">
                                         <div style="font-weight:800; color:#111; font-size:0.92rem; margin-bottom:4px; word-break:break-word;">${h.milieu || '-'}</div>
                                         <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; align-items:center;">

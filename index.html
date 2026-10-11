@@ -6775,6 +6775,13 @@
             const container = fichesList;
 
             if (window.currentTab === 'accueil') {
+                // Fast path: if grid already rendered, just update clock and skip full rebuild
+                const existingGrid = document.getElementById('accueil-grid');
+                if (existingGrid && existingGrid.children.length > 0) {
+                    const clockEl = document.getElementById('accueil-live-clock');
+                    if (clockEl) clockEl.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                    return;
+                }
                 const ACCUEIL_STORAGE_KEY = 'microbio_accueil_order';
                 const allBtns = [
                     { id: 'fiches',    icon: '📋', label: 'Fiches',        sub: 'Gestion fiches',      bg: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', shadow: '0 12px 28px rgba(59,130,246,0.45)' },
@@ -6936,8 +6943,8 @@
                             <div class="accueil-section-title">Navigation rapide</div>
                             <div id="accueil-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 13px;">
                                 ${orderedBtns.map(b => `
-                                    <div data-id="${b.id}" class="accueil-card-new accueil-card"
-                                        onclick="window.switchTab('${b.id}')"
+                                    <div data-id="${b.id}" data-tab="${b.id}" class="accueil-card-new accueil-card"
+                                        onclick="if(!window.__accueilDragging) window.switchTab('${b.id}')"
                                         style="background:${b.bg}; box-shadow:${b.shadow};">
                                         <div class="accueil-card-icon">${b.icon}</div>
                                         <div class="accueil-card-label">${b.label}</div>
@@ -6960,26 +6967,48 @@
                 }, 10000);
 
                 // SortableJS drag-to-reorder
+                // delay=600ms so quick taps still fire onclick (not swallowed by drag)
                 if (typeof Sortable !== 'undefined') {
                     const grid = document.getElementById('accueil-grid');
                     new Sortable(grid, {
-                        animation: 200,
-                        delay: 250,
+                        animation: 150,
+                        delay: 600,
                         delayOnTouchOnly: true,
+                        forceFallback: false,
                         ghostClass: 'sortable-ghost',
                         chosenClass: 'sortable-chosen',
+                        onStart: function() { window.__accueilDragging = true; },
                         onEnd: function() {
+                            window.__accueilDragging = false;
                             const newOrder = Array.from(grid.querySelectorAll('[data-id]')).map(el => el.dataset.id);
                             localStorage.setItem(ACCUEIL_STORAGE_KEY, JSON.stringify(newOrder));
                         }
                     });
                 }
 
-                // Hover lift effect (desktop)
-                document.querySelectorAll('.accueil-card-new').forEach(card => {
-                    card.addEventListener('mouseenter', () => { card.style.transform = 'translateY(-6px) scale(1.04)'; });
-                    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
-                });
+                // Reliable tap handler for mobile (works even with SortableJS)
+                const accGrid = document.getElementById('accueil-grid');
+                if (accGrid) {
+                    let _tts = 0, _tsx = 0, _tsy = 0;
+                    accGrid.addEventListener('touchstart', function(e) {
+                        _tts = Date.now();
+                        _tsx = e.touches[0].clientX;
+                        _tsy = e.touches[0].clientY;
+                    }, { passive: true });
+                    accGrid.addEventListener('touchend', function(e) {
+                        if (window.__accueilDragging) return;
+                        const dt = Date.now() - _tts;
+                        const dx = Math.abs(e.changedTouches[0].clientX - _tsx);
+                        const dy = Math.abs(e.changedTouches[0].clientY - _tsy);
+                        if (dt < 350 && dx < 15 && dy < 15) {
+                            const card = e.target.closest('[data-tab]');
+                            if (card) {
+                                e.preventDefault();
+                                window.switchTab(card.dataset.tab);
+                            }
+                        }
+                    }, { passive: false });
+                }
 
                 return;
             }

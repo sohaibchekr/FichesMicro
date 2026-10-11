@@ -1,0 +1,22 @@
+{
+  "name": "GESTMABO CQ",
+  "short_name": "GEST-LABO",
+  "description": "Système de Gestion de Laboratoire et Étiquetage",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3074c7",
+  "icons": [
+    {
+      "src": "logo.PNG",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.PNG",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

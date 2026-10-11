@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <!-- JSpreadsheet / Excel (Fallback/Ancien) -->
     <script src="assets/jsuites.js"></script>
     <link rel="stylesheet" href="assets/jsuites.css" type="text/css" />
@@ -735,64 +735,6 @@
             white-space: nowrap;
         }
 
-        /* --- MOBILE OPTIMIZATIONS --- */
-        @media (max-width: 600px) {
-            .header {
-                padding: 10px 8px;
-                gap: 8px;
-            }
-
-            .header-top { gap: 6px; }
-            
-            .logo-container {
-                padding: 4px 12px 4px 4px;
-            }
-
-            .logo-img {
-                width: 32px; height: 32px;
-            }
-
-            .logo-text {
-                font-size: 0.95rem;
-            }
-
-            .logo-subtitle {
-                display: none; /* Hide subtitle on mobile to save space */
-            }
-
-            .main-tab {
-                min-width: 80px;
-                padding: 8px 10px;
-                font-size: 0.75rem;
-            }
-            
-            .search-input {
-                padding: 8px !important;
-                height: 36px !important;
-                font-size: 0.85rem;
-            }
-            
-            #dateFilterStart, #dateFilterEnd {
-                width: 110px !important;
-            }
-
-            .modal-overlay {
-                padding: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .modal-content {
-                margin: auto;
-                max-height: 92vh;
-                padding: 25px 20px;
-                border-radius: 28px;
-                width: 100%;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-        }
 
         .close-modal {
             position: absolute;
@@ -883,50 +825,267 @@
             color: var(--text-main);
         }
 
+        /* ===========================
+           COMPREHENSIVE MOBILE OPTIMIZATIONS (≤ 600px)
+        =========================== */
         @media (max-width: 600px) {
             .header {
-                padding: 16px;
-                gap: 12px;
+                padding: 8px 10px 6px 10px !important;
+                gap: 6px !important;
+            }
+
+            .header-top {
+                gap: 6px !important;
+            }
+
+            .logo-container {
+                padding: 3px 10px 3px 4px !important;
+                gap: 8px !important;
+                height: 38px !important;
+            }
+
+            .logo-img {
+                width: 30px !important;
+                height: 30px !important;
             }
 
             .logo-text {
-                font-size: 1.1rem;
+                font-size: 0.88rem !important;
+                letter-spacing: -0.3px !important;
+                line-height: 1 !important;
+            }
+
+            .logo-subtitle {
+                display: none !important;
+            }
+
+            .header-top .main-tab {
+                padding: 6px 10px !important;
+                font-size: 1rem !important;
+                min-width: 0 !important;
+                height: 34px !important;
+            }
+
+            .main-tabs {
+                padding: 2px 0 4px 0 !important;
+                gap: 6px !important;
             }
 
             .main-tab {
-                padding: 12px 15px;
-                font-size: 0.8rem;
-                min-width: auto;
+                min-width: 0 !important;
+                padding: 7px 11px !important;
+                font-size: 0.72rem !important;
+                border-radius: 10px !important;
+                flex-shrink: 0 !important;
+            }
+
+            /* Toolbar Header on Mobile */
+            .header-toolbar {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                width: 100%;
+                margin-top: 2px;
+            }
+
+            .header-toolbar.is-hidden {
+                display: none !important;
+            }
+
+            #addBtn.is-hidden {
+                display: none !important;
+            }
+
+            .search-container-main {
+                width: 100% !important;
+                min-width: 100% !important;
+                margin-bottom: 0 !important;
             }
 
             .search-input {
-                padding: 14px 18px 14px 48px;
-                border-radius: 16px;
+                padding: 9px 12px 9px 40px !important;
+                height: 38px !important;
+                font-size: 0.82rem !important;
+                border-radius: 12px !important;
             }
 
             .search-icon {
-                left: 16px;
-                font-size: 1.1rem;
+                left: 14px !important;
+                font-size: 1rem !important;
             }
 
+            .search-container-dates {
+                width: 100% !important;
+                display: flex !important;
+                gap: 6px !important;
+            }
+
+            .search-container-dates input[type="date"] {
+                flex: 1 1 50% !important;
+                width: 50% !important;
+                min-width: 0 !important;
+                padding: 6px 8px !important;
+                height: 34px !important;
+                font-size: 0.72rem !important;
+                border-radius: 10px !important;
+            }
+
+            .toolbar-actions-row {
+                width: 100% !important;
+                display: flex !important;
+                gap: 5px !important;
+                overflow-x: auto !important;
+                padding-bottom: 2px !important;
+                -webkit-overflow-scrolling: touch !important;
+                scrollbar-width: none !important;
+                flex-wrap: nowrap !important;
+            }
+
+            .toolbar-actions-row::-webkit-scrollbar {
+                display: none;
+            }
+
+            .toolbar-actions-row button {
+                flex-shrink: 0 !important;
+                height: 32px !important;
+                padding: 0 10px !important;
+                font-size: 0.65rem !important;
+                border-radius: 9px !important;
+            }
+
+            /* Cards & Lists */
+            #fiches-list {
+                padding: 8px 8px 90px 8px !important;
+                gap: 10px !important;
+            }
+
+            .fiche-card {
+                padding: 14px 12px !important;
+                border-radius: 16px !important;
+                gap: 10px !important;
+            }
+
+            .card-header .designation {
+                font-size: 0.95rem !important;
+                line-height: 1.2 !important;
+            }
+
+            .code-badge {
+                font-size: 0.6rem !important;
+                padding: 3px 7px !important;
+            }
+
+            .pdf-btn {
+                padding: 4px 8px !important;
+                font-size: 0.65rem !important;
+            }
+
+            .card-stats-row {
+                gap: 6px !important;
+            }
+
+            .stat-chip {
+                padding: 5px 9px !important;
+                border-radius: 10px !important;
+                font-size: 0.68rem !important;
+                gap: 6px !important;
+            }
+
+            .stat-chip .stat-label {
+                font-size: 0.58rem !important;
+            }
+
+            .stat-chip .stat-value {
+                font-size: 0.76rem !important;
+            }
+
+            .prep-section {
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+            }
+
+            .prep-box {
+                padding: 10px 8px !important;
+                border-radius: 12px !important;
+            }
+
+            .prep-tags {
+                gap: 6px !important;
+                padding: 2px 0 6px 0 !important;
+            }
+
+            .mini-tag {
+                padding: 3px 8px !important;
+                font-size: 0.65rem !important;
+            }
+
+            .obs-card-footer {
+                padding: 10px 10px !important;
+                font-size: 0.75rem !important;
+                border-radius: 12px !important;
+            }
+
+            /* Floating Action Buttons */
+            #addBtn {
+                width: 52px !important;
+                height: 52px !important;
+                min-width: 52px !important;
+                max-width: 52px !important;
+                padding: 0 !important;
+                border-radius: 50% !important;
+                bottom: 22px !important;
+                right: 18px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-indent: -9999px !important;
+                box-shadow: 0 10px 25px rgba(79, 70, 229, 0.45) !important;
+            }
+
+            #addBtn::before {
+                content: '+' !important;
+                position: absolute !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                font-size: 2rem !important;
+                font-weight: 700 !important;
+                line-height: 1 !important;
+                color: white !important;
+                text-indent: 0 !important;
+            }
+
+            #maskMainRibbonBtn {
+                bottom: 84px !important;
+                right: 22px !important;
+                width: 42px !important;
+                height: 42px !important;
+                min-width: 42px !important;
+                max-width: 42px !important;
+                font-size: 0.9rem !important;
+            }
+
+            /* Modals & Forms */
             .modal-overlay {
-                padding: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                padding: 8px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
             }
 
             .modal-content {
-                padding: 20px 14px;
-                margin: auto;
-                max-height: 90vh;
-                border-radius: 20px;
-                width: 100%;
-                max-width: 100%;
-                box-sizing: border-box;
-                overflow-y: auto;
-                overflow-x: hidden;
-                -webkit-overflow-scrolling: touch;
+                padding: 20px 14px !important;
+                margin: auto !important;
+                max-height: 90vh !important;
+                border-radius: 20px !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch !important;
             }
 
             .modal-content form>div[style*="grid-template-columns"],
@@ -954,20 +1113,7 @@
                 flex-wrap: wrap !important;
             }
 
-            .stat-chip {
-                padding: 6px 12px;
-                font-size: 0.7rem;
-            }
-
-            .stat-value {
-                font-size: 0.75rem;
-            }
-
-            .prep-section {
-                grid-template-columns: 1fr;
-            }
-
-            /* Prevent iOS zoom on inputs by setting font-size to 16px min AND reduce excessive padding */
+            /* Prevent iOS zoom on inputs */
             input.form-input,
             select.form-input,
             textarea.form-input {
@@ -981,13 +1127,51 @@
                 padding: 12px !important;
                 font-size: 0.85rem !important;
                 flex: 1 1 100% !important;
-                /* Stack them vertically on very small screens */
             }
 
             .menu-btn {
                 flex: 1 1 100% !important;
                 padding: 14px 12px !important;
                 font-size: 0.85rem !important;
+            }
+
+            /* Accueil */
+            .accueil-hero {
+                padding: 18px 14px 22px !important;
+                border-radius: 0 0 22px 22px !important;
+                margin-bottom: -10px !important;
+            }
+
+            .accueil-clock {
+                font-size: 2.5rem !important;
+                letter-spacing: -1px !important;
+            }
+
+            .accueil-greeting {
+                font-size: 0.9rem !important;
+            }
+
+            #accueil-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 10px !important;
+            }
+
+            .accueil-card-new {
+                padding: 15px 10px 12px !important;
+                border-radius: 16px !important;
+            }
+
+            .accueil-card-icon {
+                font-size: 2rem !important;
+                margin-bottom: 5px !important;
+            }
+
+            .accueil-card-label {
+                font-size: 0.85rem !important;
+            }
+
+            .accueil-card-sub {
+                font-size: 0.62rem !important;
             }
         }
 
@@ -1835,43 +2019,43 @@
                 data-tab-id="programme">📅 Programme</button>
         </div>
 
-        <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
-            <div class="search-container" style="flex: 1; min-width: 150px;">
+        <div class="header-toolbar" id="headerToolbar">
+            <div class="search-container search-container-main">
                 <span class="search-icon">🔍</span>
                 <input type="text" id="searchInput" class="search-input" placeholder="Produit, lot, code..."
                     autocomplete="off" list="search-history-list">
                 <datalist id="search-history-list"></datalist>
             </div>
-            <div class="search-container" style="width: auto; flex: 0 0 auto; display: flex; gap: 5px;">
+            <div class="search-container search-container-dates" id="dateFiltersWrapper">
                 <input type="date" id="dateFilterStart" class="search-input" style="padding: 10px; width: 130px;"
                     onchange="render()" title="Du (début)">
                 <input type="date" id="dateFilterEnd" class="search-input" style="padding: 10px; width: 130px;"
                     onchange="render()" title="Au (fin)">
+            </div>
+            <div class="toolbar-actions-row" id="toolbarActionsRow">
                 <button id="excelPrepBtn" onclick="window.exportPrepToExcel()"
-                    style="display: none; background: rgba(16, 185, 129, 0.1); border: 1.5px solid #10b981; padding: 0 14px; border-radius: 12px; color: #10b981; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;">
+                    style="display: none; background: rgba(16, 185, 129, 0.1); border: 1.5px solid #10b981; padding: 0 14px; border-radius: 12px; color: #10b981; cursor: pointer; height: 36px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;">
                     <span>📊 EXCEL</span>
                 </button>
+                <button id="importDirectBtn" onclick="window.importNewRegistry()"
+                    style="display: none; background: rgba(59, 130, 246, 0.1); border: 1.5px solid #3b82f6; padding: 0 14px; border-radius: 12px; color: #3b82f6; cursor: pointer; height: 36px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;">
+                    <span>📤 IMPORT RAPIDE Excel</span>
+                </button>
+                <button id="sortBtn" onclick="toggleSort()"
+                    style="background: #fff; border: 1.5px solid var(--glass-border); padding: 0 14px; border-radius: 12px; color: var(--text-dim); cursor: pointer; height: 36px; display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;">
+                    <span id="sortBtnIcon">📅</span><span id="sortBtnLabel">Date ↓</span>
+                </button>
+                <button id="exportSyncBtn" onclick="window.triggerSyncExport()"
+                    style="background: #10b981; border: none; padding: 0 14px; border-radius: 12px; color: white; cursor: pointer; height: 36px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.3s;">
+                    <span>📤 EXPORT BDD</span>
+                </button>
+                <button id="pcImportSyncBtn" onclick="window.triggerPcToFirebaseImport()"
+                    style="background: #8b5cf6; border: none; padding: 0 14px; border-radius: 12px; color: white; cursor: pointer; height: 36px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.3s;">
+                    <span>📥 IMPORT PC</span>
+                </button>
+                <input type="file" id="pcImportFileInput" style="display:none" accept=".json"
+                    onchange="window.processPcImportFile(event)">
             </div>
-            <button id="importDirectBtn" onclick="window.importNewRegistry()"
-                style="display: none; background: rgba(59, 130, 246, 0.1); border: 1.5px solid #3b82f6; padding: 0 14px; border-radius: 12px; color: #3b82f6; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;">
-                <span>📤 IMPORT RAPIDE Excel</span>
-            </button>
-            <button id="sortBtn" onclick="toggleSort()"
-                style="background: #fff; border: 1.5px solid var(--glass-border); padding: 0 14px; border-radius: 12px; color: var(--text-dim); cursor: pointer; height: 40px; display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: all 0.3s;"
-                id="sortBtn">
-                <span id="sortBtnIcon">📅</span><span id="sortBtnLabel">Date ↓</span>
-            </button>
-            <button id="exportSyncBtn" onclick="window.triggerSyncExport()"
-                style="background: #10b981; border: none; padding: 0 14px; border-radius: 12px; color: white; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.3s;">
-                <span>📤 EXPORT BDD</span>
-            </button>
-            <button id="pcImportSyncBtn" onclick="window.triggerPcToFirebaseImport()"
-                style="background: #8b5cf6; border: none; padding: 0 14px; border-radius: 12px; color: white; cursor: pointer; height: 40px; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: all 0.3s;">
-                <span>📥 IMPORT PC</span>
-            </button>
-            <input type="file" id="pcImportFileInput" style="display:none" accept=".json"
-                onchange="window.processPcImportFile(event)">
-
         </div>
         <div id="selectionActions"
             style="display: none; margin-top: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -4222,6 +4406,17 @@
             const importDirectBtn = document.getElementById('importDirectBtn');
             const excelPrepBtn = document.getElementById('excelPrepBtn');
 
+            const toolbar = document.getElementById('headerToolbar');
+            if (toolbar) {
+                if (tab === 'accueil') {
+                    toolbar.classList.add('is-hidden');
+                    toolbar.style.display = 'none';
+                } else {
+                    toolbar.classList.remove('is-hidden');
+                    toolbar.style.display = 'flex';
+                }
+            }
+
             if (importDirectBtn) {
                 importDirectBtn.style.display = (tab === 'registres') ? 'flex' : 'none';
             }
@@ -4230,9 +4425,11 @@
             }
 
             if (addBtn && searchInput) {
-                if (tab === 'programme') {
+                if (tab === 'accueil' || tab === 'programme') {
+                    addBtn.classList.add('is-hidden');
                     addBtn.style.display = 'none';
                 } else {
+                    addBtn.classList.remove('is-hidden');
                     addBtn.style.display = 'flex';
                 }
                 if (tab === 'accueil') {

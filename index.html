@@ -1831,6 +1831,8 @@
                 data-tab-id="fertilite"> Fertilité</button>
             <button onclick="window.switchTab('taches')" id="tab-taches" class="main-tab" draggable="true"
                 data-tab-id="taches">📝 Tâches</button>
+            <button onclick="window.switchTab('programme')" id="tab-programme" class="main-tab" draggable="true"
+                data-tab-id="programme">📅 Programme</button>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; flex-wrap: wrap;">
@@ -4228,6 +4230,11 @@
             }
 
             if (addBtn && searchInput) {
+                if (tab === 'programme') {
+                    addBtn.style.display = 'none';
+                } else {
+                    addBtn.style.display = 'flex';
+                }
                 if (tab === 'accueil') {
                     addBtn.innerText = "+ NOUVELLE FICHE"; 
                     searchInput.placeholder = "Navigation accueil...";
@@ -4256,6 +4263,9 @@
                 } else if (tab === 'fertilite') {
                     addBtn.innerText = "+ NOUVEAU MC FERTILITÉ";
                     searchInput.placeholder = "Chercher un milieu, souche, méthode...";
+                } else if (tab === 'programme') {
+                    addBtn.style.display = 'none';
+                    searchInput.placeholder = "Chercher un produit dans le programme...";
                 }
             }
             try {
@@ -4269,7 +4279,7 @@
         // --- GESTION DU SWIPE POUR CHANGER D'ONGLET ---
         let touchstartX = 0;
         let touchendX = 0;
-        const tabsOrder = ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite'];
+        const tabsOrder = ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'taches', 'programme'];
 
         // ===========================
         // REORDER DES ONGLETs PRINCIPAUX (SortableJS)
@@ -4277,7 +4287,7 @@
         window.mainTabsOrderStorageKey = 'microbio_main_tabs_order';
 
         function getMainTabsDefaultOrder() {
-            return ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite'];
+            return ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'taches', 'programme'];
         }
 
         window.__mainTabsInitDone = false;
@@ -6579,6 +6589,7 @@
                     { id: 'germes',    icon: '🦠', label: 'Germes',        sub: 'Base germes',         bg: 'linear-gradient(135deg, #6366f1 0%, #3730a3 100%)', shadow: '0 12px 28px rgba(99,102,241,0.45)' },
                     { id: 'fertilite', icon: '🧫', label: 'Fertilité',     sub: 'Test de fertilité',   bg: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)', shadow: '0 12px 28px rgba(20,184,166,0.45)' },
                     { id: 'taches',    icon: '📝', label: 'Tâches',        sub: 'Suivi des tâches',    bg: 'linear-gradient(135deg, #f43f5e 0%, #9f1239 100%)', shadow: '0 12px 28px rgba(244,63,94,0.45)' },
+                    { id: 'programme', icon: '📅', label: 'Programme',     sub: 'Planning mensuel',    bg: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', shadow: '0 12px 28px rgba(2,132,199,0.45)' },
                 ];
 
                 // Load saved order
@@ -13923,6 +13934,12 @@
             reader.readAsText(file);
         };
     </script>
+
+    <!-- ===== MODULE PROGRAMME DE PRODUCTION ===== -->
+    <div id="view-programme" style="display:none; padding:0; flex-direction:column; min-height:60vh;">
+    </div>
+
+    <script src="programme.js"></script>
 
 </body>
 

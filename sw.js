@@ -1,8 +1,9 @@
-// MICROBIO v4.11.0 - Service Worker avec Cache-First + Offline complet
-const CACHE_NAME = 'microbio-cache-v4.11.0';
+// MICROBIO v4.12.3 - Service Worker avec Cache-First + Offline complet
+const CACHE_NAME = 'microbio-cache-v4.12.3';
 const ASSETS = [
   './',
   './index.html',
+  './programme.js',
   './manifest.json',
   './sohaib.png',
   'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',

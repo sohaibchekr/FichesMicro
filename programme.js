@@ -204,7 +204,7 @@
 
         /* RESPONSIVE MEDIA QUERIES (MOBILE) */
         @media (max-width: 768px) {
-            #prog-container { padding: 10px 6px; }
+            #prog-container { padding: 10px 6px; box-sizing: border-box; width: 100%; max-width: 100vw; overflow-x: hidden; }
             .prog-header-card { padding: 16px 14px; border-radius: 18px; margin-bottom: 12px; }
             .prog-kpi-grid {
                 grid-template-columns: repeat(2, 1fr) !important;

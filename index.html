@@ -19,19 +19,22 @@
             font-family: inherit;
         }
 
-        html,
-        body {
+        html {
             width: 100%;
             height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            width: 100%;
+            min-height: 100%;
             margin: 0;
             padding: 0;
             background: #f8fafc;
             overscroll-behavior-x: hidden;
             overscroll-behavior-y: auto;
             overflow-x: hidden;
-        }
-
-        body {
+            overflow-y: auto;
             font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
             color: #000000;
             user-select: none;
@@ -51,6 +54,11 @@
         input[type="text"],
         textarea {
             text-transform: uppercase;
+        }
+
+        /* Touch-action sur les cartes navigables */
+        .accueil-card-new, .accueil-card, .main-tab, .fiche-card {
+            touch-action: manipulation;
         }
     </style>
     <title>MICROBIO v4.5.0 - Labo</title>
@@ -343,6 +351,9 @@
             grid-template-columns: 1fr;
             gap: 16px;
             flex: 1;
+            align-content: start;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .fiche-card {
@@ -948,8 +959,11 @@
 
             /* Cards & Lists */
             #fiches-list {
-                padding: 8px 8px 90px 8px !important;
+                padding: 8px 8px 100px 8px !important;
                 gap: 10px !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior-y: contain !important;
             }
 
             .fiche-card {
@@ -1147,24 +1161,28 @@
             #accueil-grid {
                 grid-template-columns: repeat(2, 1fr) !important;
                 gap: 10px !important;
+                padding: 0 4px !important;
             }
 
             .accueil-card-new {
-                padding: 15px 10px 12px !important;
+                padding: 14px 8px 12px !important;
                 border-radius: 16px !important;
+                min-height: 100px !important;
+                touch-action: manipulation !important;
+                -webkit-tap-highlight-color: rgba(255,255,255,0.15) !important;
             }
 
             .accueil-card-icon {
-                font-size: 2rem !important;
+                font-size: 1.9rem !important;
                 margin-bottom: 5px !important;
             }
 
             .accueil-card-label {
-                font-size: 0.85rem !important;
+                font-size: 0.82rem !important;
             }
 
             .accueil-card-sub {
-                font-size: 0.62rem !important;
+                font-size: 0.6rem !important;
             }
         }
 
@@ -4558,7 +4576,7 @@
             if (typeof Sortable !== 'undefined') {
                 new Sortable(container, {
                     animation: 150,
-                    delay: 150, // Délai long press pour mobile
+                    delay: 500, // 500ms long press pour mobile — assez long pour pas intercepter les taps normaux
                     delayOnTouchOnly: true,
                     dataIdAttr: 'data-tab-id',
                     onStart: function (evt) {
@@ -4601,12 +4619,12 @@
 
         document.addEventListener('touchstart', e => {
             // Ne pas déclencher le swipe si on est dans une zone scrollable horizontalement ou en calculatrice
-            if (e.target.closest('.prep-tags, .main-tabs, .calc-tabs, #calcOverlay, #calcOverlay * , .modal-content, .reg-table')) return;
+            if (e.target.closest('.header, .prep-tags, .main-tabs, .calc-tabs, #calcOverlay, #calcOverlay *, .modal-content, .reg-table, #accueil-grid, .accueil-card, .accueil-card-new')) return;
             touchstartX = e.changedTouches[0].screenX;
         }, { passive: true });
 
         document.addEventListener('touchend', e => {
-            if (e.target.closest('.prep-tags, .main-tabs, .calc-tabs, #calcOverlay, #calcOverlay * , .modal-content, .reg-table')) return;
+            if (e.target.closest('.header, .prep-tags, .main-tabs, .calc-tabs, #calcOverlay, #calcOverlay *, .modal-content, .reg-table, #accueil-grid, .accueil-card, .accueil-card-new')) return;
             touchendX = e.changedTouches[0].screenX;
             handleGesture();
         }, { passive: true });
@@ -6808,13 +6826,7 @@
             const container = fichesList;
 
             if (window.currentTab === 'accueil') {
-                // Fast path: if grid already rendered, just update clock and skip full rebuild
-                const existingGrid = document.getElementById('accueil-grid');
-                if (existingGrid && existingGrid.children.length > 0) {
-                    const clockEl = document.getElementById('accueil-live-clock');
-                    if (clockEl) clockEl.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                    return;
-                }
+                // Always re-render accueil fully to ensure touch events are properly bound
                 const ACCUEIL_STORAGE_KEY = 'microbio_accueil_order';
                 const allBtns = [
                     { id: 'fiches',    icon: '📋', label: 'Fiches',        sub: 'Gestion fiches',      bg: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', shadow: '0 12px 28px rgba(59,130,246,0.45)' },
@@ -6934,6 +6946,12 @@
                             transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s;
                             -webkit-user-select: none;
                             user-select: none;
+                            touch-action: manipulation;
+                            -webkit-tap-highlight-color: rgba(255,255,255,0.2);
+                            pointer-events: auto;
+                        }
+                        .accueil-card-new * {
+                            pointer-events: none;
                         }
                         .accueil-card-new::after {
                             content: '';
@@ -6945,9 +6963,9 @@
                             pointer-events: none;
                         }
                         .accueil-card-new:active { transform: scale(0.94) !important; }
-                        .accueil-card-icon { font-size: 2.6rem; margin-bottom: 10px; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25)); pointer-events: none; }
-                        .accueil-card-label { font-weight: 800; font-size: 0.92rem; color: #fff; pointer-events: none; }
-                        .accueil-card-sub { font-size: 0.65rem; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 3px; pointer-events: none; }
+                        .accueil-card-icon { font-size: 2.6rem; margin-bottom: 10px; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25)); }
+                        .accueil-card-label { font-weight: 800; font-size: 0.92rem; color: #fff; }
+                        .accueil-card-sub { font-size: 0.65rem; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 3px; }
                         .accueil-drag-hint {
                             text-align: center;
                             color: #9ca3af;
@@ -6974,10 +6992,9 @@
                         <!-- CARDS GRID -->
                         <div style="padding: 28px 16px 0;">
                             <div class="accueil-section-title">Navigation rapide</div>
-                            <div id="accueil-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 13px;">
+                            <div id="accueil-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px;">
                                 ${orderedBtns.map(b => `
                                     <div data-id="${b.id}" data-tab="${b.id}" class="accueil-card-new accueil-card"
-                                        onclick="if(!window.__accueilDragging) window.switchTab('${b.id}')"
                                         style="background:${b.bg}; box-shadow:${b.shadow};">
                                         <div class="accueil-card-icon">${b.icon}</div>
                                         <div class="accueil-card-label">${b.label}</div>
@@ -7001,8 +7018,9 @@
 
                 // SortableJS drag-to-reorder
                 // delay=600ms so quick taps still fire onclick (not swallowed by drag)
-                if (typeof Sortable !== 'undefined') {
-                    const grid = document.getElementById('accueil-grid');
+                const grid = document.getElementById('accueil-grid');
+                if (typeof Sortable !== 'undefined' && grid && !grid._sortableInit) {
+                    grid._sortableInit = true;
                     new Sortable(grid, {
                         animation: 150,
                         delay: 600,
@@ -7033,14 +7051,27 @@
                         const dt = Date.now() - _tts;
                         const dx = Math.abs(e.changedTouches[0].clientX - _tsx);
                         const dy = Math.abs(e.changedTouches[0].clientY - _tsy);
-                        if (dt < 350 && dx < 15 && dy < 15) {
+                        // Tap court et sans mouvement significatif (tolérance large pour mobile)
+                        if (dt < 500 && dx < 30 && dy < 30) {
                             const card = e.target.closest('[data-tab]');
                             if (card) {
                                 e.preventDefault();
+                                e.stopPropagation();
                                 window.switchTab(card.dataset.tab);
                             }
                         }
                     }, { passive: false });
+
+                    // Click fallback for devices where touchend doesn't fire reliably
+                    accGrid.addEventListener('click', function(e) {
+                        if (window.__accueilDragging) return;
+                        const card = e.target.closest('[data-tab]');
+                        if (card) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.switchTab(card.dataset.tab);
+                        }
+                    });
                 }
 
                 return;

@@ -649,7 +649,7 @@
             box-shadow: 0 15px 35px var(--primary-glow);
             cursor: pointer;
             transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-            z-index: 2000;
+            z-index: 2200; /* keep FAB above modal overlay */
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
@@ -679,11 +679,13 @@
             opacity: 0;
             transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
             padding: 20px;
+            pointer-events: none; /* prevent hidden overlay from capturing touches */
         }
 
         .modal-overlay.active {
             display: flex !important;
             opacity: 1;
+            pointer-events: auto; /* allow interaction when modal is shown */
         }
 
         .modal-content {
@@ -714,6 +716,7 @@
             -webkit-overflow-scrolling: touch;
             padding: 5px 0;
             width: 100%;
+            z-index: 2200; /* keep tabs above modal overlay */
         }
 
         .main-tabs::-webkit-scrollbar {

@@ -4396,77 +4396,38 @@
 
             // ===========================
             // FIX MOBILE TOUCH UNIVERSEL
-            // Contourne SortableJS qui bloque les onclick sur mobile
+            // On détecte si c'est un écran tactile et on désactive SortableJS
+            // + on ajoute un gestionnaire de tap global
             // ===========================
+            window._isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+            // Gestionnaire GLOBAL : tout tap court sur un bouton déclenche un click
             (function fixMobileTaps() {
-                let _tapTs = 0, _tapX = 0, _tapY = 0;
+                if (!window._isTouchDevice) return;
 
-                // --- FIX 1: Onglets mainTabs (le ruban d'onglets) ---
-                const mainTabsEl = document.getElementById('mainTabs');
-                if (mainTabsEl) {
-                    mainTabsEl.addEventListener('touchstart', function(e) {
-                        _tapTs = Date.now();
-                        _tapX = e.touches[0].clientX;
-                        _tapY = e.touches[0].clientY;
-                    }, { passive: true });
+                let _ts = 0, _tx = 0, _ty = 0;
+                document.addEventListener('touchstart', function(e) {
+                    _ts = Date.now();
+                    _tx = e.touches[0].clientX;
+                    _ty = e.touches[0].clientY;
+                }, { passive: true, capture: true });
 
-                    mainTabsEl.addEventListener('touchend', function(e) {
-                        if (window.__isDraggingMainTabs) return;
-                        const dt = Date.now() - _tapTs;
-                        const dx = Math.abs(e.changedTouches[0].clientX - _tapX);
-                        const dy = Math.abs(e.changedTouches[0].clientY - _tapY);
-                        if (dt < 500 && dx < 30 && dy < 30) {
-                            const btn = e.target.closest('[data-tab-id]');
-                            if (btn) {
-                                e.preventDefault();
-                                e.stopImmediatePropagation();
-                                const tabId = btn.getAttribute('data-tab-id');
-                                if (tabId) window.switchTab(tabId);
-                            }
+                document.addEventListener('touchend', function(e) {
+                    const dt = Date.now() - _ts;
+                    const dx = Math.abs(e.changedTouches[0].clientX - _tx);
+                    const dy = Math.abs(e.changedTouches[0].clientY - _ty);
+                    // Tap court (< 400ms) et sans mouvement (< 25px)
+                    if (dt < 400 && dx < 25 && dy < 25) {
+                        // Chercher l'élément cliquable le plus proche
+                        const el = e.target.closest('button, [onclick], [data-tab], [data-tab-id], .accueil-card-new, .main-tab, .fiche-card, .menu-btn, .fab, .pick-btn, .calc-tab, .chip, .pdf-btn, .save-btn, .cancel-btn, .delete-btn, .close-modal');
+                        if (el) {
+                            e.preventDefault();
+                            el.click();
                         }
-                    }, { passive: false });
-                }
+                    }
+                }, { passive: false, capture: true });
 
-                // --- FIX 2: Boutons header-top (🏠, 🧮, 🗸) ---
-                const headerTop = document.querySelector('.header-top');
-                if (headerTop) {
-                    headerTop.addEventListener('touchstart', function(e) {
-                        _tapTs = Date.now();
-                        _tapX = e.touches[0].clientX;
-                        _tapY = e.touches[0].clientY;
-                    }, { passive: true });
-
-                    headerTop.addEventListener('touchend', function(e) {
-                        const dt = Date.now() - _tapTs;
-                        const dx = Math.abs(e.changedTouches[0].clientX - _tapX);
-                        const dy = Math.abs(e.changedTouches[0].clientY - _tapY);
-                        if (dt < 500 && dx < 30 && dy < 30) {
-                            const btn = e.target.closest('button');
-                            if (btn) {
-                                e.preventDefault();
-                                e.stopImmediatePropagation();
-                                // Déclencher le onclick du bouton directement
-                                if (btn.onclick) {
-                                    btn.onclick.call(btn, e);
-                                } else if (btn.id === 'openCalcBtn' && window.openCalculator) {
-                                    window.openCalculator();
-                                } else if (btn.id === 'toggleSelectBtn' && window.toggleSelectionMode) {
-                                    window.toggleSelectionMode();
-                                }
-                            }
-                        }
-                    }, { passive: false });
-                }
-
-                // --- FIX 3: Bouton FAB (+) et bouton masquer ruban ---
-                document.querySelectorAll('#addBtn, #maskMainRibbonBtn').forEach(function(btn) {
-                    btn.addEventListener('touchend', function(e) {
-                        e.preventDefault();
-                        btn.click();
-                    }, { passive: false });
-                });
-
-                console.log('[MICROBIO] Mobile tap fix applied ✅');
+                console.log('[MICROBIO] Mobile global tap fix applied ✅');
             })();
 
             // Toujours démarrer sur l'écran Accueil
@@ -4648,11 +4609,11 @@
                 console.warn('Erreur lecture ordre tabs', e);
             }
 
-            // Init SortableJS
-            if (typeof Sortable !== 'undefined') {
+            // Init SortableJS - DESKTOP SEULEMENT (sur mobile ça bloque les taps)
+            if (typeof Sortable !== 'undefined' && !window._isTouchDevice) {
                 new Sortable(container, {
                     animation: 150,
-                    delay: 500, // 500ms long press pour mobile — assez long pour pas intercepter les taps normaux
+                    delay: 500,
                     delayOnTouchOnly: true,
                     dataIdAttr: 'data-tab-id',
                     onStart: function (evt) {
@@ -7092,10 +7053,9 @@
                     else clearInterval(window._accueilClockInterval);
                 }, 10000);
 
-                // SortableJS drag-to-reorder
-                // delay=600ms so quick taps still fire onclick (not swallowed by drag)
+                // SortableJS drag-to-reorder - DESKTOP SEULEMENT
                 const grid = document.getElementById('accueil-grid');
-                if (typeof Sortable !== 'undefined' && grid && !grid._sortableInit) {
+                if (typeof Sortable !== 'undefined' && grid && !grid._sortableInit && !window._isTouchDevice) {
                     grid._sortableInit = true;
                     new Sortable(grid, {
                         animation: 150,

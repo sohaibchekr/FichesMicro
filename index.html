@@ -5,18 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <!-- JSpreadsheet / Excel (Fallback/Ancien) -->
-    <script src="assets/jsuites.js"></script>
+    <script src="assets/jsuites.js" defer></script>
     <link rel="stylesheet" href="assets/jsuites.css" type="text/css" />
-    <script src="assets/jexcel.js"></script>
+    <script src="assets/jexcel.js" defer></script>
     <link rel="stylesheet" href="assets/jexcel.css" type="text/css" />
-
-    <!-- Luckysheet (Clone Microsoft Office Excel) -->
-    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/css/pluginsCss.css' />
-    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/plugins.css' />
-    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/css/luckysheet.css' />
-    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/assets/iconfont/iconfont.css' />
-    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/js/plugin.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js"></script>
+    <!-- Luckysheet scripts are loaded ON DEMAND in initExcel() to avoid blocking startup -->
     <style>
         * {
             margin: 0;
@@ -67,11 +60,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
-    <!-- OCR Library (Tesseract.js) -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- OCR Library (Tesseract.js) - deferred to avoid blocking -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 
-    <!-- Excel (SheetJS) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Excel (SheetJS) - deferred to avoid blocking -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 
     <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2115,32 +2108,72 @@
     <script>
         window.mySpreadsheet = null;
 
-        window.initExcel = function () {
-            if (typeof luckysheet === 'undefined') {
-                document.getElementById('luckysheet').innerHTML = '<p style="padding:30px; color:red;">⚠️ Bibliothèque Luckysheet introuvable. Connexion internet requise pour charger Excel Officiel.</p>';
-                return;
+        window._luckysheetLoading = false;
+        window._luckysheetLoaded = false;
+
+        function _loadLuckysheetAssets(callback) {
+            if (window._luckysheetLoaded) { callback(); return; }
+            if (window._luckysheetLoading) { setTimeout(() => _loadLuckysheetAssets(callback), 200); return; }
+            window._luckysheetLoading = true;
+            const container = document.getElementById('luckysheet');
+            if (container) container.innerHTML = '<p style="padding:30px; color:#4f46e5; text-align:center;">⏳ Chargement du tableur…</p>';
+
+            // CSS assets
+            const cssUrls = [
+                'https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/css/pluginsCss.css',
+                'https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/plugins.css',
+                'https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/css/luckysheet.css',
+                'https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/assets/iconfont/iconfont.css'
+            ];
+            cssUrls.forEach(url => {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet'; link.href = url;
+                document.head.appendChild(link);
+            });
+
+            // JS assets (must be sequential)
+            function loadScript(src, next) {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = next;
+                s.onerror = () => { console.error('Failed to load:', src); next(); };
+                document.head.appendChild(s);
             }
-            try {
-                const saved = localStorage.getItem('micro_luckysheet_v1');
-                let sheets = [{ name: 'Feuille 1', status: 1, order: 0, celldata: [] }];
-                if (saved) {
-                    sheets = JSON.parse(saved);
-                }
-                luckysheet.create({
-                    container: 'luckysheet',
-                    lang: 'fr',
-                    data: sheets,
-                    showinfobar: false,
-                    enableAddBackTop: false,
-                    showtoolbarConfig: {
-                        image: true,
-                        print: true
-                    },
+
+            loadScript('https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/js/plugin.js', () => {
+                loadScript('https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js', () => {
+                    window._luckysheetLoading = false;
+                    window._luckysheetLoaded = true;
+                    callback();
                 });
-                window.mySpreadsheet = true; // flag
-            } catch (e) {
-                console.error('Luckysheet init error:', e);
-            }
+            });
+        }
+
+        window.initExcel = function () {
+            _loadLuckysheetAssets(function() {
+                if (typeof luckysheet === 'undefined') {
+                    document.getElementById('luckysheet').innerHTML = '<p style="padding:30px; color:red;">⚠️ Bibliothèque Luckysheet introuvable. Vérifiez votre connexion internet.</p>';
+                    return;
+                }
+                try {
+                    const saved = localStorage.getItem('micro_luckysheet_v1');
+                    let sheets = [{ name: 'Feuille 1', status: 1, order: 0, celldata: [] }];
+                    if (saved) { sheets = JSON.parse(saved); }
+                    const container = document.getElementById('luckysheet');
+                    if (container) container.innerHTML = '';
+                    luckysheet.create({
+                        container: 'luckysheet',
+                        lang: 'fr',
+                        data: sheets,
+                        showinfobar: false,
+                        enableAddBackTop: false,
+                        showtoolbarConfig: { image: true, print: true },
+                    });
+                    window.mySpreadsheet = true;
+                } catch (e) {
+                    console.error('Luckysheet init error:', e);
+                }
+            });
         };
 
         window.saveLuckysheetData = function () {

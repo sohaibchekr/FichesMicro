@@ -4393,6 +4393,82 @@
                 m.classList.remove('active');
             });
             initMainTabsOnce();
+
+            // ===========================
+            // FIX MOBILE TOUCH UNIVERSEL
+            // Contourne SortableJS qui bloque les onclick sur mobile
+            // ===========================
+            (function fixMobileTaps() {
+                let _tapTs = 0, _tapX = 0, _tapY = 0;
+
+                // --- FIX 1: Onglets mainTabs (le ruban d'onglets) ---
+                const mainTabsEl = document.getElementById('mainTabs');
+                if (mainTabsEl) {
+                    mainTabsEl.addEventListener('touchstart', function(e) {
+                        _tapTs = Date.now();
+                        _tapX = e.touches[0].clientX;
+                        _tapY = e.touches[0].clientY;
+                    }, { passive: true });
+
+                    mainTabsEl.addEventListener('touchend', function(e) {
+                        if (window.__isDraggingMainTabs) return;
+                        const dt = Date.now() - _tapTs;
+                        const dx = Math.abs(e.changedTouches[0].clientX - _tapX);
+                        const dy = Math.abs(e.changedTouches[0].clientY - _tapY);
+                        if (dt < 500 && dx < 30 && dy < 30) {
+                            const btn = e.target.closest('[data-tab-id]');
+                            if (btn) {
+                                e.preventDefault();
+                                e.stopImmediatePropagation();
+                                const tabId = btn.getAttribute('data-tab-id');
+                                if (tabId) window.switchTab(tabId);
+                            }
+                        }
+                    }, { passive: false });
+                }
+
+                // --- FIX 2: Boutons header-top (🏠, 🧮, 🗸) ---
+                const headerTop = document.querySelector('.header-top');
+                if (headerTop) {
+                    headerTop.addEventListener('touchstart', function(e) {
+                        _tapTs = Date.now();
+                        _tapX = e.touches[0].clientX;
+                        _tapY = e.touches[0].clientY;
+                    }, { passive: true });
+
+                    headerTop.addEventListener('touchend', function(e) {
+                        const dt = Date.now() - _tapTs;
+                        const dx = Math.abs(e.changedTouches[0].clientX - _tapX);
+                        const dy = Math.abs(e.changedTouches[0].clientY - _tapY);
+                        if (dt < 500 && dx < 30 && dy < 30) {
+                            const btn = e.target.closest('button');
+                            if (btn) {
+                                e.preventDefault();
+                                e.stopImmediatePropagation();
+                                // Déclencher le onclick du bouton directement
+                                if (btn.onclick) {
+                                    btn.onclick.call(btn, e);
+                                } else if (btn.id === 'openCalcBtn' && window.openCalculator) {
+                                    window.openCalculator();
+                                } else if (btn.id === 'toggleSelectBtn' && window.toggleSelectionMode) {
+                                    window.toggleSelectionMode();
+                                }
+                            }
+                        }
+                    }, { passive: false });
+                }
+
+                // --- FIX 3: Bouton FAB (+) et bouton masquer ruban ---
+                document.querySelectorAll('#addBtn, #maskMainRibbonBtn').forEach(function(btn) {
+                    btn.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        btn.click();
+                    }, { passive: false });
+                });
+
+                console.log('[MICROBIO] Mobile tap fix applied ✅');
+            })();
+
             // Toujours démarrer sur l'écran Accueil
             window.switchTab('accueil');
         });

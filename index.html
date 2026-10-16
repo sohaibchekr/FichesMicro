@@ -2039,6 +2039,8 @@
                 data-tab-id="fertilite"> Fertilité</button>
             <button onclick="window.switchTab('taches')" id="tab-taches" class="main-tab"
                 data-tab-id="taches">📝 Tâches</button>
+            <button onclick="window.switchTab('instances')" id="tab-instances" class="main-tab"
+                data-tab-id="instances">⚖️ Instances</button>
             <button onclick="window.switchTab('programme')" id="tab-programme" class="main-tab"
                 data-tab-id="programme">📅 Programme</button>
         </div>
@@ -3329,23 +3331,37 @@
                 <div class="section-divider"><span class="section-label">📜 Protocole Opératoire</span></div>
 
                 <div class="form-group"
-                    style="background: rgba(14, 165, 233, 0.05); padding: 12px; border-radius: 14px; border: 1px solid rgba(14, 165, 233, 0.1);">
-                    <label
-                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-wrap:wrap; gap:6px;">
-                        <span>Étapes du Protocole</span>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" onclick="addProtocolGermesPreset()"
-                                style="background:var(--secondary); color:white; border:none; border-radius:6px; padding:4px 8px; font-size:0.65rem; font-weight:800; cursor:pointer;">+
-                                Modèle Germes / Dilution</button>
-                            <button type="button" onclick="addProtocolStep()"
-                                style="background:var(--primary); color:white; border:none; border-radius:6px; padding:6px 12px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 2px 5px rgba(79,70,229,0.3);">+
-                                Ajouter Étape</button>
+                    style="background: rgba(14, 165, 233, 0.05); padding: 12px; border-radius: 14px; border: 1px solid rgba(14, 165, 233, 0.15);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-wrap:wrap; gap:6px;">
+                        <span style="font-weight:800; font-size:0.82rem; color:var(--text-main); display:flex; align-items:center; gap:5px;">
+                            <span>🧬 Logigramme & Schéma de Méthode</span>
+                        </span>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button type="button" onclick="window.clearProtocolSteps()"
+                                style="background:#ef4444; color:white; border:none; border-radius:6px; padding:5px 9px; font-size:0.65rem; font-weight:800; cursor:pointer;" title="Vider toutes les étapes">🗑️ Vider</button>
+                            <button type="button" onclick="window.addProtocolStep()"
+                                style="background:var(--primary); color:white; border:none; border-radius:6px; padding:6px 12px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 2px 5px rgba(79,70,229,0.3);">+ Ajouter Étape</button>
                         </div>
-                    </label>
+                    </div>
+
+                    <!-- Barre de Presets Méthodes Spéciales -->
+                    <div style="background:#fff; border:1px solid var(--glass-border); border-radius:10px; padding:8px 10px; margin-bottom:10px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                        <span style="font-size:0.65rem; font-weight:800; color:var(--text-dim); display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">⚡ MÉTHODES SPÉCIALES RAPIDES (1-CLIC) :</span>
+                        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                            <button type="button" onclick="window.addProtocolFucidinePreset()"
+                                style="background:#0284c7; color:white; border:none; border-radius:6px; padding:4px 8px; font-size:0.67rem; font-weight:700; cursor:pointer;" title="Ajouter protocole Fucidine crème / pommade avec Fucidinase + EPS">🧪 Fucidine (Fucidinase + EPS)</button>
+                            <button type="button" onclick="window.addProtocolFiltrationPreset()"
+                                style="background:#059669; color:white; border:none; border-radius:6px; padding:4px 8px; font-size:0.67rem; font-weight:700; cursor:pointer;" title="Ajouter protocole Filtration sur membrane">🔬 Filtration Membrane</button>
+                            <button type="button" onclick="window.addProtocolNeutralisationPreset()"
+                                style="background:#7c3aed; color:white; border:none; border-radius:6px; padding:4px 8px; font-size:0.67rem; font-weight:700; cursor:pointer;" title="Ajouter protocole Neutralisation chimique + Dilutions">🧫 Neutralisation Chimique</button>
+                            <button type="button" onclick="window.addProtocolGermesPreset()"
+                                style="background:#4b5563; color:white; border:none; border-radius:6px; padding:4px 8px; font-size:0.67rem; font-weight:700; cursor:pointer;" title="Ajouter protocole standard germes">🦠 Germes / Dilution</button>
+                        </div>
+                    </div>
+
                     <div id="protocol-container" style="display:flex; flex-direction:column; gap:10px;"></div>
-                    <p style="font-size:0.65rem; color:var(--text-dim); margin-top:10px; text-align:center;">Conseil:
-                        utilisez "apres", ";" ou "->" pour lier automatiquement vos étapes de préparation et dilution
-                        par des flèches.</p>
+                    <p style="font-size:0.67rem; color:var(--text-dim); margin-top:10px; text-align:center;">💡 Conseil :
+                        utilisez le bouton <b>→</b> ou tapez "->", "puis", ";" pour relier vos actions par de vraies flèches de logigramme.</p>
                 </div>
 
                 <div class="form-group">
@@ -4530,6 +4546,10 @@
                 } else if (tab === 'fertilite') {
                     addBtn.innerText = "+ NOUVEAU MC FERTILITÉ";
                     searchInput.placeholder = "Chercher un milieu, souche, méthode...";
+                } else if (tab === 'instances') {
+                    addBtn.innerText = "+ NOUVELLE INSTANCE";
+                    addBtn.style.display = 'flex';
+                    searchInput.placeholder = "Chercher dans les instances...";
                 } else if (tab === 'programme') {
                     addBtn.style.display = 'none';
                     searchInput.placeholder = "Chercher un produit dans le programme...";
@@ -4546,7 +4566,7 @@
         // --- GESTION DU SWIPE POUR CHANGER D'ONGLET ---
         let touchstartX = 0;
         let touchendX = 0;
-        const tabsOrder = ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'taches', 'programme'];
+        const tabsOrder = ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'taches', 'instances', 'programme'];
 
         // ===========================
         // REORDER DES ONGLETs PRINCIPAUX (SortableJS)
@@ -4554,7 +4574,7 @@
         window.mainTabsOrderStorageKey = 'microbio_main_tabs_order';
 
         function getMainTabsDefaultOrder() {
-            return ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'taches', 'programme'];
+            return ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'taches', 'instances', 'programme'];
         }
 
         window.__mainTabsInitDone = false;
@@ -6495,6 +6515,37 @@
             console.error("Taches Sync Error:", err);
         });
 
+        // --- SYNCHRONISATION FIREBASE INSTANCES ---
+        window.instancesList = [];
+        try {
+            const _cachedInst = localStorage.getItem('micro_instances');
+            if (_cachedInst) window.instancesList = JSON.parse(_cachedInst) || [];
+        } catch (_) {}
+
+        window.db.collection('instances').onSnapshot(snap => {
+            window.instancesList = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            try {
+                localStorage.setItem('micro_instances', JSON.stringify(window.instancesList));
+            } catch (_) {}
+
+            if (window.currentTab === 'instances' && typeof window.render === 'function') {
+                const active = document.activeElement;
+                const isEditing = active && (active.id === 'inst_desc' || active.id === 'inst_dateFait' || active.id === 'inst_dateEcheance');
+                if (!isEditing) {
+                    window.render();
+                }
+            }
+        }, err => {
+            console.error("Instances Sync Error:", err);
+            try {
+                const _cachedInst = localStorage.getItem('micro_instances');
+                if (_cachedInst) window.instancesList = JSON.parse(_cachedInst) || [];
+            } catch (_) {}
+            if (window.currentTab === 'instances' && typeof window.render === 'function') {
+                window.render();
+            }
+        });
+
         window.db.collection("settings").doc(CATALOGS_DOC).onSnapshot(doc => {
             if (doc.exists) {
                 catalogs = doc.data() || {};
@@ -6829,7 +6880,8 @@
                     { id: 'germes',    icon: '🦠', label: 'Germes',        sub: 'Base germes',         bg: 'linear-gradient(135deg, #6366f1 0%, #3730a3 100%)', shadow: '0 12px 28px rgba(99,102,241,0.45)' },
                     { id: 'fertilite', icon: '🧫', label: 'Fertilité',     sub: 'Test de fertilité',   bg: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)', shadow: '0 12px 28px rgba(20,184,166,0.45)' },
                     { id: 'taches',    icon: '📝', label: 'Tâches',        sub: 'Suivi des tâches',    bg: 'linear-gradient(135deg, #f43f5e 0%, #9f1239 100%)', shadow: '0 12px 28px rgba(244,63,94,0.45)' },
-                    { id: 'programme', icon: '📅', label: 'Programme',     sub: 'Planning mensuel',    bg: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', shadow: '0 12px 28px rgba(2,132,199,0.45)' },
+                    { id: 'instances', icon: '⚖️', label: 'Instances',     sub: 'Suivi des instances', bg: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', shadow: '0 12px 28px rgba(2,132,199,0.45)' },
+                    { id: 'programme', icon: '📅', label: 'Programme',     sub: 'Planning mensuel',    bg: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', shadow: '0 12px 28px rgba(14,165,233,0.45)' },
                 ];
 
                 // Load saved order
@@ -7108,27 +7160,7 @@
                             `).join('')}
                             </div>
                         </div>
-                        ${f.protocolSteps && f.protocolSteps.length > 0 ? `
-                            <div class="prep-box" style="margin-top:10px; background: rgba(79, 70, 229, 0.02); border: 1px solid var(--glass-border); border-radius:14px; padding:12px;">
-                                <span class="prep-label" style="color:var(--primary); font-weight:800; font-size:0.7rem; display:block; margin-bottom:6px;">📜 Protocole Opératoire</span>
-                                <div style="display:flex; flex-direction:column; gap:8px;">
-                                    ${f.protocolSteps.map((st, i) => {
-                    const sTitle = typeof st === 'object' ? st.title : '';
-                    const sText = typeof st === 'object' ? st.text : st;
-                    return `
-                                        <div style="font-size:0.75rem; color:var(--text-main); background:#fff; padding:8px 10px; border-radius:8px; border:1px solid var(--glass-border); display:flex; flex-direction:column; gap:4px;">
-                                            <div style="display:flex; align-items:center; gap:8px;">
-                                                <span style="font-weight:800; color:var(--primary); font-size:0.65rem; background:rgba(79,70,229,0.1); padding:2px 6px; border-radius:4px; flex-shrink:0;">E${i + 1}</span>
-                                                ${sTitle ? `<span style="font-weight:800; color:var(--text-main); font-size:0.75rem;">${sTitle}</span>` : ''}
-                                            </div>
-                                            <div style="padding-left: 2px; color:var(--text-main);">
-                                                ${(sText || '').replace(/ -> /g, ' <span style="color:var(--primary); font-weight:bold; margin:0 4px;">→</span> ')}
-                                            </div>
-                                        </div>
-                                    `}).join('')}
-                                </div>
-                            </div>
-                        ` : ''}
+                        ${f.protocolSteps && f.protocolSteps.length > 0 ? (window.renderProtocolFlowchartHtml ? window.renderProtocolFlowchartHtml(f.protocolSteps) : '') : ''}
                         ${f.observation ? `<div class="obs-card-footer"><span>📝</span><span>${f.observation}</span></div>` : ''}
                     </div>
                 `).join('');
@@ -8366,26 +8398,116 @@
                 .replace(/;/g, ' -> ')
                 .replace(/\bpuis\b/gi, ' -> ')
                 .replace(/--+>/g, ' -> ')
+                .replace(/→/g, ' -> ')
                 .replace(/\s+/g, ' ')
                 .trim();
             formatted = formatted.replace(/( -> )+/g, ' -> ');
+            formatted = formatted.replace(/^(\s*->\s*)+/, '').replace(/(\s*->\s*)+$/, '').trim();
             return formatted;
+        };
+
+        window.parseProtocolStepData = function (step, idx) {
+            const stepTitle = (typeof step === 'object' && step.title ? String(step.title) : '').trim();
+            const stepText = (typeof step === 'object' && step.text ? String(step.text) : (typeof step === 'string' ? String(step) : '')).trim();
+
+            const cleanText = window.formatProtocolStep(stepText);
+            let subSteps = cleanText ? cleanText.split(' -> ').map(sText => sText.trim()).filter(Boolean) : [];
+
+            // Filter out orphan arrow / bullet noise
+            subSteps = subSteps.filter(s => s !== '->' && s !== '→' && s !== 'v' && s !== '|' && s !== '•');
+
+            let cleanTitle = stepTitle.replace(/^(\s*(->|→)\s*)+|(\s*(->|→)\s*)+$/g, '').trim();
+
+            // If subSteps is empty and cleanTitle contains arrows, split title into subSteps
+            if (subSteps.length === 0 && cleanTitle.includes('->')) {
+                const tParts = window.formatProtocolStep(cleanTitle).split(' -> ').map(sText => sText.trim()).filter(Boolean);
+                if (tParts.length > 1) {
+                    cleanTitle = tParts[0];
+                    subSteps = tParts.slice(1);
+                }
+            }
+
+            return {
+                num: idx + 1,
+                title: cleanTitle,
+                subSteps: subSteps,
+                hasSubSteps: subSteps.length > 0,
+                fallbackAction: subSteps.length === 0 ? (cleanTitle || `Étape ${idx + 1}`) : ''
+            };
+        };
+
+        window.renderProtocolFlowchartHtml = function (steps) {
+            if (!steps || !steps.length) return '';
+            return `
+                <div class="prep-box" style="margin-top:10px; background: rgba(79, 70, 229, 0.03); border: 1px solid rgba(79, 70, 229, 0.15); border-radius:14px; padding:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span class="prep-label" style="color:var(--primary); font-weight:800; font-size:0.75rem; display:flex; align-items:center; gap:6px;">
+                            <span>🧬 Logigramme & Protocole Opératoire</span>
+                        </span>
+                        <span style="font-size:0.65rem; font-weight:700; color:var(--text-dim); background:#fff; padding:2px 8px; border-radius:10px; border:1px solid var(--glass-border);">${steps.length} étape${steps.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:0;">
+                        ${steps.map((st, i) => {
+                            const data = window.parseProtocolStepData(st, i);
+                            const isLast = i === steps.length - 1;
+                            return `
+                                <div style="background:#fff; border-radius:10px; border:1px solid var(--glass-border); padding:10px 12px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:${data.hasSubSteps ? '8px' : '4px'}; flex-wrap:wrap;">
+                                        <span style="background:var(--primary); color:#fff; font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:0.5px;">ÉTAPE ${data.num}</span>
+                                        ${data.title ? `<span style="font-weight:700; font-size:0.75rem; color:var(--text-main);">${data.title}</span>` : ''}
+                                    </div>
+                                    ${data.hasSubSteps ? `
+                                        <div style="display:flex; flex-direction:column; gap:6px; padding-left:4px;">
+                                            ${data.subSteps.map((sub, sIdx) => `
+                                                <div style="display:flex; align-items:flex-start; gap:8px;">
+                                                    <span style="width:18px; height:18px; border-radius:50%; background:rgba(79,70,229,0.12); color:var(--primary); font-size:0.65rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">${sIdx + 1}</span>
+                                                    <div style="flex:1; font-size:0.75rem; line-height:1.4; color:var(--text-main); font-weight:${sIdx === 0 ? '600' : '400'};">${sub}</div>
+                                                </div>
+                                                ${sIdx < data.subSteps.length - 1 ? `
+                                                    <div style="display:flex; align-items:center; gap:6px; padding-left:8px; color:var(--primary); opacity:0.8; margin: -2px 0;">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                                                        <span style="font-size:0.62rem; font-style:italic; color:var(--text-dim);">puis</span>
+                                                    </div>
+                                                ` : ''}
+                                            `).join('')}
+                                        </div>
+                                    ` : `
+                                        <div style="font-size:0.75rem; color:var(--text-main); padding-left:4px; font-weight:500;">
+                                            ${data.fallbackAction}
+                                        </div>
+                                    `}
+                                </div>
+                                ${!isLast ? `
+                                    <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin:4px 0;">
+                                        <div style="height:1px; flex:1; background:rgba(79,70,229,0.15);"></div>
+                                        <div style="display:flex; align-items:center; gap:4px; background:rgba(79,70,229,0.08); border:1px solid rgba(79,70,229,0.2); border-radius:12px; padding:2px 8px; font-size:0.62rem; font-weight:700; color:var(--primary);">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                                            <span>Étape suivante</span>
+                                        </div>
+                                        <div style="height:1px; flex:1; background:rgba(79,70,229,0.15);"></div>
+                                    </div>
+                                ` : ''}
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
         };
 
         window.addProtocolStep = function (step = null) {
             const container = document.getElementById('protocol-container');
             const div = document.createElement('div');
             div.className = 'protocol-step';
-            div.style = "display:flex; align-items:center; gap:8px; background:#fff; padding:8px; border-radius:8px; border:1px solid var(--glass-border); box-shadow:0 1px 3px rgba(0,0,0,0.02);";
+            div.style = "display:flex; align-items:center; gap:8px; background:#fff; padding:8px; border-radius:8px; border:1px solid var(--glass-border); box-shadow:0 1px 3px rgba(0,0,0,0.02); flex-wrap:wrap;";
 
             const stepTitle = step ? (step.title || '') : '';
             const stepText = step ? (step.text || (typeof step === 'string' ? step : '')) : '';
 
             div.innerHTML = `
                 <div style="cursor:grab; color:var(--text-dim); padding:0 5px;" class="drag-handle">☰</div>
-                <input type="text" class="form-input step-title" value="${stepTitle.replace(/"/g, '&quot;')}" placeholder="Titre (ex: Entérobactéries, Dilution...)" style="width:160px; margin:0; padding:6px 10px; font-size:0.75rem; font-weight:700;">
-                <input type="text" class="form-input step-text" value="${stepText.replace(/"/g, '&quot;')}" placeholder="ex: 10g PF dans 90ml TSB -> Incubé 2h-5h (20-25°C) -> Dilution 10⁻² avec Mossel" style="flex:1; margin:0; padding:6px 10px; font-size:0.75rem;">
-                <button type="button" onclick="window.insertArrowToStep(this)" title="Insérer une flèche ->" style="background:rgba(79,70,229,0.1); border:1px solid rgba(79,70,229,0.2); color:var(--primary); border-radius:6px; font-weight:bold; padding:4px 8px; font-size:0.75rem; cursor:pointer;">→</button>
+                <input type="text" class="form-input step-title" value="${stepTitle.replace(/"/g, '&quot;')}" placeholder="Titre (ex: Pesée, Neutralisation...)" style="width:160px; min-width:140px; margin:0; padding:6px 10px; font-size:0.75rem; font-weight:700;">
+                <input type="text" class="form-input step-text" value="${stepText.replace(/"/g, '&quot;')}" placeholder="Actions reliées par -> (ex: 10g PF dans 90ml -> Incuber 2h -> Dilution 10⁻²)" style="flex:1; min-width:200px; margin:0; padding:6px 10px; font-size:0.75rem;">
+                <button type="button" onclick="window.insertArrowToStep(this)" title="Insérer une flèche de flux ->" style="background:rgba(79,70,229,0.1); border:1px solid rgba(79,70,229,0.2); color:var(--primary); border-radius:6px; font-weight:bold; padding:4px 8px; font-size:0.75rem; cursor:pointer;">→</button>
                 <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ef4444; font-weight:800; cursor:pointer; padding:5px;">✕</button>
             `;
             container.appendChild(div);
@@ -8402,10 +8524,74 @@
         window.insertArrowToStep = function (btn) {
             const input = btn.parentElement.querySelector('.step-text');
             if (input) {
-                const val = input.value;
-                input.value = val ? val + ' -> ' : ' -> ';
+                let val = (input.value || '').trim();
+                if (!val) {
+                    input.placeholder = "Tapez d'abord l'action puis cliquez sur →";
+                    input.focus();
+                    return;
+                }
+                val = val.replace(/\s*(->|→)\s*$/, '');
+                input.value = val + ' -> ';
                 input.focus();
             }
+        };
+
+        window.clearProtocolSteps = function () {
+            const container = document.getElementById('protocol-container');
+            if (container && container.children.length > 0) {
+                if (confirm("Effacer toutes les étapes du protocole ?")) {
+                    container.innerHTML = '';
+                }
+            }
+        };
+
+        window.addProtocolFucidinePreset = function () {
+            const container = document.getElementById('protocol-container');
+            if (container && container.children.length > 0) {
+                if (!confirm("Remplacer les étapes actuelles par la méthode spéciale Fucidine ?")) return;
+                container.innerHTML = '';
+            }
+            const steps = [
+                { title: "Pesée échantillon", text: "Peser 10g × 2 de prise d'essai (Fucidine crème / pommade)" },
+                { title: "Préparation Fucidinase", text: "Introduire 6.8 ml d'EPS dans chaque flacon de Fucidinase -> Agiter délicatement jusqu'à dissolution complète" },
+                { title: "Mise en suspension", text: "10g de produit fini dans 90ml de tampon peptone pH 7.0 stérile" },
+                { title: "Neutralisation enzymatique", text: "Ajouter la Fucidinase reconstituée (6.8 ml) -> Homogénéiser et laisser agir 10 à 15 min à température ambiante" },
+                { title: "Ensemencement & Dénombrement", text: "Ensemencer 1 ml en profondeur sur gélose TSA et Sabouraud -> Incuber selon pharmacopée" }
+            ];
+            steps.forEach(s => window.addProtocolStep(s));
+            if (window.showToast) window.showToast("Méthode Spéciale Fucidine chargée !", "success");
+        };
+
+        window.addProtocolFiltrationPreset = function () {
+            const container = document.getElementById('protocol-container');
+            if (container && container.children.length > 0) {
+                if (!confirm("Remplacer les étapes actuelles par la méthode Filtration sur membrane ?")) return;
+                container.innerHTML = '';
+            }
+            const steps = [
+                { title: "Montage & Humidification", text: "Installer la rampe de filtration -> Placer membrane stérile 0.45 µm -> Humecter avec 10 ml de diluant stérile" },
+                { title: "Filtration prise d'essai", text: "Transférer la prise d'essai diluée (100 ml) -> Filtrer sous vide régulé" },
+                { title: "Rinçages successifs", text: "Rincer la membrane avec 3 × 100 ml de solution de rinçage (EPS / NaCl-Peptone)" },
+                { title: "Transfert sur milieu gélosé", text: "Déposer la membrane sur gélose TSA / Sabouraud / Milieu sélectif -> Incuber aux températures requises" }
+            ];
+            steps.forEach(s => window.addProtocolStep(s));
+            if (window.showToast) window.showToast("Méthode Filtration chargée !", "success");
+        };
+
+        window.addProtocolNeutralisationPreset = function () {
+            const container = document.getElementById('protocol-container');
+            if (container && container.children.length > 0) {
+                if (!confirm("Remplacer les étapes actuelles par la méthode Neutralisation Chimique ?")) return;
+                container.innerHTML = '';
+            }
+            const steps = [
+                { title: "Prise d'essai & Neutralisant", text: "Peser 10g de produit fini dans 90ml de bouillon neutralisant (TSB + Tween 80 + Lécithine)" },
+                { title: "Homogénéisation", text: "Agiter mécaniquement pendant 15 min à température ambiante pour libérer les germes" },
+                { title: "Série de dilutions décimales", text: "Dilution 10⁻¹ -> Dilution 10⁻² -> Dilution 10⁻³ dans diluant neutralisant stérile" },
+                { title: "Ensemencement gélose", text: "Ensemencer 1 ml en boîte de Pétri par dilution sur gélose TSA et Sabouraud" }
+            ];
+            steps.forEach(s => window.addProtocolStep(s));
+            if (window.showToast) window.showToast("Méthode Neutralisation chargée !", "success");
         };
 
         window.addProtocolGermesPreset = function () {
@@ -9122,10 +9308,10 @@
             });
 
             const protocolSteps = Array.from(document.querySelectorAll('.protocol-step')).map(stepDiv => {
-                return {
-                    title: stepDiv.querySelector('.step-title')?.value.trim() || '',
-                    text: stepDiv.querySelector('.step-text')?.value.trim() || ''
-                };
+                const title = (stepDiv.querySelector('.step-title')?.value || '').trim();
+                let text = (stepDiv.querySelector('.step-text')?.value || '').trim();
+                text = text.replace(/^(\s*(->|→)\s*)+|(\s*(->|→)\s*)+$/g, '').trim();
+                return { title, text };
             }).filter(s => s.text || s.title);
 
             const data = {
@@ -10311,82 +10497,166 @@
 
             const pageHeight = doc.internal.pageSize.height;
 
-            // Protocole Opératoire (Schema) - Noir & Blanc
+            // Protocole Opératoire (Logigramme / Schéma Vectoriel)
             if (f.protocolSteps && f.protocolSteps.length > 0) {
                 if (y > pageHeight - 40) { doc.addPage(); y = 20; }
+
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(12);
+                doc.setFontSize(11);
                 doc.setTextColor(0, 0, 0);
-                doc.text("Protocole Opératoire (Schéma)", 15, y);
-                y += 8;
+                doc.text("PROTOCOLE OPÉRATOIRE (LOGIGRAMME D'ANALYSE)", 15, y);
+                y += 6;
+
+                doc.setFont("helvetica", "italic");
+                doc.setFontSize(7.5);
+                doc.setTextColor(100, 100, 100);
+                doc.text("Suivre les étapes chronologiques et les flèches du logigramme :", 15, y);
+                y += 5;
+
+                const boxW = pageWidth - 30;
+
+                const drawVectorArrowDown = (arrowX, startY, endY, drawLabel = true) => {
+                    if (endY <= startY) return;
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setFillColor(0, 0, 0);
+                    doc.setLineWidth(0.6);
+                    doc.line(arrowX, startY, arrowX, endY - 0.5);
+                    doc.triangle(arrowX - 1.8, endY - 2.8, arrowX + 1.8, endY - 2.8, arrowX, endY, 'FD');
+
+                    if (drawLabel) {
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(6.5);
+                        doc.setTextColor(110, 110, 110);
+                        doc.text("Étape suivante", arrowX + 4, (startY + endY) / 2 + 1);
+                    }
+                };
 
                 f.protocolSteps.forEach((step, idx) => {
-                    const stepTitle = typeof step === 'object' ? step.title : '';
-                    const stepText = typeof step === 'object' ? step.text : step;
+                    const data = (window.parseProtocolStepData ? window.parseProtocolStepData(step, idx) : null) || {
+                        num: idx + 1,
+                        title: (typeof step === 'object' && step.title ? String(step.title) : '').trim(),
+                        subSteps: (typeof step === 'object' && step.text ? String(step.text) : (typeof step === 'string' ? String(step) : '')).split('->').map(t => t.trim()).filter(Boolean),
+                        hasSubSteps: true,
+                        fallbackAction: ''
+                    };
 
-                    const rawClean = window.formatProtocolStep(stepText);
-                    const subSteps = rawClean.split(' -> ').map(sText => sText.trim()).filter(Boolean);
+                    const badgeText = `ÉTAPE ${data.num}`;
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(7.5);
+                    const badgeW = doc.getTextWidth(badgeText) + 7;
 
-                    const blockHeader = stepTitle ? `Étape ${idx + 1} : ${stepTitle}` : `Étape ${idx + 1}`;
+                    const hHead = 6.8;
 
-                    let totalHeight = 10;
-                    subSteps.forEach(ss => {
-                        const lines = doc.splitTextToSize(s(ss), pageWidth - 55);
-                        totalHeight += lines.length * 5 + 4;
-                    });
+                    let bodyH = 0;
+                    const parsedLines = [];
 
-                    if (y + totalHeight > pageHeight - 20) { doc.addPage(); y = 20; }
+                    if (data.hasSubSteps && data.subSteps.length > 0) {
+                        data.subSteps.forEach((ss, ssIdx) => {
+                            const lines = doc.splitTextToSize(s(ss), boxW - 20);
+                            parsedLines.push(lines);
+                            bodyH += lines.length * 4.3 + 2;
+                            if (ssIdx < data.subSteps.length - 1) {
+                                bodyH += 4;
+                            }
+                        });
+                        bodyH += 3;
+                    } else {
+                        const actText = data.fallbackAction || data.title || `Étape ${data.num}`;
+                        const lines = doc.splitTextToSize(s(actText), boxW - 20);
+                        parsedLines.push(lines);
+                        bodyH = Math.max(7, lines.length * 4.3 + 4);
+                    }
 
-                    // Dessiner encadré de l'étape (Noir & Blanc)
+                    const totalCardH = hHead + bodyH;
+
+                    if (y + totalCardH > pageHeight - 18) {
+                        doc.addPage();
+                        y = 20;
+                    }
+
+                    // Card outer border & background
                     doc.setDrawColor(0, 0, 0);
                     doc.setLineWidth(0.4);
                     doc.setFillColor(255, 255, 255);
-                    doc.roundedRect(15, y, pageWidth - 30, totalHeight, 2, 2, 'FD');
+                    doc.roundedRect(15, y, boxW, totalCardH, 2, 2, 'FD');
 
-                    // Badge numéro & titre de l'étape (Remplissage Noir)
+                    // Header banner background
+                    doc.setFillColor(242, 244, 247);
+                    doc.roundedRect(15, y, boxW, hHead, 2, 2, 'F');
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(0.3);
+                    doc.line(15, y + hHead, 15 + boxW, y + hHead);
+
+                    // Header badge (Black rounded pill)
                     doc.setFillColor(0, 0, 0);
-                    const headerWidth = Math.min(pageWidth - 30, doc.getTextWidth(blockHeader.toUpperCase()) + 10);
-                    doc.rect(15, y, headerWidth, 6, 'F');
+                    doc.roundedRect(17, y + 1.2, badgeW, hHead - 2.4, 1.2, 1.2, 'F');
                     doc.setFont("helvetica", "bold");
-                    doc.setFontSize(8);
+                    doc.setFontSize(7.5);
                     doc.setTextColor(255, 255, 255);
-                    doc.text(blockHeader.toUpperCase(), 17, y + 4.2);
+                    doc.text(badgeText, 17 + badgeW / 2, y + hHead - 2.3, { align: 'center' });
 
-                    doc.setTextColor(0, 0, 0);
-                    let subY = y + 11;
-
-                    subSteps.forEach((ss, ssIdx) => {
-                        doc.setFont("helvetica", ssIdx === 0 ? "bold" : "normal");
-                        doc.setFontSize(9.5);
-
-                        const lines = doc.splitTextToSize(s(ss), pageWidth - 60);
-
-                        doc.setFillColor(0, 0, 0);
-                        doc.circle(22, subY - 1.5, 0.8, 'F');
-
-                        doc.text(lines, 26, subY);
-                        subY += lines.length * 5;
-
-                        // Indicateur sous-étape / flèche
-                        if (ssIdx < subSteps.length - 1) {
-                            doc.setFont("helvetica", "bold");
-                            doc.setFontSize(9);
-                            doc.setTextColor(0, 0, 0);
-                            doc.text("v", 21.3, subY);
-                            subY += 3.5;
-                        }
-                    });
-
-                    y += totalHeight + 4;
-
-                    // Flèche de liaison vers l'étape suivante
-                    if (idx < f.protocolSteps.length - 1) {
+                    // Header Title
+                    if (data.title) {
                         doc.setFont("helvetica", "bold");
-                        doc.setFontSize(10);
+                        doc.setFontSize(8);
                         doc.setTextColor(0, 0, 0);
-                        doc.text("|", 21.5, y - 2);
-                        doc.text("v", 21.2, y + 1);
-                        y += 4;
+                        const maxTitleW = boxW - badgeW - 8;
+                        const truncatedTitle = doc.splitTextToSize(data.title.toUpperCase(), maxTitleW)[0] || '';
+                        doc.text(truncatedTitle, 17 + badgeW + 4, y + hHead - 2.3);
+                    }
+
+                    // Body: Flowchart action nodes
+                    let curY = y + hHead + 4;
+                    if (data.hasSubSteps && data.subSteps.length > 0) {
+                        data.subSteps.forEach((ss, ssIdx) => {
+                            const lines = parsedLines[ssIdx];
+
+                            // Flow node circle with number
+                            doc.setFillColor(0, 0, 0);
+                            doc.circle(22, curY - 0.7, 1.8, 'F');
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(6.5);
+                            doc.setTextColor(255, 255, 255);
+                            doc.text(String(ssIdx + 1), 22, curY + 1.2, { align: 'center' });
+
+                            // Node text
+                            doc.setFont("helvetica", ssIdx === 0 ? "bold" : "normal");
+                            doc.setFontSize(8.5);
+                            doc.setTextColor(0, 0, 0);
+                            doc.text(lines, 26, curY + 1);
+
+                            curY += lines.length * 4.3 + 2;
+
+                            // Mini vector down-arrow inside the card connecting sub-steps
+                            if (ssIdx < data.subSteps.length - 1) {
+                                const arrowStartY = curY - 1;
+                                const arrowEndY = curY + 3;
+                                doc.setDrawColor(0, 0, 0);
+                                doc.setFillColor(0, 0, 0);
+                                doc.setLineWidth(0.45);
+                                doc.line(22, arrowStartY, 22, arrowEndY - 0.5);
+                                doc.triangle(20.8, arrowEndY - 2.0, 23.2, arrowEndY - 2.0, 22, arrowEndY, 'FD');
+                                curY += 4;
+                            }
+                        });
+                    } else {
+                        const lines = parsedLines[0];
+                        doc.setFillColor(0, 0, 0);
+                        doc.circle(22, curY - 0.7, 1.2, 'F');
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(8.5);
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(lines, 26, curY + 1);
+                    }
+
+                    y += totalCardH;
+
+                    // Connector Arrow between main steps
+                    if (idx < f.protocolSteps.length - 1) {
+                        const connectorH = 7.5;
+                        const arrowX = 25;
+                        drawVectorArrowDown(arrowX, y + 0.5, y + connectorH - 0.5, true);
+                        y += connectorH;
                     }
                 });
                 y += 4;
@@ -13790,6 +14060,22 @@
                         return;
                     }
 
+                    if (window.currentTab === 'instances') {
+                        const container = document.getElementById('fiches-list');
+                        if (!container) return;
+                        const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+                        if (document.getElementById('addBtn')) {
+                            document.getElementById('addBtn').style.display = 'flex';
+                            document.getElementById('addBtn').innerText = '+ NOUVELLE INSTANCE';
+                            document.getElementById('addBtn').onclick = () => window.toggleInstanceForm(true);
+                        }
+                        if (document.getElementById('excelPrepBtn')) document.getElementById('excelPrepBtn').style.display = 'none';
+                        if (document.getElementById('importDirectBtn')) document.getElementById('importDirectBtn').style.display = 'none';
+
+                        window.renderInstancesTab(container, q);
+                        return;
+                    }
+
                     if (window.currentTab === 'resfert') {
                         const container = document.getElementById('fiches-list');
                         if (!container) return;
@@ -14061,6 +14347,619 @@
                 }
             }, 800);
         })();
+
+        // ============================================================
+        // MODULE INSTANCES (SUIVI, CALCULATRICE DE DATE, PRIORITES & HISTORIQUE)
+        // ============================================================
+        window._instEditingId = null;
+        window._instPriorite = 'normal';
+        window._instFormOpen = false;
+
+        window.setInstancePriorite = function (prio) {
+            window._instPriorite = prio;
+            const btnUrgent = document.getElementById('btn_prio_urgent');
+            const btnNormal = document.getElementById('btn_prio_normal');
+            if (btnUrgent && btnNormal) {
+                if (prio === 'urgent') {
+                    btnUrgent.style.background = '#ef4444';
+                    btnUrgent.style.color = '#fff';
+                    btnUrgent.style.borderColor = '#b91c1c';
+                    btnUrgent.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.35)';
+
+                    btnNormal.style.background = '#f1f5f9';
+                    btnNormal.style.color = '#64748b';
+                    btnNormal.style.borderColor = '#cbd5e1';
+                    btnNormal.style.boxShadow = 'none';
+                } else {
+                    btnNormal.style.background = '#10b981';
+                    btnNormal.style.color = '#fff';
+                    btnNormal.style.borderColor = '#047857';
+                    btnNormal.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.35)';
+
+                    btnUrgent.style.background = '#f1f5f9';
+                    btnUrgent.style.color = '#64748b';
+                    btnUrgent.style.borderColor = '#cbd5e1';
+                    btnUrgent.style.boxShadow = 'none';
+                }
+            }
+        };
+
+        window.calcInstanceDays = function (days) {
+            const dateFaitEl = document.getElementById('inst_dateFait');
+            const dateEcheanceEl = document.getElementById('inst_dateEcheance');
+            if (!dateFaitEl || !dateFaitEl.value) {
+                if (window.showToast) window.showToast("Renseignez d'abord la date 'Fait le'", "info");
+                return;
+            }
+            const base = new Date(dateFaitEl.value + 'T00:00:00');
+            base.setDate(base.getDate() + parseInt(days, 10));
+            const yyyy = base.getFullYear();
+            const mm = String(base.getMonth() + 1).padStart(2, '0');
+            const dd = String(base.getDate()).padStart(2, '0');
+            const targetStr = `${yyyy}-${mm}-${dd}`;
+            if (dateEcheanceEl) {
+                dateEcheanceEl.value = targetStr;
+            }
+            window.updateInstanceEcheancePreview(parseInt(days, 10), targetStr);
+        };
+
+        window.updateInstanceEcheancePreview = function (days, targetStr) {
+            const previewEl = document.getElementById('inst_calc_preview');
+            const dateFaitEl = document.getElementById('inst_dateFait');
+            const dateEcheanceEl = document.getElementById('inst_dateEcheance');
+            if (!previewEl) return;
+
+            const tStr = targetStr || (dateEcheanceEl ? dateEcheanceEl.value : '');
+            if (!tStr) {
+                previewEl.innerHTML = '';
+                return;
+            }
+            const d = new Date(tStr + 'T00:00:00');
+            const opt = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            const label = d.toLocaleDateString('fr-FR', opt);
+
+            let diffDays = days;
+            if (diffDays === undefined && dateFaitEl && dateFaitEl.value) {
+                const b = new Date(dateFaitEl.value + 'T00:00:00');
+                diffDays = Math.round((d - b) / (1000 * 60 * 60 * 24));
+            }
+            const diffTxt = diffDays !== undefined ? ` (dans ${diffDays} jour${diffDays > 1 ? 's' : ''})` : '';
+
+            previewEl.innerHTML = `
+                <div style="display:inline-flex; align-items:center; gap:8px; background:#eff6ff; border:1px solid #93c5fd; padding:6px 14px; border-radius:12px; color:#1d4ed8; font-size:0.85rem; font-weight:700;">
+                    <span>📅 Résultat :</span>
+                    <span style="color:#0f172a; font-weight:800; text-transform:capitalize;">${label}</span>
+                    <span style="background:#3b82f6; color:#fff; padding:2px 8px; border-radius:8px; font-size:0.75rem;">${diffTxt}</span>
+                </div>
+            `;
+        };
+
+        window.toggleInstanceForm = function (forceOpen) {
+            if (forceOpen !== undefined) window._instFormOpen = forceOpen;
+            else window._instFormOpen = !window._instFormOpen;
+            window.render();
+            if (window._instFormOpen) {
+                setTimeout(() => {
+                    const el = document.getElementById('inst_desc');
+                    if (el) el.focus();
+                }, 80);
+            }
+        };
+
+        window.saveInstance = function () {
+            const dateFaitEl = document.getElementById('inst_dateFait');
+            const descEl = document.getElementById('inst_desc');
+            const echeanceEl = document.getElementById('inst_dateEcheance');
+
+            if (!descEl || !descEl.value.trim()) {
+                if (window.showToast) window.showToast("⚠️ Veuillez saisir une description pour l'instance.", "warning");
+                return;
+            }
+            const dateFait = dateFaitEl && dateFaitEl.value ? dateFaitEl.value : new Date().toISOString().split('T')[0];
+            const description = descEl.value.trim();
+            const dateEcheance = echeanceEl ? echeanceEl.value : '';
+            const priorite = window._instPriorite || 'normal';
+
+            const id = window._instEditingId || (Date.now().toString() + Math.random().toString().slice(2, 6));
+            const existing = window.instancesList.find(x => x.id === id) || {};
+
+            const record = {
+                id: id,
+                dateFait: dateFait,
+                description: description,
+                priorite: priorite,
+                dateEcheance: dateEcheance,
+                reglee: existing.reglee || false,
+                dateReglee: existing.dateReglee || null,
+                updatedAt: Date.now(),
+                createdAt: existing.createdAt || Date.now()
+            };
+
+            const idx = window.instancesList.findIndex(x => x.id === id);
+            if (idx >= 0) window.instancesList[idx] = record;
+            else window.instancesList.unshift(record);
+            try { localStorage.setItem('micro_instances', JSON.stringify(window.instancesList)); } catch (_) {}
+
+            window.db.collection('instances').doc(id).set(record)
+                .then(() => {
+                    if (window.showToast) window.showToast("✅ Instance enregistrée !", "success");
+                })
+                .catch(err => {
+                    console.error("Erreur Firestore instances:", err);
+                });
+
+            window._instEditingId = null;
+            window._instPriorite = 'normal';
+            window._instFormOpen = false;
+            window.render();
+        };
+
+        window.toggleInstanceReglee = function (id) {
+            const inst = window.instancesList.find(x => x.id === id);
+            if (!inst) return;
+            inst.reglee = !inst.reglee;
+            inst.dateReglee = inst.reglee ? new Date().toISOString().split('T')[0] : null;
+            inst.updatedAt = Date.now();
+
+            try { localStorage.setItem('micro_instances', JSON.stringify(window.instancesList)); } catch (_) {}
+
+            window.db.collection('instances').doc(id).set({ ...inst })
+                .then(() => {
+                    if (window.showToast) {
+                        if (inst.reglee) window.showToast("✅ Instance réglée ! Déplacée en bas.", "success", 2000);
+                        else window.showToast("↩️ Instance réactivée !", "info", 1500);
+                    }
+                })
+                .catch(e => console.error(e));
+
+            window.render();
+        };
+
+        window.deleteInstance = function (id) {
+            if (confirm("Supprimer définitivement cette instance ?")) {
+                window.instancesList = window.instancesList.filter(x => x.id !== id);
+                try { localStorage.setItem('micro_instances', JSON.stringify(window.instancesList)); } catch (_) {}
+                window.db.collection('instances').doc(id).delete()
+                    .then(() => {
+                        if (window.showToast) window.showToast("🗑️ Instance supprimée.", "info");
+                    })
+                    .catch(e => console.error(e));
+                window.render();
+            }
+        };
+
+        window.openEditInstance = function (id) {
+            const inst = window.instancesList.find(x => x.id === id);
+            if (!inst) return;
+            window._instEditingId = id;
+            window._instPriorite = inst.priorite || 'normal';
+            window._instFormOpen = true;
+            window.render();
+            setTimeout(() => {
+                const dateFaitEl = document.getElementById('inst_dateFait');
+                const descEl = document.getElementById('inst_desc');
+                const echeanceEl = document.getElementById('inst_dateEcheance');
+                if (dateFaitEl) dateFaitEl.value = inst.dateFait || '';
+                if (descEl) descEl.value = inst.description || '';
+                if (echeanceEl) echeanceEl.value = inst.dateEcheance || '';
+                window.setInstancePriorite(inst.priorite || 'normal');
+                window.updateInstanceEcheancePreview();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 60);
+        };
+
+        window.cancelEditInstance = function () {
+            window._instEditingId = null;
+            window._instPriorite = 'normal';
+            window._instFormOpen = false;
+            window.render();
+        };
+
+        window.printInstancesPDF = function () {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const printDate = new Date().toLocaleDateString('fr-FR');
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(16);
+                doc.text("Registre des Instances - " + printDate, 105, 20, null, null, "center");
+                doc.setLineWidth(0.6);
+                doc.line(14, 25, 196, 25);
+
+                const list = [...(window.instancesList || [])].sort((a, b) => {
+                    if (a.reglee !== b.reglee) return a.reglee ? 1 : -1;
+                    if (a.priorite !== b.priorite) return a.priorite === 'urgent' ? -1 : 1;
+                    return (b.dateFait || '').localeCompare(a.dateFait || '');
+                });
+
+                if (list.length === 0) {
+                    if (window.showToast) window.showToast("Aucune instance à exporter.", "info");
+                    return;
+                }
+
+                let y = 35;
+                doc.setFontSize(10);
+                doc.setFillColor(30, 41, 59);
+                doc.setTextColor(255, 255, 255);
+                doc.rect(14, y - 5, 182, 8, 'F');
+                doc.text("Fait le", 16, y);
+                doc.text("Prio", 40, y);
+                doc.text("Description de l'instance", 62, y);
+                doc.text("Échéance", 145, y);
+                doc.text("Statut", 172, y);
+                y += 8;
+
+                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+
+                list.forEach(inst => {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    const faitFmt = inst.dateFait ? inst.dateFait.split('-').reverse().join('/') : '-';
+                    const echFmt = inst.dateEcheance ? inst.dateEcheance.split('-').reverse().join('/') : '-';
+                    const prioTxt = (inst.priorite === 'urgent') ? 'URGENT' : 'Normal';
+                    const statutTxt = inst.reglee ? 'RÉGLÉE' : 'En cours';
+
+                    const descLines = doc.splitTextToSize(inst.description || '-', 80);
+                    const rowHeight = Math.max(7, descLines.length * 4.5 + 3);
+
+                    if (inst.reglee) {
+                        doc.setFillColor(241, 245, 249);
+                        doc.rect(14, y - 4, 182, rowHeight, 'F');
+                    } else if (inst.priorite === 'urgent') {
+                        doc.setFillColor(254, 242, 242);
+                        doc.rect(14, y - 4, 182, rowHeight, 'F');
+                    }
+
+                    doc.text(faitFmt, 16, y);
+                    doc.text(prioTxt, 40, y);
+                    doc.text(descLines, 62, y);
+                    doc.text(echFmt, 145, y);
+                    doc.text(statutTxt, 172, y);
+
+                    y += rowHeight;
+                    doc.setDrawColor(226, 232, 240);
+                    doc.line(14, y - 2, 196, y - 2);
+                });
+
+                const fname = "Instances_" + printDate.replace(/\//g, '-') + ".pdf";
+                doc.save(fname);
+                if (window.showToast) window.showToast("📄 PDF des instances généré !", "success");
+            } catch (err) {
+                console.error("Erreur PDF instances:", err);
+            }
+        };
+
+        window.renderInstancesTab = function (container, query) {
+            const todayDate = new Date().toISOString().split('T')[0];
+            const all = window.instancesList || [];
+
+            // Filtrage par recherche
+            const q = (query || '').toLowerCase().trim();
+            const filtered = all.filter(x => {
+                if (!q) return true;
+                const d = (x.description || '').toLowerCase();
+                const df = (x.dateFait || '').toLowerCase();
+                const de = (x.dateEcheance || '').toLowerCase();
+                const p = (x.priorite || '').toLowerCase();
+                return d.includes(q) || df.includes(q) || de.includes(q) || p.includes(q);
+            });
+
+            // SÉPARATION EN DEUX GROUPES :
+            // 1) En cours (non réglées) -> restent en haut, Urgentes en premier !
+            const enCours = filtered.filter(x => !x.reglee).sort((a, b) => {
+                if (a.priorite !== b.priorite) return a.priorite === 'urgent' ? -1 : 1;
+                return (b.dateFait || '').localeCompare(a.dateFait || '');
+            });
+
+            // 2) Réglées -> vont EN BAS de page, barrées !
+            const reglees = filtered.filter(x => x.reglee).sort((a, b) => {
+                return (b.dateReglee || b.updatedAt || 0) - (a.dateReglee || a.updatedAt || 0);
+            });
+
+            const totalCount = all.length;
+            const enCoursCount = all.filter(x => !x.reglee).length;
+            const urgentCount = all.filter(x => !x.reglee && x.priorite === 'urgent').length;
+            const regleeCount = all.filter(x => x.reglee).length;
+
+            const isEditing = !!window._instEditingId;
+
+            // Rendu HTML
+            let html = `
+                <div style="padding: 16px; max-width: 1000px; margin: 0 auto; width: 100%; box-sizing: border-box;">
+                    <!-- HEADER TAB -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                        <div>
+                            <h2 style="margin:0; font-size:1.35rem; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                                <span>⚖️</span> <span>Suivi des Instances</span>
+                            </h2>
+                            <div style="font-size:0.75rem; color:#64748b; font-weight:600; margin-top:2px;">
+                                Gestion des instances de laboratoire avec calculatrice d'échéance et priorités
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button onclick="window.toggleInstanceForm()" style="background:${window._instFormOpen ? '#475569' : '#0284c7'}; color:#fff; border:none; padding:9px 16px; border-radius:10px; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(2,132,199,0.25);">
+                                <span>${window._instFormOpen ? '✕ Fermer' : '➕ Nouvelle Instance'}</span>
+                            </button>
+                            <button onclick="window.printInstancesPDF()" style="background:#1e293b; color:#fff; border:none; padding:9px 14px; border-radius:10px; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                                <span>📄 Exporter PDF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BADGES STATS -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:18px;">
+                        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:12px 14px; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+                            <div style="font-size:0.68rem; font-weight:800; color:#64748b; text-transform:uppercase;">Total Instances</div>
+                            <div style="font-size:1.4rem; font-weight:900; color:#0f172a; margin-top:2px;">${totalCount}</div>
+                        </div>
+                        <div style="background:#fff; border:1.5px solid #fca5a5; border-radius:14px; padding:12px 14px; box-shadow:0 2px 8px rgba(239,68,68,0.06);">
+                            <div style="font-size:0.68rem; font-weight:800; color:#dc2626; text-transform:uppercase;">🔥 Urgentes en cours</div>
+                            <div style="font-size:1.4rem; font-weight:900; color:#dc2626; margin-top:2px;">${urgentCount}</div>
+                        </div>
+                        <div style="background:#fff; border:1px solid #93c5fd; border-radius:14px; padding:12px 14px; box-shadow:0 2px 8px rgba(59,130,246,0.06);">
+                            <div style="font-size:0.68rem; font-weight:800; color:#2563eb; text-transform:uppercase;">⏳ En cours</div>
+                            <div style="font-size:1.4rem; font-weight:900; color:#2563eb; margin-top:2px;">${enCoursCount}</div>
+                        </div>
+                        <div style="background:#fff; border:1px solid #a7f3d0; border-radius:14px; padding:12px 14px; box-shadow:0 2px 8px rgba(16,185,129,0.06);">
+                            <div style="font-size:0.68rem; font-weight:800; color:#059669; text-transform:uppercase;">✅ Réglées</div>
+                            <div style="font-size:1.4rem; font-weight:900; color:#059669; margin-top:2px;">${regleeCount}</div>
+                        </div>
+                    </div>
+
+                    <!-- FORMULAIRE D'AJOUT / MODIFICATION -->
+                    <div id="inst_form_panel" style="display:${window._instFormOpen ? 'block' : 'none'}; background:#fff; border:2px solid #0284c7; border-radius:18px; padding:18px; margin-bottom:22px; box-shadow:0 8px 30px rgba(2,132,199,0.12);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+                            <h3 style="margin:0; font-size:1.05rem; color:#0f172a; font-weight:800;">
+                                ${isEditing ? '✏️ Modifier l\'instance' : '➕ Nouvelle Instance'}
+                            </h3>
+                            <button onclick="window.cancelEditInstance()" style="background:transparent; border:none; color:#64748b; font-size:1.1rem; cursor:pointer;">✕</button>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:14px;">
+                            <!-- Date Fait Le -->
+                            <div>
+                                <label style="display:block; font-size:0.75rem; font-weight:800; color:#0f172a; margin-bottom:6px; text-transform:uppercase;">
+                                    📅 Fait le :
+                                </label>
+                                <input type="date" id="inst_dateFait" value="${todayDate}" onchange="window.updateInstanceEcheancePreview()"
+                                    style="width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1.5px solid #cbd5e1; font-size:0.9rem; font-weight:700; background:#f8fafc;">
+                            </div>
+
+                            <!-- Priorité Urgent / Normal -->
+                            <div>
+                                <label style="display:block; font-size:0.75rem; font-weight:800; color:#0f172a; margin-bottom:6px; text-transform:uppercase;">
+                                    🚨 Priorité :
+                                </label>
+                                <div style="display:flex; gap:8px;">
+                                    <button type="button" id="btn_prio_urgent" onclick="window.setInstancePriorite('urgent')"
+                                        style="flex:1; padding:10px; border-radius:10px; font-weight:800; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; border:1.5px solid ${window._instPriorite === 'urgent' ? '#b91c1c' : '#cbd5e1'}; background:${window._instPriorite === 'urgent' ? '#ef4444' : '#f1f5f9'}; color:${window._instPriorite === 'urgent' ? '#fff' : '#64748b'};">
+                                        🔥 URGENT
+                                    </button>
+                                    <button type="button" id="btn_prio_normal" onclick="window.setInstancePriorite('normal')"
+                                        style="flex:1; padding:10px; border-radius:10px; font-weight:800; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; border:1.5px solid ${window._instPriorite !== 'urgent' ? '#047857' : '#cbd5e1'}; background:${window._instPriorite !== 'urgent' ? '#10b981' : '#f1f5f9'}; color:${window._instPriorite !== 'urgent' ? '#fff' : '#64748b'};">
+                                        🟢 NORMAL
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description de l'instance -->
+                        <div style="margin-bottom:14px;">
+                            <label style="display:block; font-size:0.75rem; font-weight:800; color:#0f172a; margin-bottom:6px; text-transform:uppercase;">
+                                📝 Description de l'instance :
+                            </label>
+                            <textarea id="inst_desc" rows="3" placeholder="Notez la description détaillée de l'instance à traiter..."
+                                style="width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1.5px solid #cbd5e1; font-size:0.9rem; font-family:inherit; resize:vertical;"></textarea>
+                        </div>
+
+                        <!-- CALCULATRICE DE DATE D'ÉCHÉANCE -->
+                        <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:14px; margin-bottom:16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                                <label style="font-size:0.75rem; font-weight:800; color:#0f172a; text-transform:uppercase;">
+                                    🧮 Calculatrice de date d'échéance :
+                                </label>
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="font-size:0.72rem; color:#64748b; font-weight:700;">Date cible :</span>
+                                    <input type="date" id="inst_dateEcheance" onchange="window.updateInstanceEcheancePreview()"
+                                        style="padding:6px 10px; border-radius:8px; border:1.5px solid #cbd5e1; font-size:0.82rem; font-weight:700; background:#fff;">
+                                </div>
+                            </div>
+
+                            <!-- Boutons 1 2 3 4 5 6 7 jours cliquables directement -->
+                            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                                <span style="font-size:0.72rem; font-weight:800; color:#475569; align-self:center; margin-right:4px;">Ajouter jours :</span>
+                                ${[1, 2, 3, 4, 5, 6, 7, 10, 14, 21, 30].map(j => `
+                                    <button type="button" onclick="window.calcInstanceDays(${j})"
+                                        style="background:#fff; border:1.5px solid #cbd5e1; color:#0f172a; padding:6px 12px; border-radius:8px; font-weight:800; font-size:0.78rem; cursor:pointer; transition:all 0.15s;"
+                                        onmouseover="this.style.borderColor='#0284c7'; this.style.color='#0284c7';"
+                                        onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#0f172a';">
+                                        +${j} j
+                                    </button>
+                                `).join('')}
+                            </div>
+
+                            <!-- Résultat de calcul immédiat -->
+                            <div id="inst_calc_preview"></div>
+                        </div>
+
+                        <!-- Boutons actions formulaire -->
+                        <div style="display:flex; justify-content:flex-end; gap:10px;">
+                            <button type="button" onclick="window.cancelEditInstance()"
+                                style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:10px 18px; border-radius:10px; font-weight:800; font-size:0.85rem; cursor:pointer;">
+                                Annuler
+                            </button>
+                            <button type="button" onclick="window.saveInstance()"
+                                style="background:#0284c7; color:#fff; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:0.85rem; cursor:pointer; box-shadow:0 4px 14px rgba(2,132,199,0.3);">
+                                💾 Enregistrer l'instance
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ================================================= -->
+                    <!-- SECTION 1 : INSTANCES EN COURS (EN HAUT) -->
+                    <!-- ================================================= -->
+                    <div style="margin-bottom:30px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #0284c7;">
+                            <h3 style="margin:0; font-size:1.05rem; color:#0f172a; display:flex; align-items:center; gap:8px;">
+                                <span>⏳</span> <span>Instances en cours (${enCours.length})</span>
+                            </h3>
+                            <span style="font-size:0.72rem; color:#64748b; font-weight:700;">Les urgentes sont prioritaires en tête</span>
+                        </div>
+
+                        ${enCours.length === 0 ? `
+                            <div style="background:#fff; border:1px dashed #cbd5e1; border-radius:14px; padding:24px; text-align:center; color:#64748b; font-size:0.9rem;">
+                                <span>🎉 Aucune instance en cours. Tout est réglé !</span>
+                            </div>
+                        ` : `
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                ${enCours.map(inst => {
+                                    const isUrgent = inst.priorite === 'urgent';
+                                    const dateFaitFmt = inst.dateFait ? inst.dateFait.split('-').reverse().join('/') : '-';
+                                    let dateEchFmt = inst.dateEcheance ? inst.dateEcheance.split('-').reverse().join('/') : '';
+                                    
+                                    // Calcul du retard / délai
+                                    let delayBadge = '';
+                                    if (inst.dateEcheance) {
+                                        const nowT = new Date(todayDate + 'T00:00:00');
+                                        const echT = new Date(inst.dateEcheance + 'T00:00:00');
+                                        const diff = Math.round((echT - nowT) / (1000 * 60 * 60 * 24));
+                                        if (diff < 0) {
+                                            delayBadge = `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; padding:2px 8px; border-radius:6px; font-size:0.7rem; font-weight:800;">⚠️ Retard de ${Math.abs(diff)} j</span>`;
+                                        } else if (diff === 0) {
+                                            delayBadge = `<span style="background:#ffedd5; color:#c2410c; border:1px solid #fdba74; padding:2px 8px; border-radius:6px; font-size:0.7rem; font-weight:800;">⚡ Aujourd'hui !</span>`;
+                                        } else {
+                                            delayBadge = `<span style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:2px 8px; border-radius:6px; font-size:0.7rem; font-weight:800;">⏳ Dans ${diff} j</span>`;
+                                        }
+                                    }
+
+                                    return `
+                                        <div style="background:${isUrgent ? '#fff8f8' : '#ffffff'}; border:1px solid ${isUrgent ? '#fca5a5' : '#e2e8f0'}; border-left:6px solid ${isUrgent ? '#ef4444' : '#10b981'}; border-radius:16px; padding:14px 16px; box-shadow:0 2px 10px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:10px;">
+                                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+                                                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                                    <!-- Bouton / Case pour régler -->
+                                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; background:#f1f5f9; padding:4px 10px; border-radius:8px; border:1px solid #cbd5e1;" title="Cocher pour régler cette instance">
+                                                        <input type="checkbox" onchange="window.toggleInstanceReglee('${inst.id}')"
+                                                            style="width:18px; height:18px; cursor:pointer; accent-color:#10b981;">
+                                                        <span style="font-size:0.75rem; font-weight:800; color:#334155;">Régler</span>
+                                                    </label>
+
+                                                    <!-- Badge Priorité -->
+                                                    ${isUrgent ? `
+                                                        <span style="background:#fee2e2; color:#b91c1c; border:1.5px solid #ef4444; padding:3px 10px; border-radius:50px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
+                                                            🔥 URGENT
+                                                        </span>
+                                                    ` : `
+                                                        <span style="background:#ecfdf5; color:#047857; border:1px solid #10b981; padding:3px 10px; border-radius:50px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px;">
+                                                            🟢 NORMAL
+                                                        </span>
+                                                    `}
+
+                                                    <span style="font-size:0.78rem; font-weight:700; color:#64748b;">
+                                                        📅 Fait le : <strong style="color:#0f172a;">${dateFaitFmt}</strong>
+                                                    </span>
+                                                </div>
+
+                                                <!-- Boutons Actions -->
+                                                <div style="display:flex; gap:6px;">
+                                                    <button onclick="window.openEditInstance('${inst.id}')" title="Modifier"
+                                                        style="background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a; padding:5px 9px; border-radius:8px; cursor:pointer; font-size:0.75rem; font-weight:700;">
+                                                        ✏️
+                                                    </button>
+                                                    <button onclick="window.deleteInstance('${inst.id}')" title="Supprimer"
+                                                        style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:5px 9px; border-radius:8px; cursor:pointer; font-size:0.75rem; font-weight:700;">
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Description -->
+                                            <div style="font-size:0.95rem; font-weight:600; color:#0f172a; line-height:1.45; word-break:break-word;">
+                                                ${(inst.description || '').replace(/\n/g, '<br>')}
+                                            </div>
+
+                                            <!-- Échéance & calculatrice rapide -->
+                                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding-top:8px; border-top:1px dashed #e2e8f0; font-size:0.78rem;">
+                                                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                                    <span style="color:#64748b; font-weight:700;">Échéance :</span>
+                                                    ${dateEchFmt ? `<strong style="color:#0f172a;">${dateEchFmt}</strong> ${delayBadge}` : '<span style="color:#94a3b8; font-style:italic;">Non définie</span>'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `}
+                    </div>
+
+                    <!-- ================================================= -->
+                    <!-- SECTION 2 : INSTANCES RÉGLÉES (SE BARRENT & EN BAS) -->
+                    <!-- ================================================= -->
+                    <div style="margin-top:20px; padding-top:16px; border-top:2px solid #94a3b8;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 style="margin:0; font-size:1.02rem; color:#475569; display:flex; align-items:center; gap:8px;">
+                                <span>✅</span> <span>Instances réglées (${reglees.length})</span>
+                            </h3>
+                            <span style="font-size:0.72rem; color:#94a3b8; font-weight:700;">Barrées et archivées en bas</span>
+                        </div>
+
+                        ${reglees.length === 0 ? `
+                            <div style="background:#f8fafc; border:1px dashed #e2e8f0; border-radius:14px; padding:18px; text-align:center; color:#94a3b8; font-size:0.85rem;">
+                                Aucune instance réglée pour le moment.
+                            </div>
+                        ` : `
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                ${reglees.map(inst => {
+                                    const dateFaitFmt = inst.dateFait ? inst.dateFait.split('-').reverse().join('/') : '-';
+                                    const dateRegleeFmt = inst.dateReglee ? inst.dateReglee.split('-').reverse().join('/') : '';
+
+                                    return `
+                                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:6px solid #94a3b8; border-radius:14px; padding:12px 16px; opacity:0.75; display:flex; flex-direction:column; gap:8px;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                                    <!-- Case cochée -> décocher pour réactiver -->
+                                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; background:#e2e8f0; padding:4px 10px; border-radius:8px;" title="Décocher pour réactiver l'instance">
+                                                        <input type="checkbox" checked onchange="window.toggleInstanceReglee('${inst.id}')"
+                                                            style="width:18px; height:18px; cursor:pointer; accent-color:#059669;">
+                                                        <span style="font-size:0.75rem; font-weight:800; color:#475569;">Réglée</span>
+                                                    </label>
+
+                                                    <span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.7rem;">
+                                                        ${inst.priorite === 'urgent' ? '🔥 Était Urgent' : '🟢 Normal'}
+                                                    </span>
+
+                                                    <span style="font-size:0.75rem; color:#64748b;">
+                                                        Fait le : ${dateFaitFmt} ${dateRegleeFmt ? `• Réglée le : <strong>${dateRegleeFmt}</strong>` : ''}
+                                                    </span>
+                                                </div>
+
+                                                <div style="display:flex; gap:6px;">
+                                                    <button onclick="window.deleteInstance('${inst.id}')" title="Supprimer définitivement"
+                                                        style="background:#fee2e2; border:none; color:#dc2626; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:0.75rem;">
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Description BARRÉE -->
+                                            <div style="font-size:0.92rem; font-weight:600; color:#64748b; text-decoration:line-through; line-height:1.4; word-break:break-word;">
+                                                ${(inst.description || '').replace(/\n/g, '<br>')}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        };
     </script>
 
     <script>
@@ -14084,6 +14983,7 @@
                     'fertilite_mc': 'Fertilite MC',
                     'Traca_Fertilite': 'Historique Traca Fertilite',
                     'taches': 'Tâches Journalières',
+                    'instances': 'Instances',
                     'settings': 'Parametres',
                     'laboratoires': 'Laboratoires'
                 };

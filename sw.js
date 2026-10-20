@@ -1,7 +1,5 @@
-// MICROBIO v4.13.1 - Service Worker avec Cache-First + Offline complet
-const CACHE_NAME = 'microbio-cache-v4.13.1';
-// MICROBIO v4.14.0 - Service Worker avec Cache-First + Offline complet
-const CACHE_NAME = 'microbio-cache-v4.14.0';
+// MICROBIO v4.14.6 - Service Worker avec Cache-First + Offline complet
+const CACHE_NAME = 'microbio-cache-v4.14.6';
 const ASSETS = [
   './',
   './index.html',

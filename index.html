@@ -1087,18 +1087,22 @@
                 font-size: 0.9rem !important;
             }
 
-            /* Modals & Forms */
+            /* Modals & Forms — Anti-saut mobile */
             .modal-overlay {
                 padding: 8px !important;
                 display: flex !important;
-                align-items: center !important;
+                /* Aligner en haut pour éviter le saut quand le clavier virtuel ouvre */
+                align-items: flex-start !important;
                 justify-content: center !important;
+                /* L'overlay lui-même scrolle si le clavier réduit l'espace */
+                overflow-y: auto !important;
             }
 
             .modal-content {
                 padding: 20px 14px !important;
-                margin: auto !important;
-                max-height: 90vh !important;
+                margin: 8px auto !important;
+                /* dvh = dynamic viewport height qui prend en compte le clavier virtuel */
+                max-height: min(90dvh, 90vh) !important;
                 border-radius: 20px !important;
                 width: 100% !important;
                 max-width: 100% !important;
@@ -1106,6 +1110,8 @@
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
                 -webkit-overflow-scrolling: touch !important;
+                /* Empêcher le contenu de remonter avec le clavier */
+                flex-shrink: 0 !important;
             }
 
             .modal-content form>div[style*="grid-template-columns"],
@@ -4847,14 +4853,42 @@
 
         // --- Modal & History Management ---
         window.activeModals = [];
+
+        // Verrouillage du scroll body quand un modal est ouvert (anti-saut mobile)
+        function _lockBodyScroll() {
+            if (document.body.dataset.scrollLocked) return;
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = '-' + scrollY + 'px';
+            document.body.style.left = '0';
+            document.body.style.right = '0';
+            document.body.style.overflow = 'hidden';
+            document.body.dataset.scrollLocked = '1';
+            document.body.dataset.scrollY = scrollY;
+        }
+        function _unlockBodyScroll() {
+            if (!document.body.dataset.scrollLocked) return;
+            const scrollY = parseInt(document.body.dataset.scrollY || '0', 10);
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+            document.body.style.right = '';
+            document.body.style.overflow = '';
+            delete document.body.dataset.scrollLocked;
+            window.scrollTo(0, scrollY);
+        }
+
         window.openModal = function (id) {
             const el = document.getElementById(id);
             if (!el) return;
             el.classList.add('active');
-            // Toujours restaurer les styles de visibilité forcée
-            el.style.display = 'block';
+            // Utiliser flex (pas block) pour que le contenu reste centré
+            el.style.display = 'flex';
             el.style.opacity = '1';
             el.style.visibility = 'visible';
+
+            // Bloquer le scroll de la page sous le modal
+            _lockBodyScroll();
 
             window.activeModals.push(id);
             history.pushState({ modalId: id }, "");
@@ -4869,7 +4903,8 @@
                 el.style.visibility = 'hidden';
             }
             window.activeModals = window.activeModals.filter(m => m !== id);
-            // On ne fait pas history.back() ici pour éviter les conflits si déjà fermé
+            // Débloquer le scroll quand tous les modals sont fermés
+            if (window.activeModals.length === 0) _unlockBodyScroll();
         };
 
         window.onpopstate = function (event) {
@@ -4884,6 +4919,8 @@
                 }
             });
             window.activeModals = [];
+            // Débloquer le scroll si bouton retour ferme les modals
+            _unlockBodyScroll();
         };
         let fiches = [];
         let analyses = [];

@@ -304,6 +304,15 @@
         setupEventListeners();
         if (progData.length > 0) renderResults();
     }
+    window.getProgrammeData = function() {
+        if (progData && progData.length > 0) return progData;
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) return (JSON.parse(raw)).items || [];
+        } catch(e) {}
+        return [];
+    };
+
     window.mountProgrammeView = mountView;
 
     function buildMainHTML() {

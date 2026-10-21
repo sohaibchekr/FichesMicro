@@ -2929,27 +2929,20 @@
                     </div>
                     <div class="form-group">
                         <label>N° de Boîte</label>
-                        <input type="text" id="prepBoite" class="form-input" placeholder="ex: B-05">
+                        <input type="text" id="prepBoite" class="form-input" placeholder="ex: B-05" oninput="window.onPrepBoiteInput(this.value)">
                     </div>
                 </div>
 
                 <!-- Déstockage Classeur des Réactifs & Carnet de Sortie (Séparés) -->
                 <div style="background: rgba(234, 88, 12, 0.05); border: 2px solid rgba(234, 88, 12, 0.35); border-radius: 14px; padding: 12px; margin-bottom: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label style="font-size:0.7rem; font-weight:900; color:#c2410c; text-transform:uppercase; letter-spacing:0.8px; margin:0; display:flex; align-items:center; gap:6px;">
-                            <span>📦</span> NOUVELLE BOÎTE ENTAMÉE (DÉSTOCKAGE)
+                        <label style="font-size:0.72rem; font-weight:900; color:#c2410c; text-transform:uppercase; letter-spacing:0.8px; margin:0; display:flex; align-items:center; gap:6px;">
+                            <span>📦</span> FLACON(S) / BOÎTE(S) ENTAMÉ(S) — DÉSTOCKAGE
                         </label>
-                        <span style="font-size:0.62rem; color:#64748b; font-weight:700;">Classeur & Carnet séparés</span>
+                        <span id="flaconsDestockCountBadge" style="display:none; background:#ea580c; color:#fff; font-size:0.6rem; padding:2px 8px; border-radius:8px; font-weight:800;">1 flacon</span>
                     </div>
 
-                    <!-- N° de boîte à déstocker -->
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; background: #ffffff; padding: 8px 12px; border-radius: 10px; border: 1.5px solid #fdba74;">
-                        <label style="font-size: 0.72rem; font-weight: 800; color: #9a3412; white-space: nowrap; margin: 0;">N° Boîte entamée :</label>
-                        <input type="text" id="prepDestockBoite" class="form-input" placeholder="ex: B-05" style="margin: 0; padding: 5px 10px; font-weight: 900; font-size: 0.85rem; color: #c2410c; max-width: 120px; background: #fff7ed; border-color: #f97316;">
-                        <span style="font-size: 0.62rem; color: #78716c; font-style: italic;">(N° attribué à la boîte)</span>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
                         <!-- Option Classeur des Réactifs -->
                         <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px;">
                             <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; user-select:none; margin:0;">
@@ -2984,6 +2977,23 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Champ caché synchronisé pour compatibilité -->
+                    <input type="hidden" id="prepDestockBoite" value="">
+
+                    <!-- Liste des Flacons déstockés (supporte un ou plusieurs flacons) -->
+                    <div style="background:#ffffff; border:1.5px solid #fdba74; border-radius:12px; padding:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:0.7rem; font-weight:900; color:#9a3412; display:flex; align-items:center; gap:5px;">
+                                <span>📦</span> FLACON(S) À DÉSTOCKER :
+                            </span>
+                            <span style="font-size:0.62rem; color:#78716c; font-style:italic;">(Ajoutez 1 ou plusieurs flacons)</span>
+                        </div>
+                        <div id="flaconEntameContainer" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
+                        <button type="button" onclick="window.addFlaconEntame()" style="width: 100%; background: #fff7ed; color: #c2410c; border: 1.5px dashed #f97316; padding: 8px 12px; border-radius: 8px; font-size: 0.72rem; font-weight: 800; cursor: pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s;">
+                            <span>➕</span> AJOUTER UN AUTRE FLACON DÉSTOCKÉ
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Statut Fertilité -->
@@ -3011,17 +3021,7 @@
                     </div>
                 </div>
 
-                <div
-                    style="background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: 14px; padding: 12px; margin-bottom: 18px;">
-                    <label
-                        style="font-size: 0.65rem; font-weight: 800; color: #d97706; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">📦
-                        Flacon(s) Dé-stocker</label>
-                    <div id="flaconEntameContainer"
-                        style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
-                    <button type="button" onclick="window.addFlaconEntame()"
-                        style="width: 100%; background: rgba(245,158,11,0.1); color: #b45309; border: 1px dashed rgba(245,158,11,0.4); padding: 8px; border-radius: 10px; font-size: 0.65rem; font-weight: 800; cursor: pointer;">+
-                        AJOUTER UN FLACON DESTOCKER</button>
-                </div>
+                
 
 
                 <div class="form-group">
@@ -5335,14 +5335,24 @@
                     if (dkEl) dkEl.checked = !!hasK;
                     if (dkfEl) dkfEl.checked = !!doneK;
                     if (dkrEl) dkrEl.style.display = hasK ? 'block' : 'none';
-                    if (p.flaconEntames && Array.isArray(p.flaconEntames)) {
+                    if (p.flaconEntames && Array.isArray(p.flaconEntames) && p.flaconEntames.length > 0) {
                         p.flaconEntames.forEach(f => window.addFlaconEntame(f.num, f.info));
+                    } else if (p.destockBoite || p.boite) {
+                        const split = (p.destockBoite || p.boite).split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+                        if (split.length > 0) {
+                            split.forEach((n, idx) => window.addFlaconEntame(n, split.length > 1 ? ("Flacon " + (idx + 1)) : ''));
+                        } else {
+                            window.addFlaconEntame();
+                        }
+                    } else {
+                        window.addFlaconEntame();
                     }
                     window.calcFlacons();
                 }
             } else {
-                window.addFlaconEntame(); // Vide par défaut
+                window.addFlaconEntame(); // Vide par défaut pour nouvelle préparation
             }
+            window.syncDestockFlaconsFromUI();
             // Statut par défaut : quarantaine pour nouveaux, charger si édition
             if (isEdit) {
                 const p2 = preps.find(x => x.id === id);
@@ -5432,12 +5442,16 @@
         window.updateDestockBoite = function (id, boiteVal) {
             if (!id) return;
             const val = String(boiteVal || '').trim();
+            const splitNums = val.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+            const flaconEntames = splitNums.map(n => ({ num: n, info: '' }));
             window.db.collection(PREPS_COL).doc(id).update({
                 destockBoite: val,
-                boite: val,
+                boite: splitNums[0] || val,
+                flaconEntames: flaconEntames,
                 updatedAt: Date.now()
             }).then(() => {
-                if (window.showToast) window.showToast("N° de boîte mis à jour : " + val, "info");
+                const msg = splitNums.length > 1 ? (`${splitNums.length} flacons mis à jour : ` + val) : ("N° de boîte mis à jour : " + val);
+                if (window.showToast) window.showToast(msg, "info");
                 if (typeof render === 'function') render();
             }).catch(err => {
                 if (window.showToast) window.showToast("Erreur : " + err.message, "error");
@@ -5514,9 +5528,13 @@
                 return;
             }
 
+            const splitNums = boiteVal.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+            const flaconEntames = splitNums.map(n => ({ num: n, info: 'Entamé' }));
+
             window.db.collection(PREPS_COL).doc(id).update({
                 destockBoite: boiteVal,
-                boite: boiteVal,
+                boite: splitNums[0] || boiteVal,
+                flaconEntames: flaconEntames,
                 destockClasseur: isClasseur,
                 destockClasseurFait: false,
                 destockCarnet: isCarnet,
@@ -5525,7 +5543,8 @@
                 isDestocke: false,
                 updatedAt: Date.now()
             }).then(() => {
-                if (window.showToast) window.showToast(`Boîte B-${boiteVal || '?'} déclarée à déstocker 📦`, "success");
+                const countMsg = splitNums.length > 1 ? (`${splitNums.length} flacons (${boiteVal})`) : (`Flacon ${boiteVal || '?'}`);
+                if (window.showToast) window.showToast(`${countMsg} déclaré(s) à déstocker 📦`, "success");
                 window.closeQuickEntamerModal();
                 if (typeof render === 'function') render();
             }).catch(err => {
@@ -5630,7 +5649,8 @@
                                     <div style="font-size:0.65rem; color:#64748b;">Lot F: ${p.lotFourn || p.lot || '-'} • ${p.supplier || ''}</div>
                                 </td>
                                 <td style="padding:10px 6px; text-align:center;">
-                                    <input type="text" value="${bVal}" placeholder="ex: B-05" style="width:75px; text-align:center; font-weight:900; color:#c2410c; background:#fff7ed; border:1.5px solid #f97316; border-radius:6px; padding:4px 6px; font-size:0.75rem;" onchange="window.updateDestockBoite('${p.id}', this.value)" title="Modifier le N° de boîte">
+                                    <input type="text" value="${bVal}" placeholder="ex: B-05, B-06" style="min-width:85px; max-width:130px; text-align:center; font-weight:900; color:#c2410c; background:#fff7ed; border:1.5px solid #f97316; border-radius:6px; padding:4px 6px; font-size:0.75rem;" onchange="window.updateDestockBoite('${p.id}', this.value)" title="Modifier les N° de flacons (séparés par virgule)">
+                                    ${(p.flaconEntames && p.flaconEntames.length > 1) ? `<div style="font-size:0.6rem; color:#ea580c; font-weight:800; margin-top:2px;">📦 ${p.flaconEntames.length} flacons</div>` : (bVal.includes(',') ? `<div style="font-size:0.6rem; color:#ea580c; font-weight:800; margin-top:2px;">📦 ${bVal.split(',').length} flacons</div>` : '')}
                                 </td>
                                 <td style="padding:10px 8px; text-align:center;">
                                     ${pendC ? `
@@ -5718,16 +5738,69 @@
 
         window.addFlaconEntame = function (num = '', info = '') {
             const container = document.getElementById('flaconEntameContainer');
-            const rowId = 'fe-' + Date.now() + Math.floor(Math.random() * 1000);
+            if (!container) return;
+            const count = container.querySelectorAll('.flacon-entame-row').length + 1;
             const div = document.createElement('div');
             div.className = 'flacon-entame-row';
-            div.style.cssText = 'display:flex; gap:6px; align-items:center;';
+            div.style.cssText = 'display:flex; gap:6px; align-items:center; background:#ffffff; padding:6px 8px; border-radius:10px; border:1.5px solid #fed7aa; margin-bottom:4px;';
             div.innerHTML = `
-                <input type="text" class="form-input fe-num" placeholder="N° Flacon" value="${num}" style="flex:1; padding:6px; font-size:0.75rem; background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3);">
-                <input type="text" class="form-input fe-info" placeholder="Info (ex: TSA, entamé 80%)" value="${info}" style="flex:2; padding:6px; font-size:0.75rem;">
-                <button type="button" onclick="this.parentElement.remove()" style="background: rgba(239,68,68,0.1); color:#ef4444; border:none; width:26px; height:26px; border-radius:6px; cursor:pointer; font-weight:800; font-size:0.7rem; flex-shrink:0;">✕</button>
+                <span class="fe-idx" style="font-size:0.65rem; font-weight:900; color:#ea580c; width:24px; text-align:center; flex-shrink:0; background:#fff7ed; padding:3px 0; border-radius:4px; border:1px solid #fdba74;">#${count}</span>
+                <input type="text" class="form-input fe-num" placeholder="N° Flacon / Boîte (ex: B-0${count})" value="${(num || '').replace(/"/g, '&quot;')}" style="flex:1.2; padding:6px 8px; font-weight:900; font-size:0.8rem; color:#c2410c; background:#fff7ed; border-color:#f97316; margin:0;" oninput="window.syncDestockFlaconsFromUI()">
+                <input type="text" class="form-input fe-info" placeholder="Info / Qté (ex: 500g, Entamé...)" value="${(info || '').replace(/"/g, '&quot;')}" style="flex:2; padding:6px 8px; font-size:0.75rem; margin:0;" oninput="window.syncDestockFlaconsFromUI()">
+                <button type="button" onclick="this.closest('.flacon-entame-row').remove(); window.reindexFlacons(); window.syncDestockFlaconsFromUI();" style="background:rgba(239,68,68,0.1); color:#ef4444; border:none; width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight:800; font-size:0.8rem; flex-shrink:0;" title="Supprimer ce flacon">✕</button>
             `;
             container.appendChild(div);
+            window.syncDestockFlaconsFromUI();
+        };
+
+        window.reindexFlacons = function () {
+            const container = document.getElementById('flaconEntameContainer');
+            if (!container) return;
+            const rows = container.querySelectorAll('.flacon-entame-row');
+            rows.forEach((r, idx) => {
+                const idxSpan = r.querySelector('.fe-idx');
+                if (idxSpan) idxSpan.textContent = '#' + (idx + 1);
+            });
+        };
+
+        window.syncDestockFlaconsFromUI = function () {
+            const rows = Array.from(document.querySelectorAll('.flacon-entame-row'));
+            const flacons = rows.map(r => ({
+                num: (r.querySelector('.fe-num') ? r.querySelector('.fe-num').value.trim() : ''),
+                info: (r.querySelector('.fe-info') ? r.querySelector('.fe-info').value.trim() : '')
+            })).filter(f => f.num || f.info);
+
+            const nums = flacons.map(f => f.num).filter(Boolean);
+            const dbEl = document.getElementById('prepDestockBoite');
+            if (dbEl) {
+                dbEl.value = nums.join(', ');
+            }
+
+            const countBadge = document.getElementById('flaconsDestockCountBadge');
+            if (countBadge) {
+                if (nums.length > 1) {
+                    countBadge.textContent = `${nums.length} flacons à déstocker`;
+                    countBadge.style.display = 'inline-block';
+                } else if (nums.length === 1) {
+                    countBadge.textContent = `1 flacon à déstocker`;
+                    countBadge.style.display = 'inline-block';
+                } else {
+                    countBadge.style.display = 'none';
+                }
+            }
+        };
+
+        window.onPrepBoiteInput = function (val) {
+            const v = String(val || '').trim();
+            if (!v) return;
+            const rows = document.querySelectorAll('.flacon-entame-row');
+            if (rows.length === 1) {
+                const firstInput = rows[0].querySelector('.fe-num');
+                if (firstInput && !firstInput.value.trim()) {
+                    firstInput.value = v;
+                    window.syncDestockFlaconsFromUI();
+                }
+            }
         };
 
         window.setPrepExpiry = function (months) {
@@ -6031,9 +6104,21 @@
                 additifs.forEach(a => window.saveAdditifNameToCatalog(a));
 
                 const flaconEntames = Array.from(document.querySelectorAll('.flacon-entame-row')).map(row => ({
-                    num: row.querySelector('.fe-num').value,
-                    info: row.querySelector('.fe-info').value
+                    num: (row.querySelector('.fe-num') ? row.querySelector('.fe-num').value.trim() : ''),
+                    info: (row.querySelector('.fe-info') ? row.querySelector('.fe-info').value.trim() : '')
                 })).filter(f => f.num || f.info);
+
+                const flaconNums = flaconEntames.map(f => f.num).filter(Boolean);
+                const destockBoiteStr = flaconNums.length > 0
+                    ? flaconNums.join(', ')
+                    : (document.getElementById('prepDestockBoite') ? document.getElementById('prepDestockBoite').value.trim() : (document.getElementById('prepBoite').value || ''));
+
+                const isClasseur = document.getElementById('prepDestockClasseur') ? document.getElementById('prepDestockClasseur').checked : false;
+                const isCarnet = document.getElementById('prepDestockCarnet') ? document.getElementById('prepDestockCarnet').checked : false;
+                const classeurFait = document.getElementById('prepDestockClasseurFait') ? document.getElementById('prepDestockClasseurFait').checked : false;
+                const carnetFait = document.getElementById('prepDestockCarnetFait') ? document.getElementById('prepDestockCarnetFait').checked : false;
+                const aDestocker = isClasseur || isCarnet;
+                const isDestocke = ((!isClasseur || classeurFait) && (!isCarnet || carnetFait) && aDestocker);
 
                 const data = {
                     designation: document.getElementById('prepDesignation').value,
@@ -6041,28 +6126,27 @@
                     weight: document.getElementById('prepWeight').value,
                     qtyFinal: document.getElementById('prepQtyFinal').value || '',
                     volCond: document.getElementById('prepVolCond').value || '',
+                    capacite: document.getElementById('prepCapacite').value || '200',
                     totalFlacons: document.getElementById('prepTotalFlacons').value || '',
                     lot: document.getElementById('prepLot').value,
                     lotFourn: document.getElementById('prepLotFourn').value,
                     code: document.getElementById('prepCode').value,
-                    boite: document.getElementById('prepBoite').value,
+                    boite: flaconNums[0] || (document.getElementById('prepBoite').value || ''),
                     datePrep: document.getElementById('datePrep').value,
                     datePeremption: document.getElementById('datePeremption').value,
                     type: document.getElementById('prepType').value || '',
                     statut: document.getElementById('prepStatut').value || 'quarantaine',
                     dateFertilite: document.getElementById('prepDateFertilite').value || '',
-                    destockBoite: document.getElementById('prepDestockBoite') ? document.getElementById('prepDestockBoite').value.trim() : (document.getElementById('prepBoite').value || ''),
-                    destockClasseur: document.getElementById('prepDestockClasseur') ? document.getElementById('prepDestockClasseur').checked : false,
-                    destockClasseurFait: document.getElementById('prepDestockClasseurFait') ? document.getElementById('prepDestockClasseurFait').checked : false,
-                    dateDestockClasseur: (document.getElementById('prepDestockClasseurFait') && document.getElementById('prepDestockClasseurFait').checked) ? new Date().toISOString() : null,
-                    destockCarnet: document.getElementById('prepDestockCarnet') ? document.getElementById('prepDestockCarnet').checked : false,
-                    destockCarnetFait: document.getElementById('prepDestockCarnetFait') ? document.getElementById('prepDestockCarnetFait').checked : false,
-                    dateDestockCarnet: (document.getElementById('prepDestockCarnetFait') && document.getElementById('prepDestockCarnetFait').checked) ? new Date().toISOString() : null,
-                    aDestocker: (document.getElementById('prepDestockClasseur') && document.getElementById('prepDestockClasseur').checked) || (document.getElementById('prepDestockCarnet') && document.getElementById('prepDestockCarnet').checked),
-                    isDestocke: ((!document.getElementById('prepDestockClasseur') || !document.getElementById('prepDestockClasseur').checked || document.getElementById('prepDestockClasseurFait').checked) &&
-                                (!document.getElementById('prepDestockCarnet') || !document.getElementById('prepDestockCarnet').checked || document.getElementById('prepDestockCarnetFait').checked) &&
-                                ((document.getElementById('prepDestockClasseur') && document.getElementById('prepDestockClasseur').checked) || (document.getElementById('prepDestockCarnet') && document.getElementById('prepDestockCarnet').checked))),
-                    dateDestockage: new Date().toISOString(),
+                    destockBoite: destockBoiteStr,
+                    destockClasseur: isClasseur,
+                    destockClasseurFait: classeurFait,
+                    dateDestockClasseur: classeurFait ? new Date().toISOString() : null,
+                    destockCarnet: isCarnet,
+                    destockCarnetFait: carnetFait,
+                    dateDestockCarnet: carnetFait ? new Date().toISOString() : null,
+                    aDestocker: aDestocker,
+                    isDestocke: isDestocke,
+                    dateDestockage: isDestocke ? new Date().toISOString() : null,
                     additifs: additifs,
                     flaconEntames: flaconEntames,
                     updatedAt: Date.now()
@@ -7903,7 +7987,11 @@
                     const pendCarnet = window.isPrepPendingCarnet(p);
                     const isPendingDestock = pendClasseur || pendCarnet;
                     const isFullyDestocke = (p.destockClasseur || p.destockCarnet || p.aDestocker) && !isPendingDestock;
-                    const boiteDisplay = p.destockBoite || p.boite || '?';
+                    const rawBoite = p.destockBoite || p.boite || '?';
+                    const boiteDisplay = rawBoite.startsWith('B-') ? rawBoite : (rawBoite.includes(',') ? rawBoite : 'B-' + rawBoite);
+                    const flaconCount = (p.flaconEntames && p.flaconEntames.length > 0)
+                        ? p.flaconEntames.length
+                        : (rawBoite.includes(',') ? rawBoite.split(',').length : 1);
                     return `
                         <div class="${isSelected ? 'fiche-card selected' : 'fiche-card'}" onclick="${isSelectionMode ? `toggleFicheSelection('${p.id}', event)` : `openPrepModal('${p.id}')`}" style="border-left: 5px solid ${isQuarantaine ? '#f97316' : '#059669'};">
                             <div class="card-header">
@@ -7919,7 +8007,7 @@
                                         <span style="font-size: 1.25rem;">📦</span>
                                         <div>
                                             <div style="font-size: 0.72rem; font-weight: 900; color: #c2410c; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                                <span>BOÎTE : B-${boiteDisplay}</span>
+                                                <span>FLACON(S) : ${boiteDisplay}</span>${flaconCount > 1 ? `<span style="background:#ea580c; color:#fff; font-size:0.58rem; padding:1px 6px; border-radius:4px; font-weight:800;">📦 ${flaconCount} flacons</span>` : ''}
                                                 ${pendClasseur ? '<span style="background:#ea580c; color:#fff; font-size:0.58rem; padding:1px 6px; border-radius:4px; font-weight:800;">📕 Classeur requis</span>' : '<span style="background:#dcfce7; color:#15803d; font-size:0.58rem; padding:1px 6px; border-radius:4px; font-weight:800;">✅ Classeur fait</span>'}
                                                 ${pendCarnet ? '<span style="background:#0284c7; color:#fff; font-size:0.58rem; padding:1px 6px; border-radius:4px; font-weight:800;">📘 Carnet requis</span>' : '<span style="background:#dcfce7; color:#15803d; font-size:0.58rem; padding:1px 6px; border-radius:4px; font-weight:800;">✅ Carnet fait</span>'}
                                             </div>
@@ -7934,7 +8022,7 @@
                                 </div>
                             ` : (isFullyDestocke ? `
                                 <div style="font-size: 0.62rem; color: #059669; font-weight: 800; margin: 4px 0; display: flex; align-items: center; gap: 4px;">
-                                    <span>✅</span> <span>Boîte B-${boiteDisplay} déstockée (Classeur & Carnet)</span>
+                                    <span>✅</span> <span>Flacon(s) ${boiteDisplay} déstocké(s) (Classeur & Carnet)</span>
                                 </div>
                             ` : '')}
                             ${p.statut === 'fertile' && p.dateFertilite ? `<div style="font-size:0.65rem; color:#059669; font-weight:800; margin-bottom:4px;">📅 Fertil. validée le : ${window.formatStringToDate(p.dateFertilite)}</div>` : ''}

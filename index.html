@@ -6871,6 +6871,66 @@
         let isSelectionMode = false;
         let selectedFiches = new Set();
 
+        // Récupère toutes les suggestions de produits (Programme de production, Fiches, Analyses existantes, Préparations)
+        window.getAllProductSuggestions = function () {
+            const set = new Set();
+
+            // 1. Fiches signalétiques (Désignations et Codes)
+            if (typeof fiches !== 'undefined' && Array.isArray(fiches)) {
+                fiches.forEach(f => {
+                    if (f.designation && f.designation.trim()) set.add(f.designation.trim());
+                    if (f.code && f.code.trim()) set.add(f.code.trim() + ' — ' + (f.designation || '').trim());
+                });
+            }
+
+            // 2. Programme de production (programme.js / localStorage)
+            try {
+                let progItems = [];
+                if (typeof window.getProgrammeData === 'function') {
+                    progItems = window.getProgrammeData();
+                }
+                if (!progItems || progItems.length === 0) {
+                    const raw = localStorage.getItem('microbio_prod_programme_v2');
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        progItems = parsed.items || [];
+                    }
+                }
+                if (Array.isArray(progItems)) {
+                    progItems.forEach(it => {
+                        if (it && it.designation && typeof it.designation === 'string') {
+                            const d = it.designation.trim();
+                            if (d) set.add(d);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn("Erreur lecture programme suggestions:", e);
+            }
+
+            // 3. Produits déjà analysés dans l'application (Analyses existantes)
+            if (typeof analyses !== 'undefined' && Array.isArray(analyses)) {
+                analyses.forEach(a => {
+                    if (a && a.produit && typeof a.produit === 'string') {
+                        const p = a.produit.trim();
+                        if (p) set.add(p);
+                    }
+                });
+            }
+
+            // 4. Préparations de milieux & réactifs existantes
+            if (typeof preps !== 'undefined' && Array.isArray(preps)) {
+                preps.forEach(p => {
+                    if (p && p.designation && typeof p.designation === 'string') {
+                        const d = p.designation.trim();
+                        if (d) set.add(d);
+                    }
+                });
+            }
+
+            return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base', numeric: true }));
+        };
+
         function updateSuggestions() {
             const desigList = document.getElementById('designation-suggestions');
             if (desigList) {
@@ -6880,8 +6940,10 @@
 
             const prodList = document.getElementById('produit-suggestions');
             if (prodList) {
-                const uniqueProd = [...new Set(analyses.map(a => a.produit).filter(Boolean))].sort();
-                prodList.innerHTML = uniqueProd.map(p => `<option value="${p}">`).join('');
+                const uniqueProd = (typeof window.getAllProductSuggestions === 'function')
+                    ? window.getAllProductSuggestions()
+                    : [...new Set(analyses.map(a => a.produit).filter(Boolean))].sort();
+                prodList.innerHTML = uniqueProd.map(p => `<option value="${p.replace(/"/g, '&quot;')}">`).join('');
             }
             // Also refresh search suggestions with updated live data
             if (typeof updateSearchDatalist === 'function') updateSearchDatalist();
@@ -9944,7 +10006,7 @@
         // Analysis CRUD
         window.addAnalysisRow = function (data = null) {
             const container = document.getElementById('analysisRows');
-            const rowId = 'row-' + (data ? data.id : Date.now() + Math.random());
+            const rowId = 'row-' + (data ? data.id : (Date.now() + '-' + Math.floor(Math.random() * 10000)));
             const div = document.createElement('div');
             div.className = 'analysis-row';
             div.id = rowId;
@@ -9968,6 +10030,7 @@
                     <div class="form-group">
                         <label>Lot</label>
                         <input type="text" class="form-input row-lot" value="${data ? (data.lot || '') : ''}" placeholder="ex: L240601">
+
                     </div>
                     <div class="form-group">
                         <label>N° de contrôle</label>
@@ -10068,36 +10131,47 @@
             if (!prodInput || !datalistEl) return;
 
             function refreshDatalist() {
-                const suggestions = [];
-                fiches.forEach(f => {
-                    if (f.designation) suggestions.push(f.designation);
-                    if (f.code) suggestions.push(f.code + ' — ' + (f.designation || ''));
-                });
-                datalistEl.innerHTML = [...new Set(suggestions)].map(s => `<option value="${s}">`).join('');
+                const suggestions = (typeof window.getAllProductSuggestions === 'function')
+                    ? window.getAllProductSuggestions()
+                    : [];
+                datalistEl.innerHTML = suggestions.map(s => `<option value="${s.replace(/"/g, '&quot;')}">`).join('');
             }
             refreshDatalist();
 
-            prodInput.addEventListener('change', () => window.onAnalysisProdChange(prodInput, rowDiv));
+            prodInput.addEventListener('change', () => {
+                window.onAnalysisProdChange(prodInput, rowDiv);
+            });
+
             prodInput.addEventListener('input', () => {
                 refreshDatalist();
                 const val = prodInput.value.trim();
-                const matched = fiches.find(f => f.code && f.code.toLowerCase() === val.toLowerCase());
+                const matched = (typeof fiches !== 'undefined' ? fiches : []).find(f => f.code && f.code.toLowerCase() === val.toLowerCase());
                 if (matched) window.onAnalysisProdChange(prodInput, rowDiv);
+            });
+
+            prodInput.addEventListener('focus', () => {
+                refreshDatalist();
             });
         };
 
-        // Cherche la fiche correspondant au produit saisi et déclenche l'autofill
+        // Cherche la fiche correspondant au produit saisi et déclenche l'autofill (fiche + germes)
         window.onAnalysisProdChange = function (prodInput, rowDiv) {
-            const val = prodInput.value.trim().toLowerCase();
+            const rawVal = prodInput.value.trim();
+            const val = rawVal.toLowerCase();
             if (!val) return;
             const codeFromSuggestion = val.split(' — ')[0].trim();
-            const matched = fiches.find(f =>
+
+            const allFiches = typeof fiches !== 'undefined' ? fiches : [];
+            const matched = allFiches.find(f =>
                 (f.designation || '').toLowerCase() === val ||
                 (f.code || '').toLowerCase() === val ||
                 (f.code || '').toLowerCase() === codeFromSuggestion
+            ) || allFiches.find(f =>
+                f.designation && (val.includes(f.designation.toLowerCase()) || f.designation.toLowerCase().includes(val))
             );
+
             if (matched) {
-                if (val.includes(' — ')) prodInput.value = matched.designation || matched.code;
+                if (rawVal.includes(' — ')) prodInput.value = matched.designation || matched.code;
                 window.applyFicheToRow(rowDiv, matched, true);
             }
         };

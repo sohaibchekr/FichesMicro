@@ -2856,7 +2856,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label>Date Préparation</label>
-                        <input type="date" id="datePrep" class="form-input" required onchange="setPrepExpiry(12)">
+                        <input type="date" id="datePrep" class="form-input" required onchange="setPrepExpiry(12); window.autoFillMediumNextInternalLot();">
                     </div>
                     <div class="form-group">
                         <label>Date Péremption</label>
@@ -2914,7 +2914,8 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label>Lot (Interne)</label>
-                        <input type="text" id="prepLot" class="form-input" placeholder="ex: 17/24" required>
+                        <input type="text" id="prepLot" class="form-input" placeholder="ex: 17/24" required
+                            oninput="this.dataset.autoFilled = 'false'; this.style.borderColor = ''; this.style.background = '';">
                     </div>
                     <div class="form-group">
                         <label>Lot (Fournisseur)</label>
@@ -4553,6 +4554,15 @@
         window._isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
         window.addEventListener('DOMContentLoaded', () => {
+            const prepLotInputEl = document.getElementById('prepLot');
+            if (prepLotInputEl && !prepLotInputEl.dataset.prepLotManualInputBound) {
+                prepLotInputEl.dataset.prepLotManualInputBound = 'true';
+                prepLotInputEl.addEventListener('input', function () {
+                    this.dataset.autoFilled = 'false';
+                    this.style.borderColor = '';
+                    this.style.background = '';
+                });
+            }
             document.querySelectorAll('.modal-overlay').forEach(m => {
                 m.style.display = 'none';
                 m.classList.remove('active');
@@ -5265,7 +5275,13 @@
             const d = new Date(); d.setMonth(d.getMonth() + 12);
             document.getElementById('datePeremption').value = d.toISOString().split('T')[0];
             const supEl = document.getElementById('prepSupplier'); if (supEl) { supEl.value = ''; supEl.dataset.autoFilled = 'true'; }
-            document.getElementById('prepLot').value = '';
+            const prepLotEl = document.getElementById('prepLot');
+            if (prepLotEl) {
+                prepLotEl.value = '';
+                prepLotEl.dataset.autoFilled = 'true';
+                prepLotEl.style.borderColor = '';
+                prepLotEl.style.background = '';
+            }
             const lotFEl = document.getElementById('prepLotFourn'); if (lotFEl) { lotFEl.value = ''; lotFEl.dataset.autoFilled = 'true'; }
 
             const suggestionsList = document.getElementById('prep-suggestions');
@@ -5311,6 +5327,7 @@
                     document.getElementById('prepWeight').value = p.weight || '';
                     document.getElementById('prepQtyFinal').value = p.qtyFinal || '';
                     document.getElementById('prepLot').value = p.lot || '';
+                    if (prepLotEl) prepLotEl.dataset.autoFilled = 'false';
                     document.getElementById('prepLotFourn').value = p.lotFourn || '';
                     document.getElementById('prepCode').value = p.code || '';
                     document.getElementById('prepBoite').value = p.boite || '';
@@ -5903,14 +5920,14 @@
                 const match = preps.filter(p => (p.designation || '').trim().toLowerCase() === normKey)
                     .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
                 if (match) {
-                    return { supplier: match.supplier || '', lotFourn: match.lotFourn || '', code: catalogCode || match.code || '' };
+                    return { supplier: match.supplier || '', lotFourn: match.lotFourn || '', lastLot: match.lot || '', code: catalogCode || match.code || '' };
                 }
             }
             if (catalogCode) return { supplier: '', lotFourn: '', code: catalogCode };
             return null;
         };
 
-        window.saveMediumLastLotSupplier = function (desig, supplier, lotFourn) {
+        window.saveMediumLastLotSupplier = function (desig, supplier, lotFourn, lot) {
             if (!desig) return;
             const normKey = desig.trim().toLowerCase();
             try {
@@ -5918,10 +5935,174 @@
                 cache[normKey] = {
                     supplier: supplier || '',
                     lotFourn: lotFourn || '',
+                    lastLot: lot || (cache[normKey] ? cache[normKey].lastLot : '') || '',
                     updatedAt: Date.now()
                 };
                 localStorage.setItem('medium_lots_cache', JSON.stringify(cache));
             } catch (e) { }
+        };
+
+        // --- Parsing & Calcul automatique du N° de Lot Interne suivant pour les préparations ---
+        window.parsePrepLot = function (lotStr) {
+            if (!lotStr || typeof lotStr !== 'string') return null;
+            const str = lotStr.trim();
+            // Formats fractionnés avec slash ou tiret: 22/26, 05/26, 17/24, TSA-22/26, 22-26, etc.
+            const m = str.match(/^([^\d]*)(\d+)(\s*[\/\-]\s*)(\d+)([^\d]*)$/);
+            if (m) {
+                return {
+                    raw: str,
+                    prefix: m[1],
+                    numStr: m[2],
+                    num: parseInt(m[2], 10),
+                    sep: m[3],
+                    yearStr: m[4],
+                    year: parseInt(m[4], 10),
+                    end: m[5],
+                    type: 'fraction'
+                };
+            }
+            // Formats numériques simples: 22, B22, etc.
+            const m2 = str.match(/^([^\d]*)(\d+)([^\d]*)$/);
+            if (m2) {
+                return {
+                    raw: str,
+                    prefix: m2[1],
+                    numStr: m2[2],
+                    num: parseInt(m2[2], 10),
+                    end: m2[3],
+                    type: 'simple'
+                };
+            }
+            return null;
+        };
+
+        window.findBestMatchingPreps = function (allPreps, desig) {
+            if (!desig || !allPreps || allPreps.length === 0) return [];
+            const query = desig.trim().toLowerCase();
+            if (query.length < 2) return [];
+
+            const cleanQuery = query.replace(/^(gélose|gelose|bouillon|milieu|agar|solution|eau)\s+/i, '').trim();
+
+            const scored = [];
+            allPreps.forEach(p => {
+                if (!p || !p.designation) return;
+                const pName = p.designation.trim().toLowerCase();
+                const cleanPName = pName.replace(/^(gélose|gelose|bouillon|milieu|agar|solution|eau)\s+/i, '').trim();
+
+                let score = 0;
+                if (pName === query) {
+                    score = 100;
+                } else if (cleanQuery && cleanPName === cleanQuery) {
+                    score = 90;
+                } else {
+                    const targetQ = cleanQuery || query;
+                    const escaped = targetQ.replace(/[.*+?^${}()|[\]\\]/g, function (ch) { return '\\' + ch; });
+                    const wordRegex = new RegExp('(?:^|[\\s\\(\\/\\[])' + escaped + '(?:$|[\\s\\)\\/\\]])', 'i');
+                    if (wordRegex.test(pName)) {
+                        score = 70;
+                    } else if (pName.includes(query) || (cleanQuery.length >= 3 && pName.includes(cleanQuery))) {
+                        score = 50;
+                    } else if (query.includes(pName) || (cleanPName.length >= 3 && query.includes(cleanPName))) {
+                        score = 40;
+                    }
+                }
+
+                if (score > 0) {
+                    scored.push({ prep: p, score: score });
+                }
+            });
+
+            if (scored.length === 0) return [];
+            scored.sort((a, b) => b.score - a.score);
+            const maxScore = scored[0].score;
+            return scored.filter(s => s.score === maxScore).map(s => s.prep);
+        };
+
+        window.computeNextPrepInternalLot = function (desig, targetYear) {
+            if (!desig) return null;
+            const allPreps = typeof preps !== 'undefined' && Array.isArray(preps) ? preps : [];
+            const matchedPreps = window.findBestMatchingPreps(allPreps, desig);
+
+            const parsedLots = [];
+            matchedPreps.forEach(p => {
+                if (p && p.lot) {
+                    const pl = window.parsePrepLot(p.lot);
+                    if (pl) parsedLots.push(pl);
+                }
+            });
+
+            // Si aucune préparation dans Firestore, vérifier le cache local
+            if (parsedLots.length === 0) {
+                const remembered = window.getMediumLastLotSupplier(desig);
+                if (remembered && remembered.lastLot) {
+                    const pl = window.parsePrepLot(remembered.lastLot);
+                    if (pl) parsedLots.push(pl);
+                }
+            }
+
+            if (parsedLots.length === 0) return null;
+
+            // 1. Chercher les lots de la même année que targetYear (ex: 22/26 -> 23/26)
+            const sameYearLots = parsedLots.filter(pl => pl.type === 'fraction' && String(pl.yearStr) === String(targetYear));
+            if (sameYearLots.length > 0) {
+                sameYearLots.sort((a, b) => b.num - a.num);
+                const top = sameYearLots[0];
+                const nextNum = top.num + 1;
+                const padLength = top.numStr.startsWith('0') && top.numStr.length > 1 ? top.numStr.length : 0;
+                const nextNumStr = padLength ? String(nextNum).padStart(padLength, '0') : String(nextNum);
+                return top.prefix + nextNumStr + top.sep + top.yearStr + top.end;
+            }
+
+            // 2. Lots fractionnés d'une autre année (ex: 45/25 -> 01/26 ou 1/26)
+            const otherYearLots = parsedLots.filter(pl => pl.type === 'fraction');
+            if (otherYearLots.length > 0) {
+                otherYearLots.sort((a, b) => (b.year || 0) - (a.year || 0) || b.num - a.num);
+                const top = otherYearLots[0];
+                const padLength = top.numStr.startsWith('0') && top.numStr.length > 1 ? top.numStr.length : 0;
+                const nextNumStr = padLength ? '01' : '1';
+                return top.prefix + nextNumStr + top.sep + targetYear + top.end;
+            }
+
+            // 3. Lots numériques simples (sans slash)
+            const simpleLots = parsedLots.filter(pl => pl.type === 'simple');
+            if (simpleLots.length > 0) {
+                simpleLots.sort((a, b) => b.num - a.num);
+                const top = simpleLots[0];
+                const nextNum = top.num + 1;
+                const padLength = top.numStr.startsWith('0') && top.numStr.length > 1 ? top.numStr.length : 0;
+                const nextNumStr = padLength ? String(nextNum).padStart(padLength, '0') : String(nextNum);
+                return top.prefix + nextNumStr + top.end;
+            }
+
+            return null;
+        };
+
+        window.autoFillMediumNextInternalLot = function () {
+            const editId = document.getElementById('prepEditId') ? document.getElementById('prepEditId').value : '';
+            const lotInput = document.getElementById('prepLot');
+            if (!lotInput) return;
+
+            // Ne pas écraser si on édite une préparation existante déjà pourvue d'un lot
+            if (editId && lotInput.value.trim() && lotInput.dataset.autoFilled !== 'true') return;
+
+            // Ne pas écraser si l'utilisateur a modifié manuellement le lot
+            if (lotInput.value.trim() && lotInput.dataset.autoFilled === 'false') return;
+
+            const desigInput = document.getElementById('prepDesignation');
+            const desig = (desigInput ? desigInput.value : '').trim();
+            if (!desig || desig.length < 2) return;
+
+            const datePrepInput = document.getElementById('datePrep');
+            const prepDateVal = datePrepInput ? datePrepInput.value : '';
+            const targetYear = (prepDateVal ? prepDateVal.split('-')[0].slice(-2) : '') || new Date().getFullYear().toString().slice(-2);
+
+            const nextLot = window.computeNextPrepInternalLot(desig, targetYear);
+            if (nextLot) {
+                lotInput.value = nextLot;
+                lotInput.dataset.autoFilled = 'true';
+                lotInput.style.borderColor = 'rgba(14, 165, 233, 0.5)';
+                lotInput.style.background = 'rgba(14, 165, 233, 0.05)';
+            }
         };
 
         window.autoFillMediumLotAndSupplier = function () {
@@ -5954,6 +6135,7 @@
 
         window.autoSetFlaconRules = function () {
             window.autoFillMediumLotAndSupplier();
+            window.autoFillMediumNextInternalLot();
             const type = document.getElementById('prepType').value;
             const desig = (document.getElementById('prepDesignation').value || '').toLowerCase();
             let vol = '';
@@ -6155,7 +6337,8 @@
                 window.saveMediumLastLotSupplier(
                     document.getElementById('prepDesignation').value,
                     document.getElementById('prepSupplier').value,
-                    document.getElementById('prepLotFourn').value
+                    document.getElementById('prepLotFourn').value,
+                    document.getElementById('prepLot').value
                 );
 
                 if (id) {
@@ -15215,37 +15398,62 @@
                 return;
             }
             const dateFait = dateFaitEl && dateFaitEl.value ? dateFaitEl.value : new Date().toISOString().split('T')[0];
-            const description = descEl.value.trim();
             const dateEcheance = echeanceEl ? echeanceEl.value : '';
             const priorite = window._instPriorite || 'normal';
 
-            const id = window._instEditingId || (Date.now().toString() + Math.random().toString().slice(2, 6));
-            const existing = window.instancesList.find(x => x.id === id) || {};
-
-            const record = {
-                id: id,
-                dateFait: dateFait,
-                description: description,
-                priorite: priorite,
-                dateEcheance: dateEcheance,
-                reglee: existing.reglee || false,
-                dateReglee: existing.dateReglee || null,
-                updatedAt: Date.now(),
-                createdAt: existing.createdAt || Date.now()
-            };
-
-            const idx = window.instancesList.findIndex(x => x.id === id);
-            if (idx >= 0) window.instancesList[idx] = record;
-            else window.instancesList.unshift(record);
-            try { localStorage.setItem('micro_instances', JSON.stringify(window.instancesList)); } catch (_) {}
-
-            window.db.collection('instances').doc(id).set(record)
-                .then(() => {
-                    if (window.showToast) window.showToast("✅ Instance enregistrée !", "success");
-                })
-                .catch(err => {
-                    console.error("Erreur Firestore instances:", err);
+            if (window._instEditingId) {
+                // Mode édition : une seule instance
+                const description = descEl.value.trim();
+                const id = window._instEditingId;
+                const existing = window.instancesList.find(x => x.id === id) || {};
+                const record = {
+                    id: id,
+                    dateFait: dateFait,
+                    description: description,
+                    priorite: priorite,
+                    dateEcheance: dateEcheance,
+                    reglee: existing.reglee || false,
+                    dateReglee: existing.dateReglee || null,
+                    updatedAt: Date.now(),
+                    createdAt: existing.createdAt || Date.now()
+                };
+                const idx = window.instancesList.findIndex(x => x.id === id);
+                if (idx >= 0) window.instancesList[idx] = record;
+                else window.instancesList.unshift(record);
+                try { localStorage.setItem('micro_instances', JSON.stringify(window.instancesList)); } catch (_) {}
+                window.db.collection('instances').doc(id).set(record)
+                    .then(() => { if (window.showToast) window.showToast("✅ Instance modifiée !", "success"); })
+                    .catch(err => console.error("Erreur Firestore instances:", err));
+            } else {
+                // Mode ajout : chaque ligne = une instance séparée
+                const lines = descEl.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                if (lines.length === 0) {
+                    if (window.showToast) window.showToast("⚠️ Veuillez saisir au moins une instance.", "warning");
+                    return;
+                }
+                lines.forEach(function (line, i) {
+                    const id = (Date.now() + i).toString() + Math.random().toString().slice(2, 6);
+                    const record = {
+                        id: id,
+                        dateFait: dateFait,
+                        description: line,
+                        priorite: priorite,
+                        dateEcheance: dateEcheance,
+                        reglee: false,
+                        dateReglee: null,
+                        updatedAt: Date.now(),
+                        createdAt: Date.now()
+                    };
+                    window.instancesList.unshift(record);
+                    window.db.collection('instances').doc(id).set(record)
+                        .catch(err => console.error("Erreur Firestore instances:", err));
                 });
+                try { localStorage.setItem('micro_instances', JSON.stringify(window.instancesList)); } catch (_) {}
+                if (window.showToast) {
+                    if (lines.length > 1) window.showToast("✅ " + lines.length + " instances enregistrées !", "success");
+                    else window.showToast("✅ Instance enregistrée !", "success");
+                }
+            }
 
             window._instEditingId = null;
             window._instPriorite = 'normal';
@@ -15512,8 +15720,9 @@
                             <label style="display:block; font-size:0.75rem; font-weight:800; color:#0f172a; margin-bottom:6px; text-transform:uppercase;">
                                 📝 Description de l'instance :
                             </label>
-                            <textarea id="inst_desc" rows="3" placeholder="Notez la description détaillée de l'instance à traiter..."
+                            <textarea id="inst_desc" rows="${isEditing ? 3 : 5}" placeholder="${isEditing ? 'Description de l\'instance à traiter...' : 'Une instance par ligne...\nEx: Contrôle pH tampon phosphate\nEx: Vérification autoclave'}"
                                 style="width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1.5px solid #cbd5e1; font-size:0.9rem; font-family:inherit; resize:vertical;"></textarea>
+                            ${!isEditing ? `<div style="margin-top:6px; font-size:0.72rem; color:#64748b; display:flex; align-items:center; gap:5px;"><span style="background:#e0f2fe; color:#0284c7; border-radius:6px; padding:2px 7px; font-weight:800;">💡 Astuce</span> Tapez <strong>une instance par ligne</strong> pour en enregistrer plusieurs en un seul clic.</div>` : ''}
                         </div>
 
                         <!-- CALCULATRICE DE DATE D'ÉCHÉANCE -->
@@ -15554,7 +15763,7 @@
                             </button>
                             <button type="button" onclick="window.saveInstance()"
                                 style="background:#0284c7; color:#fff; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:0.85rem; cursor:pointer; box-shadow:0 4px 14px rgba(2,132,199,0.3);">
-                                💾 Enregistrer l'instance
+                                ${isEditing ? '💾 Enregistrer les modifications' : '💾 Enregistrer'}
                             </button>
                         </div>
                     </div>

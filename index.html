@@ -4,11 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <!-- JSpreadsheet / Excel (Fallback/Ancien) -->
-    <script src="assets/jsuites.js" defer></script>
-    <link rel="stylesheet" href="assets/jsuites.css" type="text/css" />
-    <script src="assets/jexcel.js" defer></script>
-    <link rel="stylesheet" href="assets/jexcel.css" type="text/css" />
     <!-- Luckysheet scripts are loaded ON DEMAND in initExcel() to avoid blocking startup -->
     <style>
         * {
@@ -95,7 +90,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
     <!-- SortableJS -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js" defer></script>
 
     <!-- SEO & Icons -->
     <meta name="description" content="Application de consultation des résumés de laboratoire microbiologique.">
@@ -2247,7 +2242,7 @@
     <footer style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.7rem; opacity: 0.5;">
         <div class="footer-version" style="color:var(--primary); font-weight:bold;">MICROBIO v4.11.0 • Stockage Local
             Direct</div>
-        <div onclick="localStorage.clear(); caches.delete('microbio-cache-v4.11.0'); location.reload(true);"
+        <div onclick="localStorage.clear(); caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => location.reload(true));"
             style="opacity: 0.5; font-size: 0.7rem; cursor: pointer; margin-top: 15px; text-decoration: underline;">
             CLIQUEZ ICI POUR RÉINITIALISER LE CACHE SI BESOIN</div>
     </footer>
@@ -2529,29 +2524,63 @@
                 <div
                     style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
                     <div class="form-group">
-                        <label>Date de préparation</label>
+                        <label>📅 Date de départ / Date de préparation</label>
                         <input type="date" id="calcPrepDate" class="form-input" onchange="window.calculateExpiry()">
                     </div>
-                    <div class="form-group">
-                        <label>Durée de validité (Mois)</label>
+
+                    <!-- Sélecteur d'unité : Semaines ou Mois -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                        <button type="button" id="btnExpiryUnitWeeks" class="pick-btn" onclick="window.switchExpiryUnit('weeks')"
+                            style="flex: 1; padding: 10px; font-size: 0.75rem; font-weight: 800; border-radius: 10px; border: 1.5px solid var(--primary); background: var(--primary); color: white; cursor: pointer; transition: all 0.2s;">
+                            🗓️ EN SEMAINES
+                        </button>
+                        <button type="button" id="btnExpiryUnitMonths" class="pick-btn" onclick="window.switchExpiryUnit('months')"
+                            style="flex: 1; padding: 10px; font-size: 0.75rem; font-weight: 800; border-radius: 10px; border: 1.5px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: var(--text-dim); cursor: pointer; transition: all 0.2s;">
+                            📆 EN MOIS
+                        </button>
+                    </div>
+
+                    <!-- BLOC 1 : CALCUL EN SEMAINES -->
+                    <div id="expiryBlockWeeks" class="form-group">
+                        <label>Durée de validité (Nombre de Semaines)</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="number" id="calcMonths" class="form-input" placeholder="ex: 12"
-                                oninput="window.calculateExpiry()">
+                            <input type="number" id="calcWeeks" class="form-input" placeholder="ex: 2 ou 3 semaines" min="1"
+                                oninput="window.calculateExpiry('weeks')">
                         </div>
-                        <div class="quick-pick">
-                            <button class="pick-btn"
-                                onclick="document.getElementById('calcMonths').value=6; window.calculateExpiry()">6
-                                MOIS</button>
-                            <button class="pick-btn"
-                                onclick="document.getElementById('calcMonths').value=12; window.calculateExpiry()">12
-                                MOIS</button>
-                            <button class="pick-btn"
-                                onclick="document.getElementById('calcMonths').value=18; window.calculateExpiry()">18
-                                MOIS</button>
-                            <button class="pick-btn"
-                                onclick="document.getElementById('calcMonths').value=24; window.calculateExpiry()">24
-                                MOIS</button>
+                        <div class="quick-pick" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px;">
+                            <button type="button" class="pick-btn" onclick="window.setCalcWeeks(1)">1 SEM</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcWeeks(2)">2 SEM</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcWeeks(3)">3 SEM</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcWeeks(4)">4 SEM</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcWeeks(6)">6 SEM</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcWeeks(8)">8 SEM</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcWeeks(12)">12 SEM</button>
                         </div>
+                    </div>
+
+                    <!-- BLOC 2 : CALCUL EN MOIS -->
+                    <div id="expiryBlockMonths" class="form-group" style="display: none;">
+                        <label>Durée de validité (Nombre de Mois)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="calcMonths" class="form-input" placeholder="ex: 12" min="1"
+                                oninput="window.calculateExpiry('months')">
+                        </div>
+                        <div class="quick-pick" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px;">
+                            <button type="button" class="pick-btn" onclick="window.setCalcMonths(1)">1 MOIS</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcMonths(3)">3 MOIS</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcMonths(6)">6 MOIS</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcMonths(12)">12 MOIS</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcMonths(18)">18 MOIS</button>
+                            <button type="button" class="pick-btn" onclick="window.setCalcMonths(24)">24 MOIS</button>
+                        </div>
+                    </div>
+
+                    <!-- Option règle -1 jour -->
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between;">
+                        <label for="calcMinusOneDay" style="font-size: 0.72rem; color: var(--text-dim); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" id="calcMinusOneDay" checked onchange="window.calculateExpiry()" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--primary);">
+                            <span>Règle laboratoire : diminuer de 1 jour (J - 1)</span>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -2861,16 +2890,19 @@
                     <div class="form-group">
                         <label>Date Péremption</label>
                         <input type="date" id="datePeremption" class="form-input" required>
-                        <div class="quick-pick" style="margin-top: 5px; display: flex; gap: 5px;">
+                        <div class="quick-pick" style="margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px;">
+                            <button type="button" class="pick-btn" onclick="window.setPrepExpiryWeeks(1)"
+                                style="flex: 1; min-width: 45px; font-size: 0.6rem; padding: 5px 3px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">1 SEM</button>
+                            <button type="button" class="pick-btn" onclick="window.setPrepExpiryWeeks(2)"
+                                style="flex: 1; min-width: 45px; font-size: 0.6rem; padding: 5px 3px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">2 SEM</button>
+                            <button type="button" class="pick-btn" onclick="window.setPrepExpiryWeeks(4)"
+                                style="flex: 1; min-width: 45px; font-size: 0.6rem; padding: 5px 3px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">4 SEM</button>
                             <button type="button" class="pick-btn" onclick="window.setPrepExpiry(1)"
-                                style="flex: 1; font-size: 0.6rem; padding: 5px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">1
-                                MOIS</button>
+                                style="flex: 1; min-width: 45px; font-size: 0.6rem; padding: 5px 3px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">1 MOIS</button>
                             <button type="button" class="pick-btn" onclick="window.setPrepExpiry(6)"
-                                style="flex: 1; font-size: 0.6rem; padding: 5px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">6
-                                MOIS</button>
+                                style="flex: 1; min-width: 45px; font-size: 0.6rem; padding: 5px 3px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">6 MOIS</button>
                             <button type="button" class="pick-btn" onclick="window.setPrepExpiry(12)"
-                                style="flex: 1; font-size: 0.6rem; padding: 5px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">12
-                                MOIS</button>
+                                style="flex: 1; min-width: 45px; font-size: 0.6rem; padding: 5px 3px; border-radius: 6px; cursor: pointer; border: 1px solid var(--glass-border); background: #f1f5f9; color: var(--text-dim); font-weight: 800;">12 MOIS</button>
                         </div>
                     </div>
                 </div>
@@ -4546,7 +4578,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW Registered v4.5.0'))
+                    .then(reg => console.log('SW Registered v4.14.15'))
                     .catch(err => console.log('SW Error:', err));
             });
         }
@@ -5820,7 +5852,21 @@
             }
         };
 
-        window.setPrepExpiry = function (months) {
+                window.setPrepExpiryWeeks = function (weeks) {
+            if (!weeks || weeks <= 0) return;
+            const prepDateVal = document.getElementById('datePrep').value;
+            if (!prepDateVal) return window.showToast("Sélectionnez d'abord la date de préparation.", 'info');
+
+            const d = new Date(prepDateVal + 'T00:00:00');
+            d.setDate(d.getDate() + (weeks * 7) - 1); // Règle du labo (-1 jour)
+
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            document.getElementById('datePeremption').value = `${yyyy}-${mm}-${dd}`;
+        };
+
+window.setPrepExpiry = function (months) {
             if (!months || months <= 0) return;
             const prepDateVal = document.getElementById('datePrep').value;
             if (!prepDateVal) return window.showToast("Sélectionnez d'abord la date de préparation.", 'info');
@@ -6749,68 +6795,169 @@
 
 
         // (moved to expiry/expiry.js)
-        window.calculateExpiry = window.calculateExpiry || function () {
+        window.expiryUnitMode = 'weeks';
 
-            const dateVal = document.getElementById('calcPrepDate').value;
-            const months = parseInt(document.getElementById('calcMonths').value) || 0;
+        window.switchExpiryUnit = function (unit) {
+            window.expiryUnitMode = unit;
+            const btnWeeks = document.getElementById('btnExpiryUnitWeeks');
+            const btnMonths = document.getElementById('btnExpiryUnitMonths');
+            const blockWeeks = document.getElementById('expiryBlockWeeks');
+            const blockMonths = document.getElementById('expiryBlockMonths');
 
-            if (!dateVal || months <= 0) {
-                document.getElementById('calcResult-expiry').innerText = "---";
-                const screen0 = document.querySelector('#calcResultsScreens .calc-screen[data-mode="expiry"]');
-                if (screen0) screen0.style.display = 'block';
+            if (unit === 'weeks') {
+                if (btnWeeks) {
+                    btnWeeks.style.background = 'var(--primary)';
+                    btnWeeks.style.borderColor = 'var(--primary)';
+                    btnWeeks.style.color = 'white';
+                }
+                if (btnMonths) {
+                    btnMonths.style.background = 'rgba(255,255,255,0.05)';
+                    btnMonths.style.borderColor = 'rgba(255,255,255,0.15)';
+                    btnMonths.style.color = 'var(--text-dim)';
+                }
+                if (blockWeeks) blockWeeks.style.display = 'block';
+                if (blockMonths) blockMonths.style.display = 'none';
+                window.calculateExpiry('weeks');
+            } else {
+                if (btnMonths) {
+                    btnMonths.style.background = 'var(--primary)';
+                    btnMonths.style.borderColor = 'var(--primary)';
+                    btnMonths.style.color = 'white';
+                }
+                if (btnWeeks) {
+                    btnWeeks.style.background = 'rgba(255,255,255,0.05)';
+                    btnWeeks.style.borderColor = 'rgba(255,255,255,0.15)';
+                    btnWeeks.style.color = 'var(--text-dim)';
+                }
+                if (blockWeeks) blockWeeks.style.display = 'none';
+                if (blockMonths) blockMonths.style.display = 'block';
+                window.calculateExpiry('months');
+            }
+        };
+
+        window.setCalcWeeks = function (w) {
+            const el = document.getElementById('calcWeeks');
+            if (el) el.value = w;
+            window.calculateExpiry('weeks');
+        };
+
+        window.setCalcMonths = function (m) {
+            const el = document.getElementById('calcMonths');
+            if (el) el.value = m;
+            window.calculateExpiry('months');
+        };
+
+        window.calculateExpiry = function (forcedUnit) {
+            const unit = forcedUnit || window.expiryUnitMode || 'weeks';
+            const dateInput = document.getElementById('calcPrepDate');
+            const dateVal = dateInput ? dateInput.value : '';
+            const minusOne = document.getElementById('calcMinusOneDay') ? document.getElementById('calcMinusOneDay').checked : true;
+
+            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="expiry"]');
+            const outResult = document.getElementById('calcResult-expiry');
+            const outUnit = document.getElementById('unitDisplay-expiry');
+            const outLabel = document.getElementById('resultLabel-expiry');
+
+            if (!dateVal) {
+                if (outResult) outResult.innerText = "---";
+                if (outUnit) outUnit.innerText = "Sélectionnez une date";
+                if (screen) screen.style.display = 'block';
                 return;
             }
 
-            const d = new Date(dateVal);
-            d.setMonth(d.getMonth() + months);
-            d.setDate(d.getDate() - 1);
+            let d = new Date(dateVal + 'T00:00:00');
+            let durationText = '';
 
-            const resultStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            document.getElementById('calcResult-expiry').innerText = resultStr;
+            if (unit === 'weeks') {
+                const weeks = parseInt(document.getElementById('calcWeeks')?.value, 10) || 0;
+                if (weeks <= 0) {
+                    if (outResult) outResult.innerText = "---";
+                    if (outUnit) outUnit.innerText = "Saisissez un nombre de semaines";
+                    if (screen) screen.style.display = 'block';
+                    return;
+                }
+                d.setDate(d.getDate() + (weeks * 7));
+                if (minusOne) d.setDate(d.getDate() - 1);
+                durationText = `+${weeks} semaine${weeks > 1 ? 's' : ''} (${weeks * 7} jours${minusOne ? ' - 1j' : ''})`;
+            } else {
+                const months = parseInt(document.getElementById('calcMonths')?.value, 10) || 0;
+                if (months <= 0) {
+                    if (outResult) outResult.innerText = "---";
+                    if (outUnit) outUnit.innerText = "Saisissez un nombre de mois";
+                    if (screen) screen.style.display = 'block';
+                    return;
+                }
+                d.setMonth(d.getMonth() + months);
+                if (minusOne) d.setDate(d.getDate() - 1);
+                durationText = `+${months} mois${minusOne ? ' (- 1 jour)' : ''}`;
+            }
 
-            const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="expiry"]');
+            const dayName = d.toLocaleDateString('fr-FR', { weekday: 'long' });
+            const formattedDate = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            if (outResult) outResult.innerText = formattedDate;
+            if (outLabel) outLabel.innerText = minusOne ? "Date d'Expiration (J - 1)" : "Date Cible";
+            if (outUnit) outUnit.innerText = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} • ${durationText}`;
             if (screen) screen.style.display = 'block';
 
-            // Si le modal prep est ouvert, on peut mettre à jour directement
+            // Si le modal de préparation est ouvert, synchroniser datePeremption
             const prepModal = document.getElementById('prepModalOverlay');
             if (prepModal && prepModal.classList.contains('active')) {
                 const datePeremption = document.getElementById('datePeremption');
                 if (datePeremption) {
-                    datePeremption.value = d.toISOString().split('T')[0];
+                    const yyyy = d.getFullYear();
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    datePeremption.value = `${yyyy}-${mm}-${dd}`;
                 }
             }
         };
 
         window.applyTestPreset = function (type) {
-
-            const nbRaw = prompt("Saisir le nombre de produits (points) à analyser :", "1");
+            const nbRaw = prompt("Saisir le nombre de produits (points / lots) à analyser :", "1");
             if (!nbRaw) return;
             const nb = parseInt(nbRaw) || 1;
 
             const container = document.getElementById('milieux-list');
             container.innerHTML = ''; // Vider la liste actuelle
+
             if (type === 'pf_mp') {
-                // Diluant non incubé
+                // Nombre de boîtes par paramètre (par défaut 2, parfois 4 ou 5)
+                let bpp = '2';
+                const bppRaw = prompt("Nombre de boîtes par paramètre (TSA / GS) :\n(Par défaut: 2 boîtes. Saisissez 2, 3, 4, 5...)", "2");
+                if (bppRaw) {
+                    const parsed = parseInt(bppRaw, 10);
+                    if (parsed > 0) bpp = String(parsed);
+                }
+
+                // 1 Diluant non incubé par lot
                 window.addMilieuRow('Diluant', nb, '1', 'Flacon', false, 'N/A', 'diluant');
-                window.addMilieuRow('TSA', nb, '2', 'Boîte 90mm', true, '30-35');
-                window.addMilieuRow('GS', nb, '2', 'Boîte 90mm', true, '20-25');
-                // Les témoins diluant = 1 boîte par diluant (nb diluants = nb produits)
+                // Boîtes TSA par lot à 30-35°C (avec témoin négatif gélose)
+                window.addMilieuRow('TSA', nb, bpp, 'Boîte 90mm', true, '30-35');
+                // Boîtes GS par lot à 20-25°C (avec témoin négatif gélose)
+                window.addMilieuRow('GS', nb, bpp, 'Boîte 90mm', true, '20-25');
+                // Témoin Diluant TSA : 1 boîte 90mm par lot à 30-35°C
                 window.addMilieuRow('TSA (Témoin Diluant)', nb, '1', 'Boîte 90mm', false, '30-35', 'temoin-tsa');
+                // Témoin Diluant GS : 1 boîte 90mm par lot à 20-25°C
                 window.addMilieuRow('GS (Témoin Diluant)', nb, '1', 'Boîte 90mm', false, '20-25', 'temoin-gs');
-                // En PF/MP : les contrôles du bas sont tous à 0
-                // (le témoin négatif des milieux est géré par la case "Nég" dans la liste)
+
+                // En PF/MP : Témoin Environnement = 1 boîte 55mm sur TSA à 30-35°C
                 document.getElementById('temoinMat').value = 0;
-                document.getElementById('temoinEnv').value = 0;
+                document.getElementById('temoinEnv').value = 1;
                 document.getElementById('temoinNegEnv').value = 0;
+                document.getElementById('temoinCond').value = '30-35';
+                document.getElementById('temoinFormat').value = 'Boîte 55mm';
                 window.calculateBoites();
             } else if (type === 'eau') {
                 // R2A (30-35°C) 1 boîte pour chaque point d'eau
                 window.addMilieuRow('R2A', nb, '1', 'Boîte 55mm', false, '30-35');
 
-                // Les contrôles d'environnement, témoin négatif, et témoin matériel
+                // Contrôles eau : environnement, témoin négatif, et témoin matériel
                 document.getElementById('temoinMat').value = 1;
                 document.getElementById('temoinEnv').value = 1;
                 document.getElementById('temoinNegEnv').value = 1;
+                document.getElementById('temoinCond').value = '30-35';
+                document.getElementById('temoinFormat').value = 'Boîte 55mm';
                 window.calculateBoites();
             }
         };
@@ -6829,11 +6976,8 @@
             div.innerHTML = `
                 <input type="text" class="form-input mil-name" placeholder="Milieu" value="${name}" oninput="window.calculateBoites()" style="flex:2; padding:6px; font-size:0.7rem;" title="Milieu">
                 <input type="number" class="form-input mil-pts" placeholder="Pts" value="${pts || ''}" oninput="window.calculateBoites()" style="flex:1; padding:6px; font-size:0.7rem;" title="Nombre de points">
-                <select class="form-input mil-mult" onchange="window.calculateBoites()" style="flex:1; padding:6px; font-size:0.7rem;" title="Boites par point">
-                    <option value="1" ${multVal === '1' ? 'selected' : ''}>x1</option>
-                    <option value="2" ${multVal === '2' ? 'selected' : ''}>x2</option>
-                    <option value="3" ${multVal === '3' ? 'selected' : ''}>x3</option>
-                    <option value="4" ${multVal === '4' ? 'selected' : ''}>x4</option>
+                <select class="form-input mil-mult" onchange="window.calculateBoites()" style="flex:1; padding:6px; font-size:0.7rem;" title="Boîtes par point / paramètre">
+                    ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(m => `<option value="${m}" ${String(multVal) === String(m) ? 'selected' : ''}>x${m}</option>`).join('')}
                 </select>
                 <select class="form-input mil-temp" onchange="window.calculateBoites()" style="flex:1.5; padding:6px; font-size:0.7rem;" title="Température">
                     <option value="20-25" ${tempVal === '20-25' ? 'selected' : ''}>20-25°C</option>
@@ -6873,9 +7017,10 @@
                 if (tGs) tGs.value = `GS (Témoin ${dilName})`;
             }
 
-            const milieuSummary = {}; // Pour le calcul de gélose
+            // Décompte par milieu pour gélose et flacons
+            const milieuSummary = {}; // { TSA: { b90: 10, b55: 1, count: 11 }, GS: { b90: 10, b55: 0, count: 10 } }
 
-            // Parcours des milieux  
+            // Parcours des milieux
             rows.forEach(row => {
                 const name = row.querySelector('.mil-name').value.trim() || 'Inconnu';
                 const pts = parseFloat(row.querySelector('.mil-pts').value) || 0;
@@ -6883,13 +7028,13 @@
                 const temp = row.querySelector('.mil-temp').value;
                 const format = row.querySelector('.mil-format').value;
                 const hasNeg = row.querySelector('.mil-neg').checked;
+
                 let addedNeg = 0;
                 if (hasNeg) {
                     const baseBoites = pts * mult;
                     if (format.includes('Boîte') && baseBoites > 0) {
-                        // Un flacon de 180ml coule 9 à 10 boîtes. 
-                        // Donc pour chaque 10 boîtes, on compte 1 témoin négatif.
-                        addedNeg = Math.ceil(baseBoites / 10);
+                        // 1 flacon coule 9 boîtes de 90mm. 1 témoin négatif par flacon préparé (tranche de 9 boîtes)
+                        addedNeg = Math.ceil(baseBoites / 9);
                     } else {
                         addedNeg = 1;
                     }
@@ -6904,12 +7049,16 @@
                     if (!formatSummary[format]) formatSummary[format] = 0;
                     formatSummary[format] += count;
 
-                    // Calcul du volume de gélose nécessaire
+                    // Regroupement par milieu pour le calcul des flacons de gélose
                     if (format.includes('Boîte')) {
-                        // On prend le nom du milieu en ignorant la partie "(Témoin...)" pour regrouper (ex: "TSA" ou "R2A")
                         const baseName = name.split('(')[0].trim().toUpperCase() || 'INCONNU';
-                        if (!milieuSummary[baseName]) milieuSummary[baseName] = 0;
-                        milieuSummary[baseName] += count * (format.includes('90') ? 18 : 10);
+                        if (!milieuSummary[baseName]) {
+                            milieuSummary[baseName] = { b90: 0, b55: 0, other: 0, count: 0 };
+                        }
+                        if (format.includes('90')) milieuSummary[baseName].b90 += count;
+                        else if (format.includes('55')) milieuSummary[baseName].b55 += count;
+                        else milieuSummary[baseName].other += count;
+                        milieuSummary[baseName].count += count;
                     }
                 }
             });
@@ -6930,25 +7079,46 @@
             if (!formatSummary[tFormat]) formatSummary[tFormat] = 0;
             formatSummary[tFormat] += totalControls;
 
-            // Les contrôles sont par défaut sur du TSA
+            // Les contrôles d'environnement / matériel sont sur du TSA
             if (totalControls > 0 && tFormat.includes('Boîte')) {
-                if (!milieuSummary['TSA']) milieuSummary['TSA'] = 0;
-                milieuSummary['TSA'] += totalControls * (tFormat.includes('90') ? 18 : 10);
+                if (!milieuSummary['TSA']) {
+                    milieuSummary['TSA'] = { b90: 0, b55: 0, other: 0, count: 0 };
+                }
+                if (tFormat.includes('90')) milieuSummary['TSA'].b90 += totalControls;
+                else if (tFormat.includes('55')) milieuSummary['TSA'].b55 += totalControls;
+                else milieuSummary['TSA'].other += totalControls;
+                milieuSummary['TSA'].count += totalControls;
             }
 
             // Affichage Résultat Principal
             const out = document.getElementById('calcResult-boites');
             if (out) out.innerText = total;
 
+            const unitEl = document.getElementById('unitDisplay-boites');
+            if (unitEl) {
+                const parts = [];
+                if (milieuSummary['TSA'] && milieuSummary['TSA'].count > 0) {
+                    parts.push(`${milieuSummary['TSA'].count} TSA`);
+                }
+                if (milieuSummary['GS'] && milieuSummary['GS'].count > 0) {
+                    parts.push(`${milieuSummary['GS'].count} GS`);
+                }
+                for (const m in milieuSummary) {
+                    if (m !== 'TSA' && m !== 'GS' && milieuSummary[m].count > 0) {
+                        parts.push(`${milieuSummary[m].count} ${m}`);
+                    }
+                }
+                unitEl.innerText = parts.length > 0 ? `${total} boîtes au total (${parts.join(' + ')})` : 'boîtes au total';
+            }
+
             const screen = document.querySelector('#calcResultsScreens .calc-screen[data-mode="boites"]');
             if (screen) screen.style.display = 'block';
 
             // Affichage Breakdown
             const summaryDiv = document.getElementById('boites-summary-display');
-            // Toujours afficher le résumé si on a des éléments (incubés ou non)
             if (Object.keys(tempSummary).length > 0) {
                 summaryDiv.style.display = 'block';
-                let html = '<div style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; font-size: 0.65rem;">Températures :</div>';
+                let html = '<div style="font-weight: 800; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; font-size: 0.65rem;">Températures d\'incubation :</div>';
                 for (const temp in tempSummary) {
                     if (tempSummary[temp] > 0) {
                         let tempLabel = temp === 'N/A' ? '<span class="condition-badge" style="background:#e2e8f0; color:#475569;">Non incubé</span>' : `<span class="condition-badge">${temp}°C</span>`;
@@ -6973,27 +7143,39 @@
                     }
                 }
 
-                // AJOUT DU CALCULATEUR DE GÉLOSE (FLACONS)
+                // CALCULATEUR DE GÉLOSE (FLACONS) AVEC RÈGLE VALIDÉE : 1 FLACON = 9 BOÎTES DE 90mm
                 if (Object.keys(milieuSummary).length > 0) {
                     html += '<div style="font-weight: 800; color: #f59e0b; margin: 12px 0 8px; text-transform: uppercase; font-size: 0.65rem; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 8px;">Préparation Gélose (Bain-Marie) :</div>';
                     for (const m in milieuSummary) {
-                        const vol = milieuSummary[m];
-                        if (vol > 0) {
-                            // Calcul automatique du volume par flacon selon le type
-                            let volParFlacon = 190; // Défaut
-                            if (m.includes('GELOSE')) volParFlacon = 180;
-                            else if (m.includes('BOUILLON')) {
-                                if (m.includes('MAC')) volParFlacon = 100;
-                                else volParFlacon = 90;
+                        const info = milieuSummary[m];
+                        if (info.count > 0) {
+                            // Règle laboratoire : 1 flacon (180-200ml) coule 9 boîtes de 90mm
+                            let flacons = 0;
+                            if (info.b90 > 0) {
+                                flacons = Math.ceil(info.b90 / 9);
+                            } else if (info.b55 > 0) {
+                                flacons = Math.ceil(info.b55 / 18);
                             }
-                            const flacons = Math.ceil(vol / volParFlacon);
-                            html += `<div class="summary-item" style="display: flex; justify-content: space-between; margin-bottom: 4px; padding: 6px; background: rgba(245, 158, 11, 0.05); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.1);">
-                                <span class="label-text" style="color:#d97706; font-size:0.75rem; font-weight:700;">${m} (~${vol} mL)</span>
-                                <span class="val-text" style="font-weight: 900; color: #b45309; font-size:0.8rem;">${flacons} flacon(s)</span>
+
+                            const details = [];
+                            if (info.b90 > 0) details.push(`${info.b90} boîte${info.b90 > 1 ? 's' : ''} 90mm`);
+                            if (info.b55 > 0) details.push(`${info.b55} boîte${info.b55 > 1 ? 's' : ''} 55mm`);
+
+                            html += `<div class="summary-item" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding: 8px 10px; background: rgba(245, 158, 11, 0.08); border-radius: 10px; border: 1.5px solid rgba(245, 158, 11, 0.25);">
+                                <div>
+                                    <span class="label-text" style="color:#d97706; font-size:0.8rem; font-weight:800; display:block;">${m}</span>
+                                    <span style="color:#78350f; font-size:0.68rem; font-weight:600;">
+                                        ${details.join(' + ')} • 1 flacon = 9 boîtes 90mm
+                                    </span>
+                                </div>
+                                <div style="text-align:right;">
+                                    <span class="val-text" style="font-weight: 900; color: #b45309; font-size:0.95rem;">${flacons} flacon${flacons > 1 ? 's' : ''}</span>
+                                    <div style="font-size:0.6rem; color:#92400e; font-weight:700;">Capacité : ${flacons * 9} boîtes max</div>
+                                </div>
                             </div>`;
                         }
                     }
-                    html += `<div style="font-size:0.5rem; color:var(--text-dim); text-align:right; margin-top:4px;">*Estimé env. 18ml/B90 et 10ml/B55</div>`;
+                    html += '<div style="font-size:0.55rem; color:#92400e; font-weight:700; text-align:right; margin-top:4px;">*Règle validée : 1 flacon (180-200ml) coule 9 boîtes de Petri (90mm)</div>';
                 }
 
                 summaryDiv.innerHTML = html;

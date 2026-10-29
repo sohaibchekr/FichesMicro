@@ -2966,6 +2966,18 @@
                     </div>
                 </div>
 
+                <div class="form-group" style="background:rgba(79,70,229,0.03); border:1.5px solid rgba(79,70,229,0.15); border-radius:12px; padding:10px 14px; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <label style="margin:0; font-size:0.68rem; font-weight:800; color:var(--primary); text-transform:uppercase;">👤 Préparé par (Opérateur)</label>
+                        <span id="currentUserHint" style="font-size:0.62rem; color:#059669; font-weight:800; cursor:pointer;" onclick="window.promptChangeCurrentUser()" title="Changer mon nom par défaut">👤 Mon profil : <strong id="currentUserNameDisplay">Moi</strong> (✏️ changer)</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="prepPreparePar" class="form-input" placeholder="ex: Mon Nom ou Initiales" list="prep-operateurs-list" style="flex:1;">
+                        <datalist id="prep-operateurs-list"></datalist>
+                        <button type="button" onclick="window.setPrepPrepareParToMe()" style="background:linear-gradient(135deg, #059669, #10b981); color:#fff; border:none; border-radius:10px; padding:0 14px; font-size:0.75rem; font-weight:900; cursor:pointer; white-space:nowrap; box-shadow:0 2px 6px rgba(5,150,105,0.25);">👤 C'est moi</button>
+                    </div>
+                </div>
+
                 <!-- Déstockage Classeur des Réactifs & Carnet de Sortie (Séparés) -->
                 <div style="background: rgba(234, 88, 12, 0.05); border: 2px solid rgba(234, 88, 12, 0.35); border-radius: 14px; padding: 12px; margin-bottom: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -4290,8 +4302,23 @@
                             style="padding:6px; font-size:0.8rem;"></div>
                 </div>
 
+                <!-- Barre d'ajout de milieu oublié sans recommencer -->
+                <div id="frForgottenBar" style="background:#ecfdf5; border:1.5px solid #a7f3d0; border-radius:12px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:1.2rem;">💡</span>
+                        <div>
+                            <div style="font-size:0.75rem; font-weight:900; color:#065f46;">Milieu oublié ? Ajoutez-le directement sans recommencer :</div>
+                            <div style="font-size:0.62rem; color:#047857;">Vos sélections et lots actuels restent conservés !</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <select id="fr_forgotten_select" class="form-input" style="padding:6px 10px; font-size:0.78rem; min-width:180px; max-width:260px;"></select>
+                        <button type="button" onclick="window.addForgottenMediumToResults()" style="background:#059669; color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:0.75rem; font-weight:900; cursor:pointer; box-shadow:0 2px 6px rgba(5,150,105,0.25);">➕ Ajouter ce milieu</button>
+                    </div>
+                </div>
+
                 <div id="feuillesResultatsLotsContainer"
-                    style="display:flex; flex-direction:column; gap:15px; max-height:40vh; overflow-y:auto; padding:5px; margin-bottom:15px;">
+                    style="display:flex; flex-direction:column; gap:15px; max-height:48vh; overflow-y:auto; padding:5px; margin-bottom:15px;">
                     <!-- Rempli en JS --></div>
                 <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
                     <button type="button" onclick="window.closeModal('feuillesResultatsModalOverlay')"
@@ -5334,6 +5361,22 @@
             }
             const codeEl = document.getElementById('prepCode'); if (codeEl) { codeEl.value = ''; codeEl.dataset.autoFilled = 'true'; codeEl.style.borderColor = ''; codeEl.style.background = ''; }
             document.getElementById('prepBoite').value = '';
+            // Opérateur
+            const myStoredUser = localStorage.getItem('microbio_current_user') || '';
+            const prepOpEl = document.getElementById('prepPreparePar');
+            if (prepOpEl) prepOpEl.value = myStoredUser;
+            const opDisplayEl = document.getElementById('currentUserNameDisplay');
+            if (opDisplayEl) opDisplayEl.textContent = myStoredUser || 'Non défini';
+            // Suggestion des opérateurs existants
+            const opDataList = document.getElementById('prep-operateurs-list');
+            if (opDataList) {
+                const uniqueOps = new Set();
+                if (myStoredUser) uniqueOps.add(myStoredUser);
+                if (typeof preps !== 'undefined' && Array.isArray(preps)) {
+                    preps.forEach(p => { if (p.preparePar) uniqueOps.add(p.preparePar.trim()); });
+                }
+                opDataList.innerHTML = Array.from(uniqueOps).map(o => `<option value="${o}">`).join('');
+            }
             document.getElementById('prepWeight').value = '';
             document.getElementById('prepQtyFinal').value = '';
             document.getElementById('prepVolCond').dataset.modifiedManually = '';
@@ -5363,6 +5406,7 @@
                     document.getElementById('prepLotFourn').value = p.lotFourn || '';
                     document.getElementById('prepCode').value = p.code || '';
                     document.getElementById('prepBoite').value = p.boite || '';
+                    if (prepOpEl) prepOpEl.value = p.preparePar || '';
                     document.getElementById('datePrep').value = p.datePrep || '';
                     document.getElementById('datePeremption').value = p.datePeremption || '';
                     document.getElementById('prepType').value = p.type || '';
@@ -5412,6 +5456,32 @@
                 window.setPrepStatut('quarantaine');
             }
             window.openModal('prepModalOverlay');
+        };
+
+        window.promptChangeCurrentUser = function() {
+            const cur = localStorage.getItem('microbio_current_user') || '';
+            const name = prompt("Entrez votre prénom ou nom pour vous identifier (ex: Sohaib) :", cur);
+            if (name !== null) {
+                const trimmed = name.trim();
+                localStorage.setItem('microbio_current_user', trimmed);
+                const disp = document.getElementById('currentUserNameDisplay');
+                if (disp) disp.textContent = trimmed || 'Moi';
+                if (window.showToast) window.showToast("Votre nom a été enregistré : " + (trimmed || 'Non défini'), "success");
+                if (typeof render === 'function') render();
+            }
+        };
+
+        window.setPrepPrepareParToMe = function() {
+            let myName = localStorage.getItem('microbio_current_user') || '';
+            if (!myName) {
+                myName = prompt("Entrez votre prénom ou nom pour vous identifier :");
+                if (!myName) return;
+                localStorage.setItem('microbio_current_user', myName.trim());
+            }
+            const el = document.getElementById('prepPreparePar');
+            if (el) el.value = myName;
+            const disp = document.getElementById('currentUserNameDisplay');
+            if (disp) disp.textContent = myName || 'Moi';
         };
 
         // === FONCTIONS SUIVI DESTOCKAGE CLASSEUR & CARNET ===
@@ -6377,8 +6447,14 @@ window.setPrepExpiry = function (months) {
                     dateDestockage: isDestocke ? new Date().toISOString() : null,
                     additifs: additifs,
                     flaconEntames: flaconEntames,
+                    preparePar: (document.getElementById('prepPreparePar') ? document.getElementById('prepPreparePar').value.trim() : '') || '',
                     updatedAt: Date.now()
                 };
+
+                const userPrepVal = (document.getElementById('prepPreparePar') ? document.getElementById('prepPreparePar').value.trim() : '');
+                if (userPrepVal && !localStorage.getItem('microbio_current_user')) {
+                    localStorage.setItem('microbio_current_user', userPrepVal);
+                }
 
                 window.saveMediumLastLotSupplier(
                     document.getElementById('prepDesignation').value,
@@ -8052,18 +8128,6 @@ window.setPrepExpiry = function (months) {
                     </style>
 
                     <div>
-                        <!-- HERO BANNER -->
-                        <div class="accueil-hero">
-                            <div class="accueil-hero-content">
-                                <div class="accueil-greeting">${greeting}, Sohaib 👨‍🔬</div>
-                                <div class="accueil-clock" id="accueil-live-clock">${timeStr}</div>
-                                <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:4px;">
-                                    <span class="accueil-date-badge">📅 ${dateStr}</span>
-                                    <span class="accueil-labo-badge">🔬 MICROBIO v4.5.0</span>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- CARDS GRID -->
                         <div style="padding: 28px 16px 0;">
                             <div class="accueil-section-title">Navigation rapide</div>
@@ -8084,13 +8148,8 @@ window.setPrepExpiry = function (months) {
                     </div>
                 `;
 
-                // Live clock update
+                // Live clock update (désactivé - hero supprimé)
                 if (window._accueilClockInterval) clearInterval(window._accueilClockInterval);
-                window._accueilClockInterval = setInterval(() => {
-                    const el = document.getElementById('accueil-live-clock');
-                    if (el) el.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                    else clearInterval(window._accueilClockInterval);
-                }, 10000);
 
                 // SortableJS drag-to-reorder - DESKTOP SEULEMENT
                 const grid = document.getElementById('accueil-grid');
@@ -8240,6 +8299,13 @@ window.setPrepExpiry = function (months) {
                 const countNonDestocke = allFiltered.filter(p => window.isPrepPendingDestock(p)).length;
                 const countClasseur = allFiltered.filter(p => window.isPrepPendingClasseur(p)).length;
                 const countCarnet = allFiltered.filter(p => window.isPrepPendingCarnet(p)).length;
+                const myUserRaw = localStorage.getItem('microbio_current_user') || '';
+                const myUserName = myUserRaw.toLowerCase().trim();
+                const countMine = allFiltered.filter(p => (p.preparePar || '').toLowerCase().trim() === myUserName && !!myUserName).length;
+                const countOthers = allFiltered.filter(p => {
+                    const op = (p.preparePar || '').toLowerCase().trim();
+                    return op && (!myUserName || op !== myUserName);
+                }).length;
                 const activeFilter = window.prepExpiryFilter || 'all';
 
                 // Barre de filtres
@@ -8292,6 +8358,8 @@ window.setPrepExpiry = function (months) {
                         ${countSoon > 0 ? `<button onclick="window.prepExpiryFilter='soon';    render();" style="background:${activeFilter === 'soon' ? 'rgba(245,158,11,0.9)' : 'rgba(245,158,11,0.1)'}; color:${activeFilter === 'soon' ? 'white' : '#d97706'}; border:1.5px solid rgba(245,158,11,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">⚠️ Bientôt (${countSoon})</button>` : ''}
                         <button onclick="window.prepExpiryFilter='valid'; render();" style="background:${activeFilter === 'valid' ? 'var(--success)' : 'rgba(34,197,94,0.08)'}; color:${activeFilter === 'valid' ? 'white' : 'var(--success)'}; border:1.5px solid rgba(34,197,94,0.25); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">✅ Valides (${countValid})</button>
                         <button onclick="window.prepExpiryFilter='all';   render();" style="background:${activeFilter === 'all' ? 'var(--text-main)' : 'rgba(0,0,0,0.05)'}; color:${activeFilter === 'all' ? 'white' : 'var(--text-dim)'}; border:1.5px solid rgba(0,0,0,0.1); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 Tous (${allFiltered.length})</button>
+                        <button onclick="window.prepExpiryFilter='mine'; render();" style="background:${activeFilter === 'mine' ? '#059669' : 'rgba(5,150,105,0.1)'}; color:${activeFilter === 'mine' ? 'white' : '#059669'}; border:1.5px solid rgba(5,150,105,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">👤 Par Moi (${countMine})</button>
+                        <button onclick="window.prepExpiryFilter='others'; render();" style="background:${activeFilter === 'others' ? '#ea580c' : 'rgba(234,88,12,0.1)'}; color:${activeFilter === 'others' ? 'white' : '#c2410c'}; border:1.5px solid rgba(234,88,12,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">👥 Collègues (${countOthers})</button>
                         <button onclick="window.prepExpiryFilter='quarantaine'; render();" style="background:${activeFilter === 'quarantaine' ? 'rgba(249,115,22,0.9)' : 'rgba(249,115,22,0.1)'}; color:${activeFilter === 'quarantaine' ? 'white' : '#c2410c'}; border:1.5px solid rgba(249,115,22,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🔶 Quarantaine (${countQuarantaine})</button>
                         <button onclick="window.prepExpiryFilter='fertile'; render();" style="background:${activeFilter === 'fertile' ? '#059669' : 'rgba(5,150,105,0.1)'}; color:${activeFilter === 'fertile' ? 'white' : '#059669'}; border:1.5px solid rgba(5,150,105,0.3); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🧫 Fertile (${countFertile})</button>
                         <button onclick="window.prepExpiryFilter='non_destocke'; render();" style="background:${activeFilter === 'non_destocke' ? '#ea580c' : (countNonDestocke > 0 ? 'rgba(234,88,12,0.15)' : 'rgba(0,0,0,0.04)')}; color:${activeFilter === 'non_destocke' ? '#ffffff' : (countNonDestocke > 0 ? '#c2410c' : 'var(--text-dim)')}; border:1.5px solid ${countNonDestocke > 0 ? '#ea580c' : 'rgba(0,0,0,0.1)'}; padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:5px;">📦 Non déstockés (${countNonDestocke})</button>
@@ -8300,6 +8368,7 @@ window.setPrepExpiry = function (months) {
                         <button onclick="window.openDestockChecklistModal()" style="background:#ffffff; color:#c2410c; border:1.5px solid #fdba74; padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(234,88,12,0.12);">📋 Suivi Déstockage</button>
                         <button onclick="window.generatePrepPdf('quarantaine')" style="background:rgba(249,115,22,0.1); color:#c2410c; border:1.5px solid rgba(249,115,22,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📄 PDF Quarantaine</button>
                         <button onclick="window.generatePrepPdf('fertile', window.currentFilteredPreps)" style="background:rgba(5,150,105,0.1); color:#059669; border:1.5px solid rgba(5,150,105,0.3); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 PDF Fertiles</button>
+                        <button onclick="window.promptChangeCurrentUser()" style="background:#f0fdf4; color:#059669; border:1.5px solid #10b981; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer;" title="Changer mon nom d'opérateur">👤 Profil : ${myUserRaw || 'Définir mon nom'}</button>
                         <div style="margin-left:auto; background:rgba(16,185,129,0.1); border:1.5px solid #10b981; padding:6px 12px; border-radius:10px; color:#10b981; font-weight:900; font-size:0.7rem;">🧫 TOTAL MC = ${totalUnits}</div>
                     </div>`;
 
@@ -8311,6 +8380,11 @@ window.setPrepExpiry = function (months) {
                     if (activeFilter === 'valid') return !s.isExpired && !s.isSoon;
                     if (activeFilter === 'quarantaine') return (p.statut || 'quarantaine') === 'quarantaine';
                     if (activeFilter === 'fertile') return p.statut === 'fertile';
+                    if (activeFilter === 'mine') return (p.preparePar || '').toLowerCase().trim() === myUserName && !!myUserName;
+                    if (activeFilter === 'others') {
+                        const op = (p.preparePar || '').toLowerCase().trim();
+                        return op && (!myUserName || op !== myUserName);
+                    }
                     if (activeFilter === 'non_destocke') return window.isPrepPendingDestock(p);
                     if (activeFilter === 'destock_classeur') return window.isPrepPendingClasseur(p);
                     if (activeFilter === 'destock_carnet') return window.isPrepPendingCarnet(p);
@@ -8357,11 +8431,25 @@ window.setPrepExpiry = function (months) {
                     const flaconCount = (p.flaconEntames && p.flaconEntames.length > 0)
                         ? p.flaconEntames.length
                         : (rawBoite.includes(',') ? rawBoite.split(',').length : 1);
+                    const prepOp = (p.preparePar || '').trim();
+                    const isMine = myUserName && prepOp && prepOp.toLowerCase() === myUserName;
+                    const isOther = prepOp && myUserName && prepOp.toLowerCase() !== myUserName;
+                    let opBadge = '';
+                    if (prepOp) {
+                        if (isMine) {
+                            opBadge = `<span style="background:rgba(5,150,105,0.15); color:#047857; border:1.5px solid #10b981; padding:3px 8px; border-radius:8px; font-size:0.6rem; font-weight:900;" title="Préparation réalisée par vous">👤 PAR MOI</span>`;
+                        } else if (isOther) {
+                            opBadge = `<span style="background:rgba(234,88,12,0.15); color:#c2410c; border:1.5px solid #fb923c; padding:3px 8px; border-radius:8px; font-size:0.6rem; font-weight:900;" title="Préparation réalisée par ${prepOp}">👥 PAR : ${prepOp}</span>`;
+                        } else {
+                            opBadge = `<span style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:8px; font-size:0.6rem; font-weight:800;">👤 ${prepOp}</span>`;
+                        }
+                    }
                     return `
-                        <div class="${isSelected ? 'fiche-card selected' : 'fiche-card'}" onclick="${isSelectionMode ? `toggleFicheSelection('${p.id}', event)` : `openPrepModal('${p.id}')`}" style="border-left: 5px solid ${isQuarantaine ? '#f97316' : '#059669'};">
+                        <div class="${isSelected ? 'fiche-card selected' : 'fiche-card'}" onclick="${isSelectionMode ? `toggleFicheSelection('${p.id}', event)` : `openPrepModal('${p.id}')`}" style="border-left: 5px solid ${isQuarantaine ? '#f97316' : '#059669'}; ${isMine ? 'box-shadow: 0 4px 15px rgba(5,150,105,0.08);' : (isOther ? 'box-shadow: 0 4px 15px rgba(234,88,12,0.08);' : '')}">
                             <div class="card-header">
                                 <div class="designation" style="font-size:1.05rem; font-weight:900; letter-spacing:-0.3px;">${p.designation}</div>
-                                <div style="display:flex; gap:5px; align-items:center; flex-shrink:0;">
+                                <div style="display:flex; gap:5px; align-items:center; flex-shrink:0; flex-wrap:wrap;">
+                                    ${opBadge}
                                     <span style="background:${isQuarantaine ? 'rgba(249,115,22,0.12)' : 'rgba(5,150,105,0.12)'}; color:${isQuarantaine ? '#c2410c' : '#059669'}; border:1px solid ${isQuarantaine ? 'rgba(249,115,22,0.4)' : 'rgba(5,150,105,0.4)'}; padding:3px 8px; border-radius:8px; font-size:0.6rem; font-weight:900;">${isQuarantaine ? '🔶 QUARANTAINE' : '✅ FERTILE'}</span>
                                     <div class="code-badge" style="background:rgba(99,102,241,0.15); color:var(--secondary); border-color:rgba(99,102,241,0.2); font-size:0.7rem; font-weight:900;">${p.code || 'N/A'}</div>
                                 </div>
@@ -12946,6 +13034,297 @@ window.setPrepExpiry = function (months) {
         };
 
         // ---- Génération PDF Feuilles de Résultats (tableau vierge par milieu) ----
+        // ---- Aide : Options de Préparations pour sélection de Lot ----
+        window._buildPrepOptionsHtml = function (mcName) {
+            const prepsList = window.preps || [];
+            const recentPreps = prepsList.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            const cleanMc = (mcName || '').toLowerCase().trim();
+
+            const matches = [];
+            const others = [];
+
+            recentPreps.forEach((p, idx) => {
+                const cleanPrep = (p.designation || '').toLowerCase().trim();
+                if (cleanPrep && (cleanPrep.includes(cleanMc) || cleanMc.includes(cleanPrep))) {
+                    matches.push({ ...p, _idx: idx });
+                } else {
+                    others.push({ ...p, _idx: idx });
+                }
+            });
+
+            let optionsHtml = '<option value="">-- Sans Lot --</option><option value="__manual__">✍️ Saisie manuelle (hors liste)...</option>';
+            if (matches.length > 0) {
+                optionsHtml += `<optgroup label="📌 Suggérés pour ${mcName}">`;
+                matches.forEach(p => {
+                    const lotStr = p.lot ? p.lot : 'S.L';
+                    optionsHtml += `<option value="${p.id}" data-idx="${p._idx}" data-lot="${lotStr}">${p.designation} - Lot ${lotStr}</option>`;
+                });
+                optionsHtml += `</optgroup>`;
+            }
+            if (others.length > 0) {
+                optionsHtml += `<optgroup label="🌐 Autres Préparations">`;
+                others.slice(0, 50).forEach(p => {
+                    const lotStr = p.lot ? p.lot : 'S.L';
+                    optionsHtml += `<option value="${p.id}" data-idx="${p._idx}" data-lot="${lotStr}">${p.designation} - Lot ${lotStr}</option>`;
+                });
+                optionsHtml += `</optgroup>`;
+            }
+            return optionsHtml;
+        };
+
+        // ---- Gestion saisie manuelle libre de lot ----
+        window.handleFrLotSelectChange = function (fid, lotIdx, type, selectEl) {
+            const manualInput = document.getElementById(`fr_${type}LotManual_${fid}_${lotIdx}`) || document.getElementById(`fr_${type}LotManual_${fid}`);
+            if (selectEl.value === '__manual__') {
+                if (manualInput) {
+                    manualInput.style.display = 'block';
+                    manualInput.focus();
+                }
+            } else {
+                if (manualInput && selectEl.value !== '') {
+                    manualInput.style.display = 'none';
+                }
+            }
+            if (type === 'test') {
+                window._autoSelectRefLot(fid, selectEl, lotIdx);
+            }
+        };
+
+        window.toggleFrManualLot = function (fid, lotIdx, type) {
+            const manualInput = document.getElementById(`fr_${type}LotManual_${fid}_${lotIdx}`) || document.getElementById(`fr_${type}LotManual_${fid}`);
+            const selectEl = document.getElementById(`fr_${type}Lot_${fid}_${lotIdx}`) || document.getElementById(`fr_${type}Lot_${fid}`);
+            if (!manualInput) return;
+            if (manualInput.style.display === 'none') {
+                manualInput.style.display = 'block';
+                if (selectEl) selectEl.value = '__manual__';
+                manualInput.focus();
+            } else {
+                manualInput.style.display = 'none';
+                if (selectEl && selectEl.value === '__manual__') selectEl.selectedIndex = 0;
+            }
+        };
+
+        window._getFrLotValue = function (fid, lotIdx, type = 'test') {
+            const manualInput = document.getElementById(`fr_${type}LotManual_${fid}_${lotIdx}`) || document.getElementById(`fr_${type}LotManual_${fid}`);
+            if (manualInput && manualInput.style.display !== 'none' && manualInput.value.trim() !== '') {
+                return manualInput.value.trim();
+            }
+            const selectEl = document.getElementById(`fr_${type}Lot_${fid}_${lotIdx}`) || document.getElementById(`fr_${type}Lot_${fid}`);
+            if (!selectEl) return (manualInput && manualInput.value.trim()) ? manualInput.value.trim() : '';
+            if (selectEl.value === '__manual__' && manualInput && manualInput.value.trim() !== '') {
+                return manualInput.value.trim();
+            }
+            if (selectEl.selectedIndex >= 0 && selectEl.options[selectEl.selectedIndex]) {
+                const opt = selectEl.options[selectEl.selectedIndex];
+                if (opt.value === '__manual__') {
+                    return (manualInput && manualInput.value.trim()) ? manualInput.value.trim() : '';
+                }
+                const attrLot = opt.getAttribute('data-lot');
+                if (attrLot && attrLot !== 'S.L') return attrLot;
+                if (opt.value && opt.value !== '') return attrLot || opt.text;
+            }
+            return (manualInput && manualInput.value.trim()) ? manualInput.value.trim() : '';
+        };
+
+        // ---- Construction Carte Milieu avec support multi-lots et saisie manuelle ----
+        window._createMediumLotCard = function (f) {
+            const mcName = f.nom || 'MC';
+            const optionsHtml = window._buildPrepOptionsHtml(mcName);
+
+            const gDateFert = (document.getElementById('frGlobalDateFert') || {}).value || '';
+            const gDateSter = (document.getElementById('frGlobalDateSter') || {}).value || '';
+
+            const div = document.createElement('div');
+            div.className = 'fr-medium-card';
+            div.id = `fr_card_${f.id}`;
+            div.setAttribute('data-fid', f.id);
+            div.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:12px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.03);';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+                    <div style="font-weight:900; font-size:0.92rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                        <span>🧪 ${mcName}</span>
+                    </div>
+                    <button type="button" onclick="window.addExtraLotToMedium('${f.id}')"
+                        style="background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; padding:5px 11px; border-radius:7px; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                        ➕ Ajouter un autre lot pour ce milieu
+                    </button>
+                </div>
+                <div id="fr_lots_container_${f.id}" class="fr-lots-container" data-fid="${f.id}" style="display:flex; flex-direction:column; gap:10px;">
+                    <div class="fr-lot-row" data-fid="${f.id}" data-lot-idx="0" style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:10px; position:relative;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                    <label style="font-size:0.7rem; font-weight:800; color:var(--primary);">LOT TESTÉ (Lot #1)</label>
+                                    <button type="button" onclick="window.toggleFrManualLot('${f.id}', 0, 'test')" style="background:none; border:none; color:#059669; font-size:0.65rem; font-weight:800; cursor:pointer; text-decoration:underline;">✏️ Saisie libre</button>
+                                </div>
+                                <select id="fr_testLot_${f.id}" class="form-input fr-test-lot-select" style="padding:6px; font-size:0.8rem;" onchange="window.handleFrLotSelectChange('${f.id}', 0, 'test', this)">
+                                    ${optionsHtml}
+                                </select>
+                                <input type="text" id="fr_testLotManual_${f.id}_0" class="form-input fr-test-lot-manual" placeholder="Tapez le n° de lot testé..." style="display:none; margin-top:4px; padding:5px 8px; font-size:0.78rem; border-color:#059669; font-weight:800; background:#f0fdf4;">
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                    <label style="font-size:0.7rem; font-weight:800; color:#d97706;">LOT RÉFÉRENCE</label>
+                                    <button type="button" onclick="window.toggleFrManualLot('${f.id}', 0, 'ref')" style="background:none; border:none; color:#d97706; font-size:0.65rem; font-weight:800; cursor:pointer; text-decoration:underline;">✏️ Saisie libre</button>
+                                </div>
+                                <select id="fr_refLot_${f.id}" class="form-input fr-ref-lot-select" style="padding:6px; font-size:0.8rem;" onchange="window.handleFrLotSelectChange('${f.id}', 0, 'ref', this)">
+                                    ${optionsHtml}
+                                </select>
+                                <input type="text" id="fr_refLotManual_${f.id}_0" class="form-input fr-ref-lot-manual" placeholder="Tapez le n° de lot référence..." style="display:none; margin-top:4px; padding:5px 8px; font-size:0.78rem; border-color:#d97706; font-weight:800; background:#fffbeb;">
+                            </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; border-top:1px dashed #cbd5e1; padding-top:8px;">
+                            <div>
+                                <label style="font-size:0.7rem; font-weight:800; color:#475569;">Date Fertilité</label>
+                                <input type="date" id="fr_df_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;" value="${gDateFert}" onchange="var s=document.getElementById('fr_ds_${f.id}'); if(s && !s.value) s.value=this.value;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.7rem; font-weight:800; color:#475569;">Date Stérilité</label>
+                                <input type="date" id="fr_ds_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;" value="${gDateSter}">
+                            </div>
+                            <div>
+                                <label style="font-size:0.7rem; font-weight:800; color:#475569;">Stérilité</label>
+                                <select id="fr_res_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;">
+                                    <option value="OK">Conforme (OK)</option>
+                                    <option value="NON">Non conforme (NON)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return div;
+        };
+
+        // ---- Ajout d'un lot supplémentaire pour un milieu existant ----
+        window.addExtraLotToMedium = function (fid) {
+            const container = document.getElementById(`fr_lots_container_${fid}`);
+            if (!container) return;
+            const rows = container.querySelectorAll('.fr-lot-row');
+            const nextIdx = rows.length;
+            const fertiliteData = window._fertiliteData || [];
+            const f = fertiliteData.find(x => String(x.id) === String(fid));
+            const mcName = f ? f.nom : 'MC';
+            const optionsHtml = window._buildPrepOptionsHtml(mcName);
+
+            const gDateFert = (document.getElementById(`fr_df_${fid}`) || document.getElementById('frGlobalDateFert') || {}).value || '';
+            const gDateSter = (document.getElementById(`fr_ds_${fid}`) || document.getElementById('frGlobalDateSter') || {}).value || '';
+
+            const div = document.createElement('div');
+            div.className = 'fr-lot-row';
+            div.setAttribute('data-fid', fid);
+            div.setAttribute('data-lot-idx', nextIdx);
+            div.style.cssText = 'background:#f0fdf4; border:1.5px dashed #059669; border-radius:8px; padding:10px; position:relative;';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; border-bottom:1px solid #d1fae5; padding-bottom:4px;">
+                    <span class="fr-lot-badge" style="font-size:0.75rem; font-weight:800; color:#065f46; background:#d1fae5; padding:2px 8px; border-radius:4px;">
+                        🏷️ Autre Lot Testé (Lot #${nextIdx + 1})
+                    </span>
+                    <button type="button" onclick="this.closest('.fr-lot-row').remove(); window.updateLotIndices('${fid}');"
+                        style="background:#fee2e2; color:#b91c1c; border:none; border-radius:5px; padding:2px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">
+                        🗑️ Retirer ce lot
+                    </button>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                            <label style="font-size:0.7rem; font-weight:800; color:#059669;">LOT TESTÉ #${nextIdx + 1}</label>
+                            <button type="button" onclick="window.toggleFrManualLot('${fid}', ${nextIdx}, 'test')" style="background:none; border:none; color:#059669; font-size:0.65rem; font-weight:800; cursor:pointer; text-decoration:underline;">✏️ Saisie libre</button>
+                        </div>
+                        <select id="fr_testLot_${fid}_${nextIdx}" class="form-input fr-test-lot-select" style="padding:6px; font-size:0.8rem;" onchange="window.handleFrLotSelectChange('${fid}', ${nextIdx}, 'test', this)">
+                            ${optionsHtml}
+                        </select>
+                        <input type="text" id="fr_testLotManual_${fid}_${nextIdx}" class="form-input fr-test-lot-manual" placeholder="Tapez le n° de lot testé..." style="display:none; margin-top:4px; padding:5px 8px; font-size:0.78rem; border-color:#059669; font-weight:800; background:#f0fdf4;">
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                            <label style="font-size:0.7rem; font-weight:800; color:#d97706;">LOT RÉFÉRENCE</label>
+                            <button type="button" onclick="window.toggleFrManualLot('${fid}', ${nextIdx}, 'ref')" style="background:none; border:none; color:#d97706; font-size:0.65rem; font-weight:800; cursor:pointer; text-decoration:underline;">✏️ Saisie libre</button>
+                        </div>
+                        <select id="fr_refLot_${fid}_${nextIdx}" class="form-input fr-ref-lot-select" style="padding:6px; font-size:0.8rem;" onchange="window.handleFrLotSelectChange('${fid}', ${nextIdx}, 'ref', this)">
+                            ${optionsHtml}
+                        </select>
+                        <input type="text" id="fr_refLotManual_${fid}_${nextIdx}" class="form-input fr-ref-lot-manual" placeholder="Tapez le n° de lot référence..." style="display:none; margin-top:4px; padding:5px 8px; font-size:0.78rem; border-color:#d97706; font-weight:800; background:#fffbeb;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; border-top:1px dashed #cbd5e1; padding-top:8px;">
+                    <div>
+                        <label style="font-size:0.7rem; font-weight:800; color:#475569;">Date Fertilité</label>
+                        <input type="date" id="fr_df_${fid}_${nextIdx}" class="form-input" style="padding:5px; font-size:0.75rem;" value="${gDateFert}" onchange="var s=document.getElementById('fr_ds_${fid}_${nextIdx}'); if(s && !s.value) s.value=this.value;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem; font-weight:800; color:#475569;">Date Stérilité</label>
+                        <input type="date" id="fr_ds_${fid}_${nextIdx}" class="form-input" style="padding:5px; font-size:0.75rem;" value="${gDateSter}">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem; font-weight:800; color:#475569;">Stérilité</label>
+                        <select id="fr_res_${fid}_${nextIdx}" class="form-input" style="padding:5px; font-size:0.75rem;">
+                            <option value="OK">Conforme (OK)</option>
+                            <option value="NON">Non conforme (NON)</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        };
+
+        window.updateLotIndices = function (fid) {
+            const container = document.getElementById(`fr_lots_container_${fid}`);
+            if (!container) return;
+            const rows = container.querySelectorAll('.fr-lot-row');
+            rows.forEach((r, idx) => {
+                r.setAttribute('data-lot-idx', idx);
+                const badge = r.querySelector('.fr-lot-badge');
+                if (badge) badge.textContent = `🏷️ Autre Lot Testé (Lot #${idx + 1})`;
+            });
+        };
+
+        // ---- Barre Milieu Oublié dans les Feuilles de Résultats ----
+        window.updateForgottenMediaList = function () {
+            const sel = document.getElementById('fr_forgotten_select');
+            if (!sel) return;
+            const fertiliteData = window._fertiliteData || [];
+            const checkedIds = Array.from(window._fertCheckedIds || new Set()).map(String);
+            const unselected = fertiliteData.filter(f => !checkedIds.includes(String(f.id)));
+
+            if (unselected.length === 0) {
+                sel.innerHTML = '<option value="">-- Tous les milieux sont déjà ajoutés --</option>';
+                sel.disabled = true;
+            } else {
+                sel.disabled = false;
+                sel.innerHTML = '<option value="">-- Choisir un milieu à rajouter --</option>' +
+                    unselected.map(f => `<option value="${f.id}">🧪 ${f.nom || 'MC'}</option>`).join('');
+            }
+        };
+
+        window.addForgottenMediumToResults = function () {
+            const sel = document.getElementById('fr_forgotten_select');
+            if (!sel || !sel.value) {
+                if (window.showToast) window.showToast("Veuillez sélectionner un milieu dans la liste.", "warning");
+                return;
+            }
+            const fid = sel.value;
+            const fertiliteData = window._fertiliteData || [];
+            const f = fertiliteData.find(x => String(x.id) === String(fid));
+            if (!f) return;
+
+            if (!window._fertCheckedIds) window._fertCheckedIds = new Set();
+            window._fertCheckedIds.add(String(fid));
+
+            // Cocher aussi la case dans la vue en arrière-plan
+            const cb = document.querySelector(`.fert-checkbox[value="${fid}"]`);
+            if (cb) cb.checked = true;
+
+            const container = document.getElementById('feuillesResultatsLotsContainer');
+            const card = window._createMediumLotCard(f);
+            container.appendChild(card);
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            window.updateForgottenMediaList();
+            if (window.showToast) window.showToast(`Milieu "${f.nom}" ajouté sans réinitialiser vos saisies !`, "success");
+        };
+
+        // ---- Génération PDF Feuilles de Résultats (tableau vierge par milieu) ----
         window.generateFertFeuillesResultats = function () {
             const checkedIds = Array.from(window._fertCheckedIds || new Set());
             if (checkedIds.length === 0) {
@@ -12959,88 +13338,14 @@ window.setPrepExpiry = function (months) {
             const container = document.getElementById('feuillesResultatsLotsContainer');
             container.innerHTML = '';
 
-            const prepsList = window.preps || [];
-            // Tri robuste basé sur updatedAt ou date d'ajout
-            const recentPreps = prepsList.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-
             selectedFiches.forEach(f => {
-                const mcName = f.nom || 'MC';
-                const cleanMc = mcName.toLowerCase().trim();
-
-                const matches = [];
-                const others = [];
-
-                recentPreps.forEach((p, idx) => {
-                    const cleanPrep = (p.designation || '').toLowerCase().trim();
-                    if (cleanPrep.includes(cleanMc) || cleanMc.includes(cleanPrep)) {
-                        matches.push({ ...p, _idx: idx });
-                    } else {
-                        others.push({ ...p, _idx: idx });
-                    }
-                });
-
-                let optionsHtml = '<option value="">-- Sans Lot --</option>';
-                // Options suggérées (correspondance textuelle)
-                if (matches.length > 0) {
-                    optionsHtml += `<optgroup label="📌 Suggérés pour ${mcName}">`;
-                    matches.forEach(p => {
-                        const lotStr = p.lot ? p.lot : 'S.L';
-                        optionsHtml += `<option value="${p.id}" data-idx="${p._idx}" data-lot="${lotStr}">${p.designation} - Lot ${lotStr}</option>`;
-                    });
-                    optionsHtml += `</optgroup>`;
-                }
-                // Autres options (au cas où la recherche ne trouve pas)
-                if (others.length > 0) {
-                    optionsHtml += `<optgroup label="🌐 Autres Préparations">`;
-                    others.slice(0, 50).forEach(p => {  // On limite à 50 pour éviter de figer le DOM
-                        const lotStr = p.lot ? p.lot : 'S.L';
-                        optionsHtml += `<option value="${p.id}" data-idx="${p._idx}" data-lot="${lotStr}">${p.designation} - Lot ${lotStr}</option>`;
-                    });
-                    optionsHtml += `</optgroup>`;
-                }
-
-                const div = document.createElement('div');
-                div.style.background = '#f8fafc';
-                div.style.border = '1px solid #e2e8f0';
-                div.style.padding = '12px';
-                div.style.borderRadius = '12px';
-                div.innerHTML = `
-                    <div style="font-weight:800; font-size:0.9rem; color:var(--text-main); margin-bottom:8px;">🧪 ${mcName}</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <div>
-                            <label style="font-size:0.7rem; font-weight:800; color:var(--primary);">LOT TESTÉ</label>
-                            <select id="fr_testLot_${f.id}" class="form-input" style="padding:6px; font-size:0.8rem;" onchange="window._autoSelectRefLot('${f.id}', this)">
-                                ${optionsHtml}
-                            </select>
-                        </div>
-                        <div>
-                            <label style="font-size:0.7rem; font-weight:800; color:#d97706;">LOT RÉFÉRENCE</label>
-                            <select id="fr_refLot_${f.id}" class="form-input" style="padding:6px; font-size:0.8rem;">
-                                ${optionsHtml}
-                            </select>
-                        </div>
-                    </div>
-                    <!-- Dates & Result for this MC -->
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; border-top:1px dashed #cbd5e1; padding-top:8px;">
-                        <div>
-                            <label style="font-size:0.7rem; font-weight:800; color:#475569;">Date Fertilité</label>
-                            <input type="date" id="fr_df_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;" onchange="var s=document.getElementById('fr_ds_${f.id}'); if(s && !s.value) s.value=this.value;">
-                        </div>
-                        <div>
-                            <label style="font-size:0.7rem; font-weight:800; color:#475569;">Date Stérilité</label>
-                            <input type="date" id="fr_ds_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;">
-                        </div>
-                        <div>
-                            <label style="font-size:0.7rem; font-weight:800; color:#475569;">Stérilité</label>
-                            <select id="fr_res_${f.id}" class="form-input" style="padding:5px; font-size:0.75rem;">
-                                <option value="OK">Conforme (OK)</option>
-                                <option value="NON">Non conforme (NON)</option>
-                            </select>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(div);
+                const card = window._createMediumLotCard(f);
+                container.appendChild(card);
             });
+
+            // Mettre à jour la liste des oubliés
+            window.updateForgottenMediaList();
+
             // Reset toujours à l'étape 1 avant d'ouvrir
             document.getElementById('frStep1Wrapper').style.display = '';
             document.getElementById('frStep2Wrapper').style.display = 'none';
@@ -13049,20 +13354,16 @@ window.setPrepExpiry = function (months) {
             window.openModal('feuillesResultatsModalOverlay');
         };
 
-        window._autoSelectRefLot = function (ficheId, selectEl) {
-            const refSelect = document.getElementById('fr_refLot_' + ficheId);
+        window._autoSelectRefLot = function (ficheId, selectEl, lotIdx = 0) {
+            const refSelect = document.getElementById(`fr_refLot_${ficheId}_${lotIdx}`) || document.getElementById('fr_refLot_' + ficheId);
             if (!refSelect || selectEl.selectedIndex <= 0) return;
 
             const chosenOption = selectEl.options[selectEl.selectedIndex];
-            // On récupère l'index absolu dans recentPreps
             const originalIndex = parseInt(chosenOption.getAttribute('data-idx'), 10);
 
             let found = false;
-            // On cherche l'option qui correspond au lot D'AVANT (donc index + 1 dans un tri décroissant)
             for (let i = 0; i < refSelect.options.length; i++) {
                 const optIdx = parseInt(refSelect.options[i].getAttribute('data-idx'), 10);
-                // Si on trouve une préparation qui est plus ancienne, on s'arrête dessus !
-                // (Note: on prend le premier optIdx > originalIndex pour trouver le précédent préparé le plus proche)
                 if (optIdx > originalIndex) {
                     refSelect.selectedIndex = i;
                     found = true;
@@ -13178,20 +13479,49 @@ window.setPrepExpiry = function (months) {
                 addFS(f.inhSouches, 'inh', 'Inhibition');
                 if (fSouches.length === 0) return;
 
-                const testLotEl = document.getElementById('fr_testLot_' + fid);
-                const refLotEl = document.getElementById('fr_refLot_' + fid);
-                const testLotName = (testLotEl && testLotEl.selectedIndex >= 0 && testLotEl.options[testLotEl.selectedIndex]) ? (testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
-                const refLotName = (refLotEl && refLotEl.selectedIndex >= 0 && refLotEl.options[refLotEl.selectedIndex]) ? (refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') || '') : '';
+                // Récupérer tous les lots configurés pour ce milieu
+                let lotRows = Array.from(document.querySelectorAll(`.fr-lot-row[data-fid="${fid}"]`));
+                if (lotRows.length === 0) {
+                    lotRows = [{ getAttribute: () => '0' }];
+                }
 
-                let rows = window.sortStrainsList(fSouches).map(t => {
-                    const sk = window._frSoucheKey(t.s);
-                    const b = `frr_${fid}_${t.secKey}_${sk}`;
-                    // Choisir le bon inoculum selon la section
-                    const inocId = (t.secKey === 'inh') ? 'fr_inoc_inh_' + sk : 'fr_inoc_' + sk;
-                    const inocHtml = `<input type="text" id="readout_${b}" readonly class="fr-inoc-readout" data-inoc-id="${inocId}" placeholder="— Inoc. —" style="padding:4px; font-size:0.65rem; border:none; background:transparent; font-weight:800; color:${t.secKey === 'inh' ? '#dc2626' : '#059669'}; text-align:center; width:100%;">`;
+                lotRows.forEach((lRow, rowIdx) => {
+                    const lIdx = lRow.getAttribute ? (parseInt(lRow.getAttribute('data-lot-idx'), 10) || rowIdx) : rowIdx;
+                    const testLotName = window._getFrLotValue ? window._getFrLotValue(fid, lIdx, 'test') : '';
+                    const refLotName = window._getFrLotValue ? window._getFrLotValue(fid, lIdx, 'ref') : '';
 
-                    const isEnrich = (f.categorie === 'enrichissement' || (f.nom || '').toLowerCase().includes('rappaport'));
-                    if (isEnrich) {
+                    const lotTitleBadge = lotRows.length > 1
+                        ? `<span style="font-size:0.75rem; background:#e0e7ff; color:#3730a3; padding:2px 8px; border-radius:6px; margin-left:8px; font-weight:800;">🏷️ Lot n°${lIdx + 1} : ${testLotName || 'Sans Lot'}</span>`
+                        : (testLotName ? `<span style="font-size:0.75rem; background:#ecfdf5; color:#065f46; padding:2px 8px; border-radius:6px; margin-left:8px; font-weight:800;">🏷️ Lot : ${testLotName}</span>` : '');
+
+                    let rows = window.sortStrainsList(fSouches).map(t => {
+                        const sk = window._frSoucheKey(t.s);
+                        const b = `frr_${fid}_l${lIdx}_${t.secKey}_${sk}`;
+                        // Choisir le bon inoculum selon la section
+                        const inocId = (t.secKey === 'inh') ? 'fr_inoc_inh_' + sk : 'fr_inoc_' + sk;
+                        const inocHtml = `<input type="text" id="readout_${b}" readonly class="fr-inoc-readout" data-inoc-id="${inocId}" placeholder="— Inoc. —" style="padding:4px; font-size:0.65rem; border:none; background:transparent; font-weight:800; color:${t.secKey === 'inh' ? '#dc2626' : '#059669'}; text-align:center; width:100%;">`;
+
+                        const isEnrich = (f.categorie === 'enrichissement' || (f.nom || '').toLowerCase().includes('rappaport'));
+                        if (isEnrich) {
+                            return `<tr>
+                                <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
+                                    ${t.s}<br><span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
+                                </td>
+                                <td style="padding:0; border:1px solid #e2e8f0; text-align:center; background:#f0fdf4;">${inocHtml}</td>
+                                <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569;">
+                                    <div>R: ${refLotName || '—'}</div><div>T: ${testLotName || '—'}</div>
+                                </td>
+                                <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
+                                    <select id="${b}_rmoy" style="${iS}"><option value=""></option><option value="Trouble">Trouble</option><option value="Limpide">Limpide</option></select>
+                                </td>
+                                <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
+                                    <select id="${b}_tmoy" style="${iS}"><option value=""></option><option value="Trouble">Trouble</option><option value="Limpide">Limpide</option></select>
+                                </td>
+                                <td style="padding:4px; border:1px solid #e2e8f0;">
+                                    <select id="${b}_ratio" style="${rS}"><option value="—">—</option><option value="OK">OK</option><option value="NON">NON</option></select>
+                                </td>
+                            </tr>`;
+                        }
                         return `<tr>
                             <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
                                 ${t.s}<br><span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
@@ -13200,60 +13530,43 @@ window.setPrepExpiry = function (months) {
                             <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569;">
                                 <div>R: ${refLotName || '—'}</div><div>T: ${testLotName || '—'}</div>
                             </td>
-                            <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
-                                <select id="${b}_rmoy" style="${iS}"><option value=""></option><option value="Trouble">Trouble</option><option value="Limpide">Limpide</option></select>
-                            </td>
-                            <td colspan="3" style="padding:4px; border:1px solid #e2e8f0;">
-                                <select id="${b}_tmoy" style="${iS}"><option value=""></option><option value="Trouble">Trouble</option><option value="Limpide">Limpide</option></select>
-                            </td>
-                            <td style="padding:4px; border:1px solid #e2e8f0;">
-                                <select id="${b}_ratio" style="${rS}"><option value="—">—</option><option value="OK">OK</option><option value="NON">NON</option></select>
-                            </td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_rmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_tmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
+                            <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_ratio" readonly style="${rS} cursor:default;" placeholder="—"></td>
                         </tr>`;
-                    }
-                    return `<tr>
-                        <td style="padding:4px 6px; font-size:0.7rem; font-weight:700; border:1px solid #e2e8f0; min-width:90px;">
-                            ${t.s}<br><span style="font-size:0.63rem; color:#64748b; font-weight:normal; font-style:italic;">${t.secLabel}</span>
-                        </td>
-                        <td style="padding:0; border:1px solid #e2e8f0; text-align:center; background:#f0fdf4;">${inocHtml}</td>
-                        <td style="padding:4px; border:1px solid #e2e8f0; font-size:0.65rem; color:#475569;">
-                            <div>R: ${refLotName || '—'}</div><div>T: ${testLotName || '—'}</div>
-                        </td>
-                        <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
-                        <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_rb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
-                        <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_rmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
-                        <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb1" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
-                        <td style="padding:4px; border:1px solid #e2e8f0;"><input type="number" step="any" id="${b}_tb2" style="${iS}" oninput="window._calcFrRow('${b}')"></td>
-                        <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_tmoy" readonly style="${aS} cursor:default;" placeholder="—"></td>
-                        <td style="padding:4px; border:1px solid #e2e8f0;"><input id="${b}_ratio" readonly style="${rS} cursor:default;" placeholder="—"></td>
-                    </tr>`;
-                }).join('');
+                    }).join('');
 
-                const mcDiv = document.createElement('div');
-                mcDiv.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);';
-                mcDiv.innerHTML = `
-                    <div style="font-weight:900; font-size:0.95rem; color:var(--text-main); margin-bottom:10px;">
-                        <span style="color:#0f172a; text-transform:uppercase; letter-spacing:0.5px;">🧪 ${f.nom}</span>
-                    </div>
-                    <div style="overflow-x:auto; border-radius:6px; border:1px solid #cbd5e1;">
-                        <table style="width:100%; border-collapse:collapse; min-width:850px; background:#fff;">
-                            <thead><tr style="background:#e2e8f0;">
-                                <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:18%;">Souche</th>
-                                <th style="padding:6px; text-align:center; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:10%;">Inoculum</th>
-                                <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:14%;">Lots (Réf / Test)</th>
-                                <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.07);">Réf Bte 1</th>
-                                <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.07);">Réf Bte 2</th>
-                                <th style="padding:6px; font-size:0.62rem; border-right:2px solid #94a3b8; border-bottom:1px solid #cbd5e1; background:rgba(5,150,105,0.09);">Réf Moy.</th>
-                                <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(79,70,229,0.07);">Tes. Bte 1</th>
-                                <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(79,70,229,0.07);">Tes. Bte 2</th>
-                                <th style="padding:6px; font-size:0.62rem; border-right:2px solid #94a3b8; border-bottom:1px solid #cbd5e1; background:rgba(5,150,105,0.09);">Tes. Moy.</th>
-                                <th style="padding:6px; font-size:0.62rem; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.15); font-weight:900;">Ratio T/R</th>
-                            </tr></thead>
-                            <tbody>${rows}</tbody>
-                        </table>
-                    </div>
-                `;
-                resultsContainer.appendChild(mcDiv);
+                    const mcDiv = document.createElement('div');
+                    mcDiv.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05);';
+                    mcDiv.innerHTML = `
+                        <div style="font-weight:900; font-size:0.95rem; color:var(--text-main); margin-bottom:10px; display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                            <span style="color:#0f172a; text-transform:uppercase; letter-spacing:0.5px;">🧪 ${f.nom}</span>
+                            ${lotTitleBadge}
+                        </div>
+                        <div style="overflow-x:auto; border-radius:6px; border:1px solid #cbd5e1;">
+                            <table style="width:100%; border-collapse:collapse; min-width:850px; background:#fff;">
+                                <thead><tr style="background:#e2e8f0;">
+                                    <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:18%;">Souche</th>
+                                    <th style="padding:6px; text-align:center; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:10%;">Inoculum</th>
+                                    <th style="padding:6px; text-align:left; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; width:14%;">Lots (Réf / Test)</th>
+                                    <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.07);">Réf Bte 1</th>
+                                    <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.07);">Réf Bte 2</th>
+                                    <th style="padding:6px; font-size:0.62rem; border-right:2px solid #94a3b8; border-bottom:1px solid #cbd5e1; background:rgba(5,150,105,0.09);">Réf Moy.</th>
+                                    <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(79,70,229,0.07);">Tes. Bte 1</th>
+                                    <th style="padding:6px; font-size:0.62rem; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; background:rgba(79,70,229,0.07);">Tes. Bte 2</th>
+                                    <th style="padding:6px; font-size:0.62rem; border-right:2px solid #94a3b8; border-bottom:1px solid #cbd5e1; background:rgba(5,150,105,0.09);">Tes. Moy.</th>
+                                    <th style="padding:6px; font-size:0.62rem; border-bottom:1px solid #cbd5e1; background:rgba(217,119,6,0.15); font-weight:900;">Ratio T/R</th>
+                                </tr></thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    `;
+                    resultsContainer.appendChild(mcDiv);
+                });
             });
 
             // Sync inoculum readouts
@@ -13371,7 +13684,7 @@ window.setPrepExpiry = function (months) {
                 y = doc.lastAutoTable.finalY + 10;
             }
 
-            // 2. Résultats par Milieu
+            // 2. Résultats par Milieu (avec support multi-lots)
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
             doc.text('2. RÉSULTATS PAR MILIEU', 12, y + 5);
@@ -13385,122 +13698,124 @@ window.setPrepExpiry = function (months) {
                 addFS(f.inhSouches, 'inh', 'Inhibition');
                 if (fSouches.length === 0) return;
 
-                const rowH = 9;
-                const requiredHeight = 8 + rowH + (fSouches.length * rowH) + 10;
-                if (y + requiredHeight > pageHeight - 10) {
-                    doc.addPage(); pageNb++; addHeader(pageNb);
-                }
+                let lotRows = Array.from(document.querySelectorAll(`.fr-lot-row[data-fid="${f.id}"]`));
+                if (lotRows.length === 0) lotRows = [{ getAttribute: () => '0' }];
 
-                // Titre MC
-                doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
-                doc.setFillColor(235, 235, 235);
-                doc.rect(10, y, pageWidth - 20, 8, 'F');
-                doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
-                doc.rect(10, y, pageWidth - 20, 8, 'D');
-                doc.text(`MILIEU : ${cU(f.nom)}`, 12, y + 5.5);
-                y += 8;
+                lotRows.forEach((lRow, rowIdx) => {
+                    const lIdx = lRow.getAttribute ? (parseInt(lRow.getAttribute('data-lot-idx'), 10) || rowIdx) : rowIdx;
+                    const testL = window._getFrLotValue ? window._getFrLotValue(f.id, lIdx, 'test') : '';
+                    const refL = window._getFrLotValue ? window._getFrLotValue(f.id, lIdx, 'ref') : '';
 
-                // En-tête colonnes
-                doc.setFillColor(250, 250, 250);
-                doc.rect(10, y, pageWidth - 20, rowH, 'F');
-                doc.rect(10, y, pageWidth - 20, rowH, 'D');
-                doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
-
-                const cols = [42, 60, 80, 100, 120, 135, 150, 165, 180, 195, 215, pageWidth - 10];
-
-                doc.text('Souche', 12, y + 5);
-                doc.text('Inoculum', cols[0] + 2, y + 5);
-                doc.text('Section', cols[1] + 2, y + 5);
-                doc.text('Lot Ref', cols[2] + 2, y + 5);
-                doc.text('Lot Test', cols[3] + 2, y + 5);
-                doc.text('Ref. B1', cols[4] + 2, y + 5);
-                doc.text('Ref. B2', cols[5] + 2, y + 5);
-                doc.text('Test B1', cols[6] + 2, y + 5);
-                doc.text('Test B2', cols[7] + 2, y + 5);
-                doc.text('R. Moy', cols[8] + 2, y + 5);
-                doc.text('T. Moy', cols[9] + 2, y + 5);
-                doc.text('Ratio (Pr)', cols[10] + 2, y + 5);
-
-                cols.forEach((colX, idx) => {
-                    if (idx < cols.length - 1) {
-                        doc.setLineWidth(idx === 5 || idx === 7 || idx === 9 ? 0.5 : 0.15);
-                        doc.line(colX, y, colX, y + rowH);
-                    }
-                });
-                y += rowH;
-
-                // Récup lots du MC
-                const testLotEl = document.getElementById('fr_testLot_' + f.id);
-                const refLotEl = document.getElementById('fr_refLot_' + f.id);
-                const testL = (testLotEl && testLotEl.selectedIndex >= 0 && testLotEl.options[testLotEl.selectedIndex]) ? testLotEl.options[testLotEl.selectedIndex].getAttribute('data-lot') : '';
-                const refL = (refLotEl && refLotEl.selectedIndex >= 0 && refLotEl.options[refLotEl.selectedIndex]) ? refLotEl.options[refLotEl.selectedIndex].getAttribute('data-lot') : '';
-
-                window.sortStrainsList(fSouches).forEach((t) => {
-                    const s = t.s;
-                    const b = `frr_${f.id}_${t.secKey}_${window._frSoucheKey(s)}`;
-                    const g = suf => { const el = document.getElementById(b + suf); return el ? el.value.trim() : ''; };
-                    const rb1 = g('_rb1'), rb2 = g('_rb2'), rmoy = g('_rmoy');
-                    const tb1 = g('_tb1'), tb2 = g('_tb2'), tmoy = g('_tmoy');
-                    const ratio = g('_ratio');
-                    const inocV = t.secKey === 'inh'
-                        ? (inoculumGlobalInh[s] || '—')
-                        : (inoculumGlobal[s] || '—');
-
-                    let obsText = '';
-                    const isEnrich = (f.categorie === 'enrichissement' || (f.nom || '').toLowerCase().includes('rappaport'));
-                    if (isEnrich) {
-                        const rm = g('_rmoy'); const tm = g('_tmoy');
-                        if (rm && tm) obsText = rm === tm ? 'OK' : 'NON CF';
-                    } else if (ratio && Number(ratio)) {
-                        const rVal = Number(ratio);
-                        obsText = (rVal >= 0.5 && rVal <= 2.0) ? 'OK' : 'NON CF (Ratio)';
-                    } else if (t.secKey === 'inh') {
-                        obsText = (tb1 || tb2) ? 'NON CF (Croissance)' : 'OK (Inhibé)';
+                    const rowH = 9;
+                    const requiredHeight = 8 + rowH + (fSouches.length * rowH) + 10;
+                    if (y + requiredHeight > pageHeight - 10) {
+                        doc.addPage(); pageNb++; addHeader(pageNb);
                     }
 
-                    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2);
+                    // Titre MC avec info Lot
+                    const lotSuffix = lotRows.length > 1 ? ` (Lot n°${lIdx + 1} : ${testL || 'S.L'})` : (testL ? ` (Lot : ${testL})` : '');
+                    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
+                    doc.setFillColor(235, 235, 235);
+                    doc.rect(10, y, pageWidth - 20, 8, 'F');
+                    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
+                    doc.rect(10, y, pageWidth - 20, 8, 'D');
+                    doc.text(`MILIEU : ${cU(f.nom)}${cU(lotSuffix)}`, 12, y + 5.5);
+                    y += 8;
+
+                    // En-tête colonnes
+                    doc.setFillColor(250, 250, 250);
+                    doc.rect(10, y, pageWidth - 20, rowH, 'F');
                     doc.rect(10, y, pageWidth - 20, rowH, 'D');
+                    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+
+                    const cols = [42, 60, 80, 100, 120, 135, 150, 165, 180, 195, 215, pageWidth - 10];
+
+                    doc.text('Souche', 12, y + 5);
+                    doc.text('Inoculum', cols[0] + 2, y + 5);
+                    doc.text('Section', cols[1] + 2, y + 5);
+                    doc.text('Lot Ref', cols[2] + 2, y + 5);
+                    doc.text('Lot Test', cols[3] + 2, y + 5);
+                    doc.text('Ref. B1', cols[4] + 2, y + 5);
+                    doc.text('Ref. B2', cols[5] + 2, y + 5);
+                    doc.text('Test B1', cols[6] + 2, y + 5);
+                    doc.text('Test B2', cols[7] + 2, y + 5);
+                    doc.text('R. Moy', cols[8] + 2, y + 5);
+                    doc.text('T. Moy', cols[9] + 2, y + 5);
+                    doc.text('Ratio (Pr)', cols[10] + 2, y + 5);
+
                     cols.forEach((colX, idx) => {
                         if (idx < cols.length - 1) {
                             doc.setLineWidth(idx === 5 || idx === 7 || idx === 9 ? 0.5 : 0.15);
                             doc.line(colX, y, colX, y + rowH);
                         }
                     });
-
-                    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
-                    doc.text(doc.splitTextToSize(cU(s), cols[0] - 12)[0], 12, y + 6);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(inocV, cols[0] + 2, y + 6);
-                    doc.text(cU(t.secLabel), cols[1] + 2, y + 6);
-                    doc.text(refL || '—', cols[2] + 2, y + 6);
-                    doc.text(testL || '—', cols[3] + 2, y + 6);
-                    doc.text(rb1 || '', cols[4] + 2, y + 6);
-                    doc.text(rb2 || '', cols[5] + 2, y + 6);
-                    doc.text(tb1 || '', cols[6] + 2, y + 6);
-                    doc.text(tb2 || '', cols[7] + 2, y + 6);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(rmoy || '', cols[8] + 2, y + 6);
-                    doc.text(tmoy || '', cols[9] + 2, y + 6);
-                    doc.setTextColor(0, 0, 0);
-                    doc.text(ratio ? String(ratio) : '', cols[10] + 2, y + 6);
-
                     y += rowH;
+
+                    window.sortStrainsList(fSouches).forEach((t) => {
+                        const s = t.s;
+                        const b = `frr_${f.id}_l${lIdx}_${t.secKey}_${window._frSoucheKey(s)}`;
+                        const g = suf => { const el = document.getElementById(b + suf) || document.getElementById(`frr_${f.id}_${t.secKey}_${window._frSoucheKey(s)}` + suf); return el ? el.value.trim() : ''; };
+                        const rb1 = g('_rb1'), rb2 = g('_rb2'), rmoy = g('_rmoy');
+                        const tb1 = g('_tb1'), tb2 = g('_tb2'), tmoy = g('_tmoy');
+                        const ratio = g('_ratio');
+                        const inocV = t.secKey === 'inh'
+                            ? (inoculumGlobalInh[s] || '—')
+                            : (inoculumGlobal[s] || '—');
+
+                        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2);
+                        doc.rect(10, y, pageWidth - 20, rowH, 'D');
+                        cols.forEach((colX, idx) => {
+                            if (idx < cols.length - 1) {
+                                doc.setLineWidth(idx === 5 || idx === 7 || idx === 9 ? 0.5 : 0.15);
+                                doc.line(colX, y, colX, y + rowH);
+                            }
+                        });
+
+                        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+                        doc.text(doc.splitTextToSize(cU(s), cols[0] - 12)[0], 12, y + 6);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(inocV, cols[0] + 2, y + 6);
+                        doc.text(cU(t.secLabel), cols[1] + 2, y + 6);
+                        doc.text(refL || '—', cols[2] + 2, y + 6);
+                        doc.text(testL || '—', cols[3] + 2, y + 6);
+                        doc.text(rb1 || '', cols[4] + 2, y + 6);
+                        doc.text(rb2 || '', cols[5] + 2, y + 6);
+                        doc.text(tb1 || '', cols[6] + 2, y + 6);
+                        doc.text(tb2 || '', cols[7] + 2, y + 6);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text(rmoy || '', cols[8] + 2, y + 6);
+                        doc.text(tmoy || '', cols[9] + 2, y + 6);
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(ratio ? String(ratio) : '', cols[10] + 2, y + 6);
+
+                        y += rowH;
+                    });
+                    y += 8;
                 });
-                y += 8;
             });
 
             doc.save(`Feuilles_Resultats_Global_Fertilite_${date.replace(/\//g, '_')}.pdf`);
         };
         // ---- Génération PDF RECAPITULATIF ----
-        window.generateFertGlobalRecap = function (useLots = false) {
-            const checkedIds = Array.from(window._fertCheckedIds || new Set());
-            if (checkedIds.length === 0) {
-                window.showToast("Cochez au moins un MC pour le rapport !", "error");
-                return;
+        window.generateFertGlobalRecap = function (useLots = false, itemsOverride = null) {
+            let selectedFiches = [];
+            const fertiliteData = window._fertiliteData || [];
+
+            if (itemsOverride && itemsOverride.length > 0) {
+                selectedFiches = [...new Map(itemsOverride.map(item => [item.fiche.id, item.fiche])).values()];
+            } else {
+                const checkedIds = Array.from(window._fertCheckedIds || new Set());
+                if (checkedIds.length === 0) {
+                    window.showToast("Cochez au moins un MC pour le rapport !", "error");
+                    return;
+                }
+                selectedFiches = checkedIds.map(id => fertiliteData.find(f => f.id === id)).filter(Boolean);
             }
 
-            const fertiliteData = window._fertiliteData || [];
-            const selectedFiches = checkedIds.map(id => fertiliteData.find(f => f.id === id)).filter(Boolean);
+            if (selectedFiches.length === 0) {
+                window.showToast("Aucun milieu sélectionné.", "error");
+                return;
+            }
 
             // Helper conversion superscripts -> ASCII pour jsPDF
             const cU = (str) => {
@@ -13518,7 +13833,6 @@ window.setPrepExpiry = function (months) {
             let totalTubesMC = 0;
             let flaconsMap = {};
 
-            let globalSterilityMarked = new Set();
             let totalBoitesFertilite = 0;
             let totalBoitesSterilite = 0;
             let totalTubesFertilite = 0;
@@ -13560,98 +13874,104 @@ window.setPrepExpiry = function (months) {
                 processStrains(f.indSouches, 'ind');
                 processStrains(f.inhSouches, 'inh');
 
-                let testLotStr = '—';
-                if (useLots === true) {
-                    const lEl = document.getElementById('fr_testLot_' + f.id);
-                    if (lEl && lEl.options[lEl.selectedIndex]) {
-                        testLotStr = lEl.options[lEl.selectedIndex].getAttribute('data-lot') || 'S.L';
-                        if (testLotStr === 'S.L' && lEl.options[lEl.selectedIndex].value === "") testLotStr = "—";
+                let mediumLots = [];
+                if (itemsOverride && itemsOverride.length > 0) {
+                    const matched = itemsOverride.filter(x => x.fiche.id === f.id);
+                    matched.forEach(m => mediumLots.push(m.lot || '—'));
+                    if (mediumLots.length === 0) mediumLots.push('—');
+                } else if (useLots === true) {
+                    const lotRows = document.querySelectorAll(`.fr-lot-row[data-fid="${f.id}"]`);
+                    if (lotRows && lotRows.length > 0) {
+                        lotRows.forEach((r, idx) => {
+                            const lIdx = r.getAttribute ? (parseInt(r.getAttribute('data-lot-idx'), 10) || idx) : idx;
+                            const lotStr = (window._getFrLotValue ? window._getFrLotValue(f.id, lIdx, 'test') : '') || '—';
+                            mediumLots.push(lotStr === '' ? '—' : lotStr);
+                        });
+                    } else {
+                        const lotStr = (window._getFrLotValue ? window._getFrLotValue(f.id, 0, 'test') : '') || '—';
+                        mediumLots.push(lotStr === '' ? '—' : lotStr);
                     }
+                } else {
+                    mediumLots.push('—');
                 }
 
-                Object.values(sectionGroupMap).forEach(group => {
-                    let mStrainsCount = group.souches.size;
-                    let lBoites = 0; let lTubes = 0; let lFlacons = 0; let lPrecoulees = 0;
+                mediumLots.forEach(testLotStr => {
+                    Object.values(sectionGroupMap).forEach(group => {
+                        let mStrainsCount = group.souches.size;
+                        let lBoites = 0; let lTubes = 0; let lFlacons = 0; let lPrecoulees = 0;
 
-                    let needsSter = false;
-                    let sterKey = group.milieuTest.toLowerCase();
-                    if (!globalSterilityMarked.has(sterKey)) {
-                        globalSterilityMarked.add(sterKey);
-                        needsSter = true; // Apply sterility on the first time we encouter this medium!
-                    }
+                        let sterilityPlates = group.isGelose ? 2 : 0;
+                        let sterilityTubes = (group.isEnrichissement || group.methode === 'direct') ? 3 : 0;
 
-                    let fName = group.milieuTest.toUpperCase();
+                        let fName = group.milieuTest.toUpperCase();
 
-                    if (group.isEnrichissement || group.methode === 'direct') {
-                        if (!tubesMap[fName]) tubesMap[fName] = {fert: 0, ster: 0};
-                        lTubes = mStrainsCount * 2;
-                        totalTubesFertilite += lTubes;
-                        tubesMap[fName].fert += lTubes;
+                        if (group.isEnrichissement || group.methode === 'direct') {
+                            if (!tubesMap[fName]) tubesMap[fName] = {fert: 0, ster: 0};
+                            lTubes = mStrainsCount * 2;
+                            totalTubesFertilite += lTubes;
+                            tubesMap[fName].fert += lTubes;
 
-                        if (needsSter) {
-                            lTubes += 3;
-                            totalTubesSterilite += 3;
-                            tubesMap[fName].ster += 3;
-                        }
-                    } else {
-                        let testPlatesNeeded = mStrainsCount * 2;
-                        let refPlatesNeeded = mStrainsCount * 2;
-                        let sterilityPlates = needsSter && group.isGelose ? 2 : 0;
-                        totalBoitesSterilite += sterilityPlates;
-
-                        if (!boitesMap[fName]) boitesMap[fName] = {fert: 0, ster: 0};
-                        if (!boitesMap['TSA']) boitesMap['TSA'] = {fert: 0, ster: 0};
-
-                        if (!group.isGelose) {
-                            boitesMap['TSA'].fert += testPlatesNeeded + refPlatesNeeded;
+                            lTubes += sterilityTubes;
+                            totalTubesSterilite += sterilityTubes;
+                            tubesMap[fName].ster += sterilityTubes;
                         } else {
-                            boitesMap[fName].fert += testPlatesNeeded;
-                            boitesMap['TSA'].fert += refPlatesNeeded;
-                            boitesMap[fName].ster += sterilityPlates;
-                        }
+                            let testPlatesNeeded = mStrainsCount * 2;
+                            let refPlatesNeeded = mStrainsCount * 2;
+                            totalBoitesSterilite += sterilityPlates;
 
-                        if (group.methode === 'surface') {
-                            lPrecoulees = testPlatesNeeded + refPlatesNeeded;
-                            totalBoitesFertilite += lPrecoulees;
-                            if (needsSter && group.isGelose) lPrecoulees += sterilityPlates;
-                        } else { // Surfusion
-                            let testFlacons = Math.ceil((testPlatesNeeded + sterilityPlates) / 10);
-                            let refFlacons = Math.ceil(refPlatesNeeded / 10);
-                            
-                            lBoites = testPlatesNeeded + sterilityPlates + refPlatesNeeded;
-                            totalBoitesFertilite += testPlatesNeeded + refPlatesNeeded;
+                            if (!boitesMap[fName]) boitesMap[fName] = {fert: 0, ster: 0};
+                            if (!boitesMap['TSA']) boitesMap['TSA'] = {fert: 0, ster: 0};
 
-                            lFlacons = testFlacons + refFlacons;
-                            
-                            if (group.isGelose) {
-                                if (!flaconsMap[fName]) flaconsMap[fName] = 0;
-                                flaconsMap[fName] += testFlacons;
+                            if (!group.isGelose) {
+                                boitesMap['TSA'].fert += testPlatesNeeded + refPlatesNeeded;
                             } else {
-                                if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
-                                flaconsMap['TSA'] += testFlacons;
+                                boitesMap[fName].fert += testPlatesNeeded;
+                                boitesMap['TSA'].fert += refPlatesNeeded;
+                                boitesMap[fName].ster += sterilityPlates;
                             }
-                            
-                            if (refFlacons > 0) {
-                                if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
-                                flaconsMap['TSA'] += refFlacons;
+
+                            if (group.methode === 'surface') {
+                                lPrecoulees = testPlatesNeeded + refPlatesNeeded + (group.isGelose ? sterilityPlates : 0);
+                                totalBoitesFertilite += testPlatesNeeded + refPlatesNeeded;
+                            } else { // Surfusion
+                                let testFlacons = Math.ceil((testPlatesNeeded + sterilityPlates) / 10);
+                                let refFlacons = Math.ceil(refPlatesNeeded / 10);
+                                
+                                lBoites = testPlatesNeeded + sterilityPlates + refPlatesNeeded;
+                                totalBoitesFertilite += testPlatesNeeded + refPlatesNeeded;
+
+                                lFlacons = testFlacons + refFlacons;
+                                
+                                if (group.isGelose) {
+                                    if (!flaconsMap[fName]) flaconsMap[fName] = 0;
+                                    flaconsMap[fName] += testFlacons;
+                                } else {
+                                    if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
+                                    flaconsMap['TSA'] += testFlacons;
+                                }
+                                
+                                if (refFlacons > 0) {
+                                    if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
+                                    flaconsMap['TSA'] += refFlacons;
+                                }
                             }
                         }
-                    }
 
-                    totalBoites += lBoites;
-                    totalFlacons += lFlacons;
-                    totalTubesMC += lTubes;
-                    totalBoites += lPrecoulees; // adds to overall boites
+                        totalBoites += lBoites;
+                        totalFlacons += lFlacons;
+                        totalTubesMC += lTubes;
+                        totalBoites += lPrecoulees; // adds to overall boites
 
-                    recapMC.push({
-                        nom: group.nom,
-                        milieuTest: group.milieuTest,
-                        lot: testLotStr,
-                        souchesCount: mStrainsCount,
-                        boites: lBoites,
-                        precoulees: lPrecoulees,
-                        flacons: lFlacons,
-                        tubes: lTubes
+                        recapMC.push({
+                            nom: group.nom,
+                            milieuTest: group.milieuTest,
+                            lot: testLotStr,
+                            souchesCount: mStrainsCount,
+                            boites: lBoites,
+                            precoulees: lPrecoulees,
+                            flacons: lFlacons,
+                            tubes: lTubes
+                        });
                     });
                 });
 
@@ -13850,24 +14170,58 @@ window.setPrepExpiry = function (months) {
             doc.setFontSize(11); doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
             const totalSectionNum = hasSomeSteps ? '4.' : '3.';
             doc.text(totalSectionNum + ' TOTAUX GENERAUX', 15, y); y += 7;
-            let boitesStr = totalBoitesFertilite + ' pour fertilité';
-            if (totalBoitesSterilite > 0) boitesStr += ' / ' + totalBoitesSterilite + ' pour stérilité';
-            let tubesStr = totalTubesFertilite + ' pour fertilité';
-            if (totalTubesSterilite > 0) tubesStr += ' / ' + totalTubesSterilite + ' pour stérilité';
+
+            // Helper pour récupérer la température d'incubation d'un milieu
+            const getTempForMedium = (medName) => {
+                const cleanK = (medName || '').toUpperCase().trim();
+                const fMatch = selectedFiches.find(f => {
+                    const nom = (f.nom || '').toUpperCase().trim();
+                    const mTest = (f.milieuTest || '').toUpperCase().trim();
+                    const indTest = (f.indMilieuTest || '').toUpperCase().trim();
+                    const inhTest = (f.inhMilieuTest || '').toUpperCase().trim();
+                    return nom === cleanK || mTest === cleanK || indTest === cleanK || inhTest === cleanK || cleanK.includes(nom) || nom.includes(cleanK);
+                });
+                if (fMatch) {
+                    if (fMatch.incubConditions && fMatch.incubConditions.length > 0) {
+                        const temps = fMatch.incubConditions.map(c => c.temp).filter(Boolean);
+                        if (temps.length > 0) return [...new Set(temps)].join(' ou ');
+                    }
+                    if (fMatch.incubTemp) return fMatch.incubTemp;
+                }
+                if (cleanK.includes('SDA') || cleanK.includes('SABOURAUD') || cleanK.includes('LEVURE') || cleanK.includes('MOISISSURE')) {
+                    return '20-25°C';
+                }
+                return '30-35°C';
+            };
+
+            const allUniqueTemps = new Set();
+            selectedFiches.forEach(f => {
+                if (f.incubConditions && f.incubConditions.length > 0) {
+                    f.incubConditions.forEach(c => { if (c.temp) allUniqueTemps.add(c.temp); });
+                } else if (f.incubTemp) {
+                    allUniqueTemps.add(f.incubTemp);
+                }
+            });
+            if (allUniqueTemps.size === 0) allUniqueTemps.add('30-35°C');
+            const globalTempStr = Array.from(allUniqueTemps).join(' ou ');
+
+            let totalBoitesAll = totalBoitesFertilite + totalBoitesSterilite;
+            let totalTubesAll = totalTubesFertilite + totalTubesSterilite;
 
             let totalsBody = [];
             
             if (Object.keys(boitesMap).length > 0) {
                 for (let k in boitesMap) {
                     let b = boitesMap[k];
-                    if (b.fert > 0 || b.ster > 0) {
-                        let bStr = b.fert + ' pour fertilité';
-                        if (b.ster > 0) bStr += ' / ' + b.ster + ' pour stérilité';
-                        totalsBody.push(['- Boîtes de Petri (' + k + ')', bStr]);
+                    let bTotal = b.fert + b.ster;
+                    if (bTotal > 0) {
+                        let mTemp = getTempForMedium(k);
+                        let tempSuffix = mTemp ? ` (incuber dans ${mTemp})` : '';
+                        totalsBody.push(['- Boîtes de Petri (' + k + ')', bTotal + ' boîtes' + tempSuffix]);
                     }
                 }
             }
-            totalsBody.push(['Boîtes de Petri (TOTAL)', boitesStr]);
+            totalsBody.push(['Boîtes de Petri (TOTAL)', totalBoitesAll + ' boîtes (incuber dans ' + globalTempStr + ')']);
 
             if (Object.keys(flaconsMap).length > 0) {
                 for (let k in flaconsMap) {
@@ -13882,14 +14236,15 @@ window.setPrepExpiry = function (months) {
             if (Object.keys(tubesMap).length > 0) {
                 for (let k in tubesMap) {
                     let t = tubesMap[k];
-                    if (t.fert > 0 || t.ster > 0) {
-                        let tStr = t.fert + ' pour fertilité';
-                        if (t.ster > 0) tStr += ' / ' + t.ster + ' pour stérilité';
-                        totalsBody.push(['- Tubes MC (' + k + ')', tStr]);
+                    let tTotal = t.fert + t.ster;
+                    if (tTotal > 0) {
+                        let mTemp = getTempForMedium(k);
+                        let tempSuffix = mTemp ? ` (incuber dans ${mTemp})` : '';
+                        totalsBody.push(['- Tubes MC (' + k + ')', tTotal + ' tubes' + tempSuffix]);
                     }
                 }
             }
-            totalsBody.push(['Tubes MC Bouillons (TOTAL)', tubesStr]);
+            totalsBody.push(['Tubes MC Bouillons (TOTAL)', totalTubesAll + ' tubes (incuber dans ' + globalTempStr + ')']);
             totalsBody.push(['Tubes de dilution pH 7 (9mL)', totalTubes + ' tubes']);
 
             doc.autoTable({
@@ -14616,6 +14971,8 @@ window.setPrepExpiry = function (months) {
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #059669; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
                             <h2 style="color:#059669; margin:0; font-size:1.3rem;">🔍 Historique Traçabilité Fertilité</h2>
                             <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button onclick="window.generateConsommablesFromHistory(false)" style="background:linear-gradient(to right, #3b82f6, #2563eb); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 4px rgba(37,99,235,0.2);">📦 Cons. (Sans Lots)</button>
+                                <button onclick="window.generateConsommablesFromHistory(true)" style="background:linear-gradient(to right, #f59e0b, #d97706); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 4px rgba(217,119,6,0.2);">📦 Cons. (Avec Lots)</button>
                                 <button onclick="window.generateSouchesRapportPdf()" style="background:#0369a1; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">🧬 Rapport Souches PDF</button>
                                 <button onclick="window.generateFertiliteTracaPdf()" style="background:#111; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📄 Exporter Historique PDF</button>
                                 <button onclick="window._showingFertTraca=false; window.render()" style="background:#6b7280; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour</button>
@@ -14750,6 +15107,176 @@ window.setPrepExpiry = function (months) {
                         .catch(e => { if (window.showToast) window.showToast('Erreur: ' + e.message, 'error'); });
                 };
 
+                // ---- Génération des Consommables depuis l'Historique de Traçabilité ----
+                window.generateConsommablesFromHistory = function (useLots = true) {
+                    const checkboxes = document.querySelectorAll('.cb-traca-print:checked');
+                    if (checkboxes.length === 0) {
+                        if (window.showToast) window.showToast("Cochez au moins un MC dans l'historique !", "warning");
+                        return;
+                    }
+                    const checkedIds = Array.from(checkboxes).map(c => c.value);
+                    const fertiliteData = window._fertiliteData || [];
+                    const historyList = window._tracaFertHistory || [];
+                    const itemsOverride = [];
+
+                    checkedIds.forEach(id => {
+                        const rec = historyList.find(h => String(h.id) === String(id));
+                        if (!rec) return;
+
+                        let f = fertiliteData.find(x => (x.nom || '').trim().toLowerCase() === (rec.milieu || '').trim().toLowerCase());
+                        if (!f) {
+                            f = fertiliteData.find(x => (x.nom || '').toLowerCase().includes((rec.milieu || '').toLowerCase()) || (rec.milieu || '').toLowerCase().includes((x.nom || '').toLowerCase()));
+                        }
+                        if (!f) {
+                            const sList = (rec.souches && rec.souches !== '-') ? rec.souches.split(',').map(s => s.trim()).filter(Boolean) : [];
+                            f = {
+                                id: 'hist_' + rec.id,
+                                nom: rec.milieu || 'MC',
+                                milieuTest: rec.milieu || 'MC',
+                                souches: sList,
+                                indSouches: [],
+                                inhSouches: [],
+                                categorie: (rec.milieu || '').toLowerCase().includes('bouillon') ? 'enrichissement' : 'gelose'
+                            };
+                        }
+
+                        itemsOverride.push({
+                            fiche: f,
+                            lot: (rec.lot && rec.lot !== '-') ? rec.lot : 'S.L'
+                        });
+                    });
+
+                    if (itemsOverride.length === 0) {
+                        if (window.showToast) window.showToast("Aucun milieu valide sélectionné.", "error");
+                        return;
+                    }
+
+                    window.generateFertGlobalRecap(useLots, itemsOverride);
+                };
+
+                // ---- Rendu Modale Origines avec Milieux Oubliés ----
+                window._renderOrigPickerModal = function (existingValues = {}) {
+                    let overlay = document.getElementById('origPickerOverlay');
+                    if (!overlay) {
+                        overlay = document.createElement('div');
+                        overlay.id = 'origPickerOverlay';
+                        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+                        document.body.appendChild(overlay);
+                    }
+
+                    const entries = window._pendingTracaEntries || [];
+                    const dateVal = window._pendingTracaDate;
+                    const allUniqueSouches = [...new Set(entries.flatMap(e => e.uniqueSouches))];
+                    const fertiliteData = window._fertiliteData || [];
+                    const usedFids = new Set(entries.map(e => String(e.f.id)));
+                    const unselected = fertiliteData.filter(f => !usedFids.has(String(f.id)));
+
+                    let unselectedOptions = '<option value="">-- Choisir un milieu à rajouter --</option>';
+                    unselected.forEach(f => {
+                        unselectedOptions += `<option value="${f.id}">🧪 ${f.nom || 'MC'}</option>`;
+                    });
+
+                    const prevOrig = window._lastUsedOrigines || window._soucheOrigines || {};
+                    const rows = allUniqueSouches.map(s => {
+                        const key = s.replace(/[^a-z0-9]/gi, '_');
+                        const curVal = existingValues[key] !== undefined ? existingValues[key] : (prevOrig[s] || '');
+                        return `
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:6px; padding:4px 10px; font-size:0.82rem; font-weight:800; min-width:140px;">${s}</span>
+                            <input id="newOrig_${key}" type="text" value="${curVal.replace(/"/g, '&quot;')}" placeholder="ex: CS:04" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
+                        </div>`;
+                    }).join('');
+
+                    const mediaBadges = entries.map(e => `<span style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:5px; padding:2px 8px; font-size:0.75rem; font-weight:700; color:#334155;">🧪 ${e.f.nom || 'MC'} (Lot: ${e.lotStr || 'S.L'})</span>`).join(' ');
+
+                    overlay.innerHTML = `
+                    <div style="background:#fff; border-radius:16px; padding:24px; max-width:520px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.35); max-height:90vh; overflow-y:auto;">
+                        <h3 style="margin:0 0 6px; color:#059669; font-size:1.15rem; font-weight:900;">🧬 Origines des Souches</h3>
+                        <p style="margin:0 0 12px; font-size:0.8rem; color:#6b7280;">Ces origines seront enregistrées pour cette session (${dateVal}). Modifiables ultérieurement dans l'historique.</p>
+                        
+                        <div style="margin-bottom:14px; display:flex; flex-wrap:wrap; gap:5px; align-items:center;">
+                            <span style="font-size:0.75rem; font-weight:800; color:#475569;">Milieux inclus (${entries.length}) :</span>
+                            ${mediaBadges}
+                        </div>
+
+                        <!-- Milieu oublié sans recommencer -->
+                        <div style="background:#ecfdf5; border:1.5px solid #a7f3d0; border-radius:10px; padding:10px 12px; margin-bottom:16px;">
+                            <div style="font-size:0.75rem; font-weight:800; color:#065f46; margin-bottom:6px;">💡 Milieu oublié ? Ajoutez-le directement à cette session :</div>
+                            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                <select id="manualMissingSelect" class="form-input" style="flex:1; min-width:180px; padding:6px; font-size:0.78rem;">
+                                    ${unselectedOptions}
+                                </select>
+                                <button type="button" onclick="window.addMissingMilieuToManualTraca()" style="background:#059669; color:#fff; border:none; padding:7px 12px; border-radius:7px; font-size:0.75rem; font-weight:800; cursor:pointer; box-shadow:0 2px 4px rgba(5,150,105,0.2);">➕ Ajouter</button>
+                            </div>
+                        </div>
+
+                        <div>${rows || '<div style="color:#888; font-style:italic; font-size:0.85rem; padding:10px 0;">Aucune souche enregistrée pour ces milieux.</div>'}</div>
+                        
+                        <div style="display:flex; gap:10px; margin-top:18px; justify-content:flex-end; flex-wrap:wrap;">
+                            <button onclick="document.getElementById('origPickerOverlay').remove()" style="background:#f3f4f6; color:#374151; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem;">Annuler</button>
+                            <button onclick="window._confirmSaveTraca()" style="background:#059669; color:#fff; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:bold;">💾 Enregistrer</button>
+                        </div>
+                    </div>`;
+                };
+
+                // ---- Ajout d'un milieu oublié à la volée pendant la traçabilité manuelle ----
+                window.addMissingMilieuToManualTraca = function () {
+                    const sel = document.getElementById('manualMissingSelect');
+                    if (!sel || !sel.value) {
+                        if (window.showToast) window.showToast("Veuillez choisir un milieu dans la liste.", "warning");
+                        return;
+                    }
+                    const fid = sel.value;
+                    const fertiliteData = window._fertiliteData || [];
+                    const f = fertiliteData.find(x => String(x.id) === String(fid));
+                    if (!f) return;
+
+                    // Déterminer le lot
+                    const prepsList = window.preps || [];
+                    const fName = (f.nom || '').toLowerCase().trim();
+                    const matchingPreps = prepsList.filter(p => (p.designation || '').toLowerCase().trim() === fName && p.lot);
+                    let lotStr = '';
+                    if (matchingPreps.length === 1) {
+                        lotStr = matchingPreps[0].lot || '';
+                    } else if (matchingPreps.length > 1) {
+                        const options = matchingPreps.map((p, i) => `${i + 1}. Lot: ${p.lot} (préparé le ${window.formatStringToDate ? window.formatStringToDate(p.datePrep) : p.datePrep || '?'})`).join('\n');
+                        const choice = prompt(`Plusieurs lots trouvés pour "${f.nom || ''}".\nChoisissez un numéro (1 à ${matchingPreps.length}) ou tapez un lot manuellement :\n\n${options}`, '1');
+                        if (choice === null) return;
+                        const cidx = parseInt(choice) - 1;
+                        lotStr = (!isNaN(cidx) && cidx >= 0 && cidx < matchingPreps.length) ? (matchingPreps[cidx].lot || '') : choice;
+                    } else {
+                        const manual = prompt(`Aucune préparation trouvée pour "${f.nom || ''}".\nSaisir le numéro de lot manuellement (optionnel) :`, '');
+                        if (manual === null) return;
+                        lotStr = manual;
+                    }
+
+                    const inc = ((f.incubConditions && f.incubConditions.length > 0) ? f.incubConditions.map(c => c.temp + ' / ' + c.duree).join(', ') : (f.incubTemp ? (f.incubTemp + ' / ' + f.incubDuree) : '-'));
+                    const strains = [];
+                    if (f.souches && f.souches.length) strains.push(...f.souches);
+                    if (f.indSouches && f.indSouches.length) strains.push(...f.indSouches);
+                    if (f.inhSouches && f.inhSouches.length) strains.push(...f.inhSouches);
+                    const souchStr = strains.length ? [...new Set(strains)].join(', ') : '-';
+                    const uniqueSouches = [...new Set(strains)];
+
+                    if (!window._pendingTracaEntries) window._pendingTracaEntries = [];
+                    window._pendingTracaEntries.push({ f, inc, souchStr, uniqueSouches, lotStr });
+
+                    if (!window._fertCheckedIds) window._fertCheckedIds = new Set();
+                    window._fertCheckedIds.add(String(fid));
+                    const cb = document.querySelector(`.fert-checkbox[value="${fid}"]`);
+                    if (cb) cb.checked = true;
+
+                    // Mémoriser les valeurs déjà renseignées
+                    const currentInputs = {};
+                    document.querySelectorAll('[id^="newOrig_"]').forEach(inp => {
+                        const k = inp.id.replace('newOrig_', '');
+                        currentInputs[k] = inp.value;
+                    });
+
+                    window._renderOrigPickerModal(currentInputs);
+                    if (window.showToast) window.showToast(`Milieu "${f.nom}" ajouté à la session !`, "success");
+                };
+
                 window.saveManualFertiliteTraca = function () {
                     const checkedIds = Array.from(window._fertCheckedIds || new Set());
                     if (checkedIds.length === 0) {
@@ -14808,28 +15335,8 @@ window.setPrepExpiry = function (months) {
                         return;
                     }
 
-                    // Construire la modale d'origines
-                    const prevOrig = window._lastUsedOrigines || window._soucheOrigines || {};
-                    const rows = allUniqueSouches.map(s => `
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                        <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:6px; padding:4px 10px; font-size:0.82rem; font-weight:800; min-width:140px;">${s}</span>
-                        <input id="newOrig_${s.replace(/[^a-z0-9]/gi, '_')}" type="text" value="${(prevOrig[s] || '').replace(/"/g, '&quot;')}" placeholder="ex: CS:04" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
-                    </div>`).join('');
-
-                    const overlay = document.createElement('div');
-                    overlay.id = 'origPickerOverlay';
-                    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
-                    overlay.innerHTML = `
-                    <div style="background:#fff; border-radius:16px; padding:24px; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.35); max-height:90vh; overflow-y:auto;">
-                        <h3 style="margin:0 0 6px; color:#059669; font-size:1.1rem;">🧬 Origines des Souches</h3>
-                        <p style="margin:0 0 16px; font-size:0.8rem; color:#6b7280;">Ces origines seront enregistrées uniquement pour cette session (${dateVal}). Vous pourrez les modifier après dans l'historique.</p>
-                        <div>${rows}</div>
-                        <div style="display:flex; gap:10px; margin-top:18px; justify-content:flex-end; flex-wrap:wrap;">
-                            <button onclick="document.getElementById('origPickerOverlay').remove()" style="background:#f3f4f6; color:#374151; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem;">Annuler</button>
-                            <button onclick="window._confirmSaveTraca()" style="background:#059669; color:#fff; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:bold;">💾 Enregistrer</button>
-                        </div>
-                    </div>`;
-                    document.body.appendChild(overlay);
+                    // Construire la modale d'origines avec support de milieu oublié
+                    window._renderOrigPickerModal();
                 };
 
                 window._confirmSaveTraca = function () {
@@ -15290,6 +15797,9 @@ window.setPrepExpiry = function (months) {
                                 <button onclick="window.rf_generatePDF()" style="background:#0284c7; color:#fff; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-size:0.9rem; font-weight:800; margin-left:auto; box-shadow:0 3px 8px rgba(2,132,199,0.3);">
                                     📄 IMPRIMER LE SUIVI (PDF GRAND FORMAT)
                                 </button>
+                                <button onclick="if(confirm('Effacer toutes les sélections et lots sauvegardés ?')){ localStorage.removeItem('micro_rfState'); window.rfState={}; window.render(); }" style="background:#ef4444; color:#fff; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:700; margin-left:8px; box-shadow:0 3px 8px rgba(239,68,68,0.25);">
+                                    🗑️ Réinitialiser
+                                </button>
                             </div>
 
                             <div style="overflow-x:auto; border-radius:10px; border:2px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
@@ -15398,9 +15908,14 @@ window.setPrepExpiry = function (months) {
                         doc.setTextColor(0, 0, 0);
                         doc.text("MILIEUX DE CULTURE FERTILES LIBÉRÉS POUR UTILISATION", pageWidth / 2, 18, { align: "center" });
 
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(10);
+                        const editionDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                        doc.text(`Édité le : ${editionDate}`, pageWidth / 2, 25, { align: "center" });
+
                         doc.setDrawColor(0, 0, 0);
                         doc.setLineWidth(0.6);
-                        doc.line(12, 22, pageWidth - 12, 22);
+                        doc.line(12, 29, pageWidth - 12, 29);
 
                         // Table des Milieux & Lots (NOIR ET BLANC, AUCUN REMPLISSAGE, QUADRILLAGE NET)
                         const tableBody = checked.map(item => [
@@ -15409,7 +15924,7 @@ window.setPrepExpiry = function (months) {
                         ]);
 
                         doc.autoTable({
-                            startY: 26,
+                            startY: 33,
                             head: [['MILIEU DE CULTURE', 'LOT']],
                             body: tableBody,
                             theme: 'grid',

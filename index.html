@@ -2961,8 +2961,15 @@
                         <input type="text" id="prepCode" class="form-input" placeholder="ex: M-01">
                     </div>
                     <div class="form-group">
-                        <label>N° de Boîte</label>
-                        <input type="text" id="prepBoite" class="form-input" placeholder="ex: B-05" oninput="window.onPrepBoiteInput(this.value)">
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>N° de Boîte / Flacons</span>
+                            <span style="font-size:0.62rem; color:#ea580c; font-weight:800; background:#fff7ed; padding:2px 6px; border-radius:6px; border:1px solid #fed7aa;" title="Tapez par ex: 5+6 ou 5,6 pour plusieurs flacons">💡 Astuce : 5+6</span>
+                        </label>
+                        <div style="position:relative; display:flex; align-items:center;">
+                            <input type="text" id="prepBoite" class="form-input" placeholder="ex: 5+6 ou B-05, B-06" oninput="window.onPrepBoiteInput(this.value)" onblur="window.onPrepBoiteBlur(this.value)" style="font-weight:900; color:#c2410c; background:#fff7ed; border-color:#f97316; padding-right:85px; margin-bottom:0;">
+                            <button type="button" onclick="window.appendNextFlaconQuick()" style="position:absolute; right:4px; top:50%; transform:translateY(-50%); background:linear-gradient(135deg, #ea580c, #f97316); color:#fff; border:none; padding:5px 9px; border-radius:7px; font-size:0.65rem; font-weight:900; cursor:pointer; box-shadow:0 1px 3px rgba(234,88,12,0.3); white-space:nowrap;" title="Ajouter rapidement le flacon suivant">+ Flacon (+)</button>
+                        </div>
+                        <div id="prepBoiteLivePill" style="display:none; margin-top:4px; font-size:0.68rem; font-weight:800; color:#ea580c; align-items:center; gap:4px; flex-wrap:wrap;"></div>
                     </div>
                 </div>
 
@@ -3188,8 +3195,11 @@
             <input type="hidden" id="quickEntamerPrepId">
 
             <div class="form-group" style="margin-bottom: 14px;">
-                <label style="font-size: 0.72rem; font-weight: 800; color: #9a3412;">N° DE BOÎTE ENTAMÉE</label>
-                <input type="text" id="quickEntamerBoite" class="form-input" placeholder="ex: B-05" style="font-size: 1rem; font-weight: 900; text-align: center; border: 2px solid #f97316; background: #fff7ed; color: #c2410c;">
+                <label style="font-size: 0.72rem; font-weight: 800; color: #9a3412; display:flex; justify-content:space-between; align-items:center;">
+                    <span>N° DE BOÎTE ENTAMÉE</span>
+                    <span style="font-size:0.62rem; color:#ea580c; font-weight:800; background:#fff7ed; padding:1px 6px; border-radius:4px; border:1px solid #fed7aa;">💡 Astuce : 5+6</span>
+                </label>
+                <input type="text" id="quickEntamerBoite" class="form-input" placeholder="ex: 5+6 ou B-05, B-06" style="font-size: 1rem; font-weight: 900; text-align: center; border: 2px solid #f97316; background: #fff7ed; color: #c2410c;">
             </div>
 
             <label style="font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block;">À DÉSTOCKER DANS :</label>
@@ -5320,7 +5330,94 @@
             }
         };
 
-        // Constantes déplacées en haut
+        // Helper parsing multi-flacons ultra-rapide (ex: 5+6, 5,6, 5 6, B-05+B-06, 1-3)
+        window.formatSingleFlaconNum = function (raw) {
+            if (!raw) return '';
+            let s = String(raw).trim();
+            if (!s) return '';
+            if (/^\d+$/.test(s)) {
+                return 'B-' + s.padStart(2, '0');
+            }
+            const m = s.match(/^[bB][-_\s]?(\d+)$/);
+            if (m) {
+                return 'B-' + m[1].padStart(2, '0');
+            }
+            if (/^[bB]-/i.test(s)) {
+                return 'B-' + s.slice(2).trim();
+            }
+            return s;
+        };
+
+        window.parseFlaconInput = function (input) {
+            if (!input) return [];
+            if (Array.isArray(input)) {
+                const seen = [];
+                input.forEach(x => {
+                    const rawVal = (typeof x === 'object' && x !== null) ? (x.num || '') : String(x);
+                    const subList = window.parseFlaconInput(rawVal);
+                    subList.forEach(item => {
+                        if (item && !seen.includes(item)) seen.push(item);
+                    });
+                });
+                return seen;
+            }
+            let str = String(input).trim();
+            if (!str || str === '?') return [];
+
+            // Plage de numéros (ex: 5-7 ou 1-3)
+            const rangeMatch = str.match(/^(?:B-)?(\d+)\s*(?:-|à|to)\s*(?:B-)?(\d+)$/i);
+            if (rangeMatch) {
+                const start = parseInt(rangeMatch[1], 10);
+                const end = parseInt(rangeMatch[2], 10);
+                if (start <= end && end - start <= 20) {
+                    const list = [];
+                    for (let i = start; i <= end; i++) {
+                        list.push('B-' + String(i).padStart(2, '0'));
+                    }
+                    return list;
+                }
+            }
+
+            // Découpage sur +, ,, ;, /, &, ou espaces entre numéros
+            const tokens = str.split(/[\+;,/&]|\s+(?=[bB]?\d+)/).map(s => s.trim()).filter(Boolean);
+            const result = [];
+            tokens.forEach(tok => {
+                const rMatch = tok.match(/^(?:B-)?(\d+)\s*-\s*(?:B-)?(\d+)$/i);
+                if (rMatch) {
+                    const s = parseInt(rMatch[1], 10);
+                    const e = parseInt(rMatch[2], 10);
+                    if (s <= e && e - s <= 20) {
+                        for (let i = s; i <= e; i++) {
+                            result.push('B-' + String(i).padStart(2, '0'));
+                        }
+                        return;
+                    }
+                }
+                const formatted = window.formatSingleFlaconNum(tok);
+                if (formatted && !result.includes(formatted)) {
+                    result.push(formatted);
+                }
+            });
+            return result;
+        };
+
+        window.formatBoiteDisplay = function (p) {
+            if (!p) return '?';
+            const sources = [];
+            if (p.boite) sources.push(p.boite);
+            if (p.destockBoite) sources.push(p.destockBoite);
+            if (p.flaconEntames && Array.isArray(p.flaconEntames)) {
+                p.flaconEntames.forEach(f => { if (f && f.num) sources.push(f.num); });
+            }
+
+            const parsed = window.parseFlaconInput(sources);
+            if (parsed.length > 0) {
+                return parsed.join(' + ');
+            }
+            const raw = p.destockBoite || p.boite || '';
+            if (!raw) return '?';
+            return raw.startsWith('B-') ? raw : 'B-' + raw;
+        };
 
         window.openPrepModal = function (id = null) {
             document.getElementById('prepEditId').value = id || '';
@@ -5361,6 +5458,8 @@
             }
             const codeEl = document.getElementById('prepCode'); if (codeEl) { codeEl.value = ''; codeEl.dataset.autoFilled = 'true'; codeEl.style.borderColor = ''; codeEl.style.background = ''; }
             document.getElementById('prepBoite').value = '';
+            const pbLivePill = document.getElementById('prepBoiteLivePill');
+            if (pbLivePill) { pbLivePill.style.display = 'none'; pbLivePill.innerHTML = ''; }
             // Opérateur
             const myStoredUser = localStorage.getItem('microbio_current_user') || '';
             const prepOpEl = document.getElementById('prepPreparePar');
@@ -5405,7 +5504,8 @@
                     if (prepLotEl) prepLotEl.dataset.autoFilled = 'false';
                     document.getElementById('prepLotFourn').value = p.lotFourn || '';
                     document.getElementById('prepCode').value = p.code || '';
-                    document.getElementById('prepBoite').value = p.boite || '';
+                    const formattedBVal = window.formatBoiteDisplay(p);
+                    document.getElementById('prepBoite').value = formattedBVal !== '?' ? formattedBVal : (p.boite || p.destockBoite || '');
                     if (prepOpEl) prepOpEl.value = p.preparePar || '';
                     document.getElementById('datePrep').value = p.datePrep || '';
                     document.getElementById('datePeremption').value = p.datePeremption || '';
@@ -5428,19 +5528,17 @@
                     if (dkEl) dkEl.checked = !!hasK;
                     if (dkfEl) dkfEl.checked = !!doneK;
                     if (dkrEl) dkrEl.style.display = hasK ? 'block' : 'none';
-                    if (p.flaconEntames && Array.isArray(p.flaconEntames) && p.flaconEntames.length > 0) {
-                        p.flaconEntames.forEach(f => window.addFlaconEntame(f.num, f.info));
-                    } else if (p.destockBoite || p.boite) {
-                        const split = (p.destockBoite || p.boite).split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-                        if (split.length > 0) {
-                            split.forEach((n, idx) => window.addFlaconEntame(n, split.length > 1 ? ("Flacon " + (idx + 1)) : ''));
-                        } else {
-                            window.addFlaconEntame();
-                        }
+                    const allFlacons = window.parseFlaconInput([ ...(p.flaconEntames || []).map(f => f.num), p.destockBoite, p.boite ]);
+                    if (allFlacons.length > 0) {
+                        allFlacons.forEach((n, idx) => {
+                            const info = (p.flaconEntames && p.flaconEntames[idx] && p.flaconEntames[idx].info) ? p.flaconEntames[idx].info : (allFlacons.length > 1 ? ('Flacon ' + (idx + 1)) : 'Entamé');
+                            window.addFlaconEntame(n, info);
+                        });
                     } else {
                         window.addFlaconEntame();
                     }
                     window.calcFlacons();
+                    if (window.onPrepBoiteInput) window.onPrepBoiteInput(document.getElementById('prepBoite').value);
                 }
             } else {
                 window.addFlaconEntame(); // Vide par défaut pour nouvelle préparation
@@ -5548,7 +5646,8 @@
 
             window.db.collection(PREPS_COL).doc(id).update(updates).then(() => {
                 const typeLabel = type === 'classeur' ? 'Classeur des réactifs' : 'Carnet de sortie';
-                if (window.showToast) window.showToast(`Boîte B-${currentBoite || '?'} déstockée du ${typeLabel} ✅`, "success");
+                const labelBoite = (currentBoite.startsWith('B-') || currentBoite.includes('+')) ? currentBoite : ('B-' + currentBoite);
+                if (window.showToast) window.showToast(`Boîte ${labelBoite || '?'} déstockée du ${typeLabel} ✅`, "success");
                 if (document.getElementById('destockChecklistModalOverlay') && document.getElementById('destockChecklistModalOverlay').style.display === 'flex') {
                     window.renderDestockChecklistBody();
                 }
@@ -5561,15 +5660,17 @@
         window.updateDestockBoite = function (id, boiteVal) {
             if (!id) return;
             const val = String(boiteVal || '').trim();
-            const splitNums = val.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-            const flaconEntames = splitNums.map(n => ({ num: n, info: '' }));
+            const splitNums = window.parseFlaconInput(val);
+            const flaconEntames = splitNums.map((n, idx) => ({ num: n, info: splitNums.length > 1 ? ('Flacon ' + (idx + 1)) : '' }));
+            const boiteFormatted = splitNums.length > 0 ? splitNums.join(' + ') : val;
+            const destockFormatted = splitNums.length > 0 ? splitNums.join(', ') : val;
             window.db.collection(PREPS_COL).doc(id).update({
-                destockBoite: val,
-                boite: splitNums[0] || val,
+                destockBoite: destockFormatted,
+                boite: boiteFormatted,
                 flaconEntames: flaconEntames,
                 updatedAt: Date.now()
             }).then(() => {
-                const msg = splitNums.length > 1 ? (`${splitNums.length} flacons mis à jour : ` + val) : ("N° de boîte mis à jour : " + val);
+                const msg = splitNums.length > 1 ? (`${splitNums.length} flacons mis à jour : ` + boiteFormatted) : ("N° de boîte mis à jour : " + boiteFormatted);
                 if (window.showToast) window.showToast(msg, "info");
                 if (typeof render === 'function') render();
             }).catch(err => {
@@ -5603,7 +5704,8 @@
             }
 
             window.db.collection(PREPS_COL).doc(id).update(updates).then(() => {
-                if (window.showToast) window.showToast(`Boîte B-${currentBoite || '?'} déstockée du classeur ET du carnet ✅`, "success");
+                const labelBoite = (currentBoite.startsWith('B-') || currentBoite.includes('+')) ? currentBoite : ('B-' + currentBoite);
+                if (window.showToast) window.showToast(`Boîte ${labelBoite || '?'} déstockée du classeur ET du carnet ✅`, "success");
                 if (document.getElementById('destockChecklistModalOverlay') && document.getElementById('destockChecklistModalOverlay').style.display === 'flex') {
                     window.renderDestockChecklistBody();
                 }
@@ -5647,12 +5749,14 @@
                 return;
             }
 
-            const splitNums = boiteVal.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-            const flaconEntames = splitNums.map(n => ({ num: n, info: 'Entamé' }));
+            const splitNums = window.parseFlaconInput(boiteVal);
+            const flaconEntames = splitNums.map((n, idx) => ({ num: n, info: splitNums.length > 1 ? ('Flacon ' + (idx + 1)) : 'Entamé' }));
+            const boiteFormatted = splitNums.length > 0 ? splitNums.join(' + ') : boiteVal;
+            const destockFormatted = splitNums.length > 0 ? splitNums.join(', ') : boiteVal;
 
             window.db.collection(PREPS_COL).doc(id).update({
-                destockBoite: boiteVal,
-                boite: splitNums[0] || boiteVal,
+                destockBoite: destockFormatted,
+                boite: boiteFormatted,
                 flaconEntames: flaconEntames,
                 destockClasseur: isClasseur,
                 destockClasseurFait: false,
@@ -5662,7 +5766,7 @@
                 isDestocke: false,
                 updatedAt: Date.now()
             }).then(() => {
-                const countMsg = splitNums.length > 1 ? (`${splitNums.length} flacons (${boiteVal})`) : (`Flacon ${boiteVal || '?'}`);
+                const countMsg = splitNums.length > 1 ? (`${splitNums.length} flacons (${boiteFormatted})`) : (`Flacon ${boiteFormatted || '?'}`);
                 if (window.showToast) window.showToast(`${countMsg} déclaré(s) à déstocker 📦`, "success");
                 window.closeQuickEntamerModal();
                 if (typeof render === 'function') render();
@@ -5768,8 +5872,8 @@
                                     <div style="font-size:0.65rem; color:#64748b;">Lot F: ${p.lotFourn || p.lot || '-'} • ${p.supplier || ''}</div>
                                 </td>
                                 <td style="padding:10px 6px; text-align:center;">
-                                    <input type="text" value="${bVal}" placeholder="ex: B-05, B-06" style="min-width:85px; max-width:130px; text-align:center; font-weight:900; color:#c2410c; background:#fff7ed; border:1.5px solid #f97316; border-radius:6px; padding:4px 6px; font-size:0.75rem;" onchange="window.updateDestockBoite('${p.id}', this.value)" title="Modifier les N° de flacons (séparés par virgule)">
-                                    ${(p.flaconEntames && p.flaconEntames.length > 1) ? `<div style="font-size:0.6rem; color:#ea580c; font-weight:800; margin-top:2px;">📦 ${p.flaconEntames.length} flacons</div>` : (bVal.includes(',') ? `<div style="font-size:0.6rem; color:#ea580c; font-weight:800; margin-top:2px;">📦 ${bVal.split(',').length} flacons</div>` : '')}
+                                    <input type="text" value="${bVal}" placeholder="ex: 5+6 ou B-05, B-06" style="min-width:95px; max-width:140px; text-align:center; font-weight:900; color:#c2410c; background:#fff7ed; border:1.5px solid #f97316; border-radius:6px; padding:4px 6px; font-size:0.75rem;" onchange="window.updateDestockBoite('${p.id}', this.value)" title="Modifier les N° de flacons (ex: 5+6 ou B-05, B-06)">
+                                    ${(p.flaconEntames && p.flaconEntames.length > 1) ? `<div style="font-size:0.6rem; color:#ea580c; font-weight:800; margin-top:2px;">📦 ${p.flaconEntames.length} flacons</div>` : (window.parseFlaconInput(bVal).length > 1 ? `<div style="font-size:0.6rem; color:#ea580c; font-weight:800; margin-top:2px;">📦 ${window.parseFlaconInput(bVal).length} flacons</div>` : '')}
                                 </td>
                                 <td style="padding:10px 8px; text-align:center;">
                                     ${pendC ? `
@@ -5911,15 +6015,79 @@
 
         window.onPrepBoiteInput = function (val) {
             const v = String(val || '').trim();
-            if (!v) return;
-            const rows = document.querySelectorAll('.flacon-entame-row');
-            if (rows.length === 1) {
-                const firstInput = rows[0].querySelector('.fe-num');
-                if (firstInput && !firstInput.value.trim()) {
-                    firstInput.value = v;
-                    window.syncDestockFlaconsFromUI();
+            const pill = document.getElementById('prepBoiteLivePill');
+            const parsed = v ? window.parseFlaconInput(v) : [];
+
+            if (parsed.length > 1) {
+                if (pill) {
+                    pill.innerHTML = `📦 <strong>${parsed.length} flacons détectés :</strong> ` +
+                        parsed.map(n => `<span style="background:#ea580c; color:#fff; padding:2px 7px; border-radius:5px; font-size:0.65rem; font-weight:900; margin:1px;">${n}</span>`).join(' <span style="color:#ea580c; font-weight:900;">+</span> ');
+                    pill.style.display = 'flex';
                 }
+
+                // Auto-génération immédiate des lignes pour chaque flacon
+                const container = document.getElementById('flaconEntameContainer');
+                if (container) {
+                    container.innerHTML = '';
+                    parsed.forEach((n, idx) => {
+                        window.addFlaconEntame(n, 'Flacon ' + (idx + 1));
+                    });
+                }
+            } else if (parsed.length === 1) {
+                if (pill) {
+                    pill.innerHTML = `📦 1 flacon détecté : <span style="background:#059669; color:#fff; padding:2px 7px; border-radius:5px; font-size:0.65rem; font-weight:900;">${parsed[0]}</span>`;
+                    pill.style.display = 'flex';
+                }
+                const container = document.getElementById('flaconEntameContainer');
+                if (container) {
+                    const rows = container.querySelectorAll('.flacon-entame-row');
+                    if (rows.length <= 1) {
+                        if (rows.length === 0) window.addFlaconEntame(parsed[0], '');
+                        else {
+                            const inp = rows[0].querySelector('.fe-num');
+                            if (inp) inp.value = parsed[0];
+                            window.syncDestockFlaconsFromUI();
+                        }
+                    }
+                }
+            } else {
+                if (pill) { pill.style.display = 'none'; pill.innerHTML = ''; }
             }
+        };
+
+        window.onPrepBoiteBlur = function (val) {
+            const v = String(val || '').trim();
+            if (!v) return;
+            const parsed = window.parseFlaconInput(v);
+            const input = document.getElementById('prepBoite');
+            if (parsed.length > 0 && input) {
+                input.value = parsed.join(' + ');
+            }
+        };
+
+        window.appendNextFlaconQuick = function () {
+            const input = document.getElementById('prepBoite');
+            if (!input) return;
+            const v = input.value.trim();
+            let nextStr = 'B-01';
+            if (v) {
+                const parsed = window.parseFlaconInput(v);
+                if (parsed.length > 0) {
+                    const last = parsed[parsed.length - 1];
+                    const m = last.match(/(\d+)$/);
+                    if (m) {
+                        const nxt = parseInt(m[1], 10) + 1;
+                        nextStr = 'B-' + String(nxt).padStart(2, '0');
+                    }
+                    input.value = parsed.join(' + ') + ' + ' + nextStr;
+                } else {
+                    input.value = v + ' + B-02';
+                }
+            } else {
+                input.value = 'B-01';
+            }
+            window.onPrepBoiteInput(input.value);
+            input.focus();
         };
 
                 window.setPrepExpiryWeeks = function (weeks) {
@@ -6401,15 +6569,29 @@ window.setPrepExpiry = function (months) {
                 const additifs = Array.from(document.getElementById('prepAdditifsContainer').querySelectorAll('.additif-entry')).map(div => JSON.parse(div.dataset.info));
                 additifs.forEach(a => window.saveAdditifNameToCatalog(a));
 
-                const flaconEntames = Array.from(document.querySelectorAll('.flacon-entame-row')).map(row => ({
+                const rowFlacons = Array.from(document.querySelectorAll('.flacon-entame-row')).map(row => ({
                     num: (row.querySelector('.fe-num') ? row.querySelector('.fe-num').value.trim() : ''),
                     info: (row.querySelector('.fe-info') ? row.querySelector('.fe-info').value.trim() : '')
-                })).filter(f => f.num || f.info);
+                }));
 
-                const flaconNums = flaconEntames.map(f => f.num).filter(Boolean);
-                const destockBoiteStr = flaconNums.length > 0
-                    ? flaconNums.join(', ')
-                    : (document.getElementById('prepDestockBoite') ? document.getElementById('prepDestockBoite').value.trim() : (document.getElementById('prepBoite').value || ''));
+                const boiteRaw = (document.getElementById('prepBoite') ? document.getElementById('prepBoite').value.trim() : '');
+
+                // Collecte tous les numéros saisis (lignes de flacons ET champ N° de Boîte)
+                const allRaw = [];
+                rowFlacons.forEach(rf => { if (rf.num) allRaw.push(rf.num); });
+                if (boiteRaw) allRaw.push(boiteRaw);
+
+                const flaconNums = window.parseFlaconInput(allRaw);
+                const flaconEntames = flaconNums.map((n, idx) => {
+                    const existingInfo = rowFlacons[idx] ? rowFlacons[idx].info : '';
+                    return {
+                        num: n,
+                        info: existingInfo || (flaconNums.length > 1 ? ('Flacon ' + (idx + 1)) : 'Entamé')
+                    };
+                });
+
+                const boiteFormatted = flaconNums.length > 0 ? flaconNums.join(' + ') : boiteRaw;
+                const destockBoiteStr = flaconNums.length > 0 ? flaconNums.join(', ') : boiteRaw;
 
                 const isClasseur = document.getElementById('prepDestockClasseur') ? document.getElementById('prepDestockClasseur').checked : false;
                 const isCarnet = document.getElementById('prepDestockCarnet') ? document.getElementById('prepDestockCarnet').checked : false;
@@ -6429,7 +6611,7 @@ window.setPrepExpiry = function (months) {
                     lot: document.getElementById('prepLot').value,
                     lotFourn: document.getElementById('prepLotFourn').value,
                     code: document.getElementById('prepCode').value,
-                    boite: flaconNums[0] || (document.getElementById('prepBoite').value || ''),
+                    boite: boiteFormatted,
                     datePrep: document.getElementById('datePrep').value,
                     datePeremption: document.getElementById('datePeremption').value,
                     type: document.getElementById('prepType').value || '',
@@ -8426,11 +8608,9 @@ window.setPrepExpiry = function (months) {
                     const pendCarnet = window.isPrepPendingCarnet(p);
                     const isPendingDestock = pendClasseur || pendCarnet;
                     const isFullyDestocke = (p.destockClasseur || p.destockCarnet || p.aDestocker) && !isPendingDestock;
-                    const rawBoite = p.destockBoite || p.boite || '?';
-                    const boiteDisplay = rawBoite.startsWith('B-') ? rawBoite : (rawBoite.includes(',') ? rawBoite : 'B-' + rawBoite);
-                    const flaconCount = (p.flaconEntames && p.flaconEntames.length > 0)
-                        ? p.flaconEntames.length
-                        : (rawBoite.includes(',') ? rawBoite.split(',').length : 1);
+                    const boiteDisplay = window.formatBoiteDisplay(p);
+                    const flaconsList = window.parseFlaconInput([ ...(p.flaconEntames || []).map(f => f.num), p.destockBoite, p.boite ]);
+                    const flaconCount = flaconsList.length > 0 ? flaconsList.length : 1;
                     const prepOp = (p.preparePar || '').trim();
                     const isMine = myUserName && prepOp && prepOp.toLowerCase() === myUserName;
                     const isOther = prepOp && myUserName && prepOp.toLowerCase() !== myUserName;
@@ -8500,7 +8680,8 @@ window.setPrepExpiry = function (months) {
                                     </div>
                                 </div>
                                 <div style="text-align:right; display:flex; flex-direction:column; gap:3px; align-items:flex-end;">
-                                    <div style="font-size:0.72rem; color:var(--secondary); font-weight:900;">📦 B-${p.boite || '?'} | ⚖️ ${p.weight || '0'}g</div>
+                                    <div style="font-size:0.72rem; color:var(--secondary); font-weight:900;">📦 ${boiteDisplay} | ⚖️ ${p.weight || '0'}g</div>
+                                    ${flaconCount > 1 ? `<div style="font-size:0.6rem; color:#ea580c; font-weight:900; background:#fff7ed; padding:2px 6px; border-radius:4px; border:1px solid #fed7aa;">📦 ${flaconCount} flacons</div>` : ''}
                                     ${p.qtyFinal ? `<div style="font-size:0.65rem; color: var(--primary); font-weight: 800;">💧 VOL : ${p.qtyFinal}</div>` : ''}
                                     ${p.totalFlacons ? `<div style="font-size:0.65rem; color: #0369a1; font-weight: 900; background: #e0f2fe; padding: 2px 6px; border-radius: 4px; display: inline-block;">🧪 ${p.totalFlacons}</div>` : ''}
                                     ${isExpired ? '<span style="color:#ef4444; font-size:0.68rem; font-weight:900;">⚠️ EXPIRÉ</span>' : ''}
@@ -8525,11 +8706,14 @@ window.setPrepExpiry = function (months) {
                                     `).join('')}
                                 </div>
                             ` : ''}
-                            ${p.flaconEntames && p.flaconEntames.length > 0 ? `
+                            ${flaconsList.length > 0 ? `
                                 <div style="margin-top:8px; border-top:1px solid rgba(245,158,11,0.15); padding-top:8px;">
-                                    <div style="font-size:0.62rem; color:#d97706; font-weight:900; text-transform:uppercase; margin-bottom:4px;">📦 Flacons entamés</div>
+                                    <div style="font-size:0.62rem; color:#d97706; font-weight:900; text-transform:uppercase; margin-bottom:4px;">📦 Flacons entamés (${flaconsList.length})</div>
                                     <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                                        ${p.flaconEntames.map(f => `<span style="background:rgba(245,158,11,0.1); color:#b45309; border:1px solid rgba(245,158,11,0.2); padding:3px 8px; border-radius:6px; font-size:0.68rem; font-weight:800;">📦 ${f.num || '?'} ${f.info ? '— ' + f.info : ''}</span>`).join('')}
+                                        ${flaconsList.map((fNum, idx) => {
+                                            const info = (p.flaconEntames && p.flaconEntames[idx] && p.flaconEntames[idx].info) ? p.flaconEntames[idx].info : (flaconsList.length > 1 ? ('Flacon ' + (idx + 1)) : '');
+                                            return `<span style="background:rgba(245,158,11,0.1); color:#b45309; border:1px solid rgba(245,158,11,0.2); padding:3px 8px; border-radius:6px; font-size:0.68rem; font-weight:800;">📦 ${fNum} ${info ? '— ' + info : ''}</span>`;
+                                        }).join('')}
                                     </div>
                                 </div>
                             ` : ''}
@@ -9842,7 +10026,7 @@ window.setPrepExpiry = function (months) {
                 "Lot Fournisseur": p.lotFourn || "",
                 "Fournisseur": p.supplier || "",
                 "Code": p.code || "",
-                "Boite": p.boite || ""
+                "Boite(s)": (p.flaconEntames && p.flaconEntames.length > 0) ? p.flaconEntames.map(f => f.num).filter(Boolean).join(', ') : (p.boite || "")
             }));
 
             let totalUnits = 0;

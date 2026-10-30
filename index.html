@@ -13875,30 +13875,43 @@ window.setPrepExpiry = function (months) {
                 processStrains(f.inhSouches, 'inh');
 
                 let mediumLots = [];
+                let mediumRefLots = [];
                 if (itemsOverride && itemsOverride.length > 0) {
                     const matched = itemsOverride.filter(x => x.fiche.id === f.id);
-                    matched.forEach(m => mediumLots.push(m.lot || '—'));
-                    if (mediumLots.length === 0) mediumLots.push('—');
+                    matched.forEach(m => {
+                        mediumLots.push(m.lot || '—');
+                        mediumRefLots.push(m.refLot || 'TSA');
+                    });
+                    if (mediumLots.length === 0) {
+                        mediumLots.push('—');
+                        mediumRefLots.push('TSA');
+                    }
                 } else if (useLots === true) {
                     const lotRows = document.querySelectorAll(`.fr-lot-row[data-fid="${f.id}"]`);
                     if (lotRows && lotRows.length > 0) {
                         lotRows.forEach((r, idx) => {
                             const lIdx = r.getAttribute ? (parseInt(r.getAttribute('data-lot-idx'), 10) || idx) : idx;
                             const lotStr = (window._getFrLotValue ? window._getFrLotValue(f.id, lIdx, 'test') : '') || '—';
+                            const refLotStr = (window._getFrLotValue ? window._getFrLotValue(f.id, lIdx, 'ref') : '') || '—';
                             mediumLots.push(lotStr === '' ? '—' : lotStr);
+                            mediumRefLots.push(refLotStr === '' ? '—' : refLotStr);
                         });
                     } else {
                         const lotStr = (window._getFrLotValue ? window._getFrLotValue(f.id, 0, 'test') : '') || '—';
+                        const refLotStr = (window._getFrLotValue ? window._getFrLotValue(f.id, 0, 'ref') : '') || '—';
                         mediumLots.push(lotStr === '' ? '—' : lotStr);
+                        mediumRefLots.push(refLotStr === '' ? '—' : refLotStr);
                     }
                 } else {
                     mediumLots.push('—');
+                    mediumRefLots.push('—');
                 }
 
-                mediumLots.forEach(testLotStr => {
+                mediumLots.forEach((testLotStr, mIdx) => {
+                    const refLotStr = mediumRefLots[mIdx] || '—';
                     Object.values(sectionGroupMap).forEach(group => {
                         let mStrainsCount = group.souches.size;
-                        let lBoites = 0; let lTubes = 0; let lFlacons = 0; let lPrecoulees = 0;
+                        if (mStrainsCount === 0) mStrainsCount = 1;
 
                         let sterilityPlates = group.isGelose ? 2 : 0;
                         let sterilityTubes = (group.isEnrichissement || group.methode === 'direct') ? 3 : 0;
@@ -13907,13 +13920,58 @@ window.setPrepExpiry = function (months) {
 
                         if (group.isEnrichissement || group.methode === 'direct') {
                             if (!tubesMap[fName]) tubesMap[fName] = {fert: 0, ster: 0};
-                            lTubes = mStrainsCount * 2;
+                            let lTubes = mStrainsCount * 2;
                             totalTubesFertilite += lTubes;
                             tubesMap[fName].fert += lTubes;
 
                             lTubes += sterilityTubes;
                             totalTubesSterilite += sterilityTubes;
                             tubesMap[fName].ster += sterilityTubes;
+                            totalTubesMC += lTubes;
+
+                            // Comptage référence TSA pour l'inoculum des bouillons (2 boîtes par souche)
+                            let refPlatesNeeded = mStrainsCount * 2;
+                            if (!boitesMap['TSA']) boitesMap['TSA'] = {fert: 0, ster: 0};
+                            boitesMap['TSA'].fert += refPlatesNeeded;
+                            totalBoitesFertilite += refPlatesNeeded;
+                            totalBoites += refPlatesNeeded;
+
+                            if (boitesMap['TSA'].ster === 0) {
+                                boitesMap['TSA'].ster = 2;
+                                totalBoitesSterilite += 2;
+                                totalBoites += 2;
+                            }
+
+                            let refFlacons = Math.ceil((refPlatesNeeded + 2) / 10);
+                            if (refFlacons > 0) {
+                                if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
+                                flaconsMap['TSA'] += refFlacons;
+                                totalFlacons += refFlacons;
+                            }
+
+                            // 1. Ligne bouillon
+                            recapMC.push({
+                                nom: group.nom,
+                                milieuTest: group.milieuTest,
+                                lot: (useLots && testLotStr !== '—') ? testLotStr : '',
+                                souchesCount: mStrainsCount,
+                                boites: 0,
+                                precoulees: 0,
+                                flacons: 0,
+                                tubes: lTubes
+                            });
+
+                            // 2. Ligne référence TSA (boîtes de pétri pour contrôle d'inoculum)
+                            recapMC.push({
+                                nom: group.nom + ' (Réf. Inoculum)',
+                                milieuTest: 'GÉLOSE TSA (RÉF)',
+                                lot: (useLots && refLotStr !== '—') ? refLotStr : (useLots ? 'Lot Réf (TSA)' : ''),
+                                souchesCount: mStrainsCount,
+                                boites: refPlatesNeeded + 2,
+                                precoulees: 0,
+                                flacons: refFlacons,
+                                tubes: 0
+                            });
                         } else {
                             let testPlatesNeeded = mStrainsCount * 2;
                             let refPlatesNeeded = mStrainsCount * 2;
@@ -13930,18 +13988,35 @@ window.setPrepExpiry = function (months) {
                                 boitesMap[fName].ster += sterilityPlates;
                             }
 
-                            if (group.methode === 'surface') {
-                                lPrecoulees = testPlatesNeeded + refPlatesNeeded + (group.isGelose ? sterilityPlates : 0);
-                                totalBoitesFertilite += testPlatesNeeded + refPlatesNeeded;
-                            } else { // Surfusion
-                                let testFlacons = Math.ceil((testPlatesNeeded + sterilityPlates) / 10);
-                                let refFlacons = Math.ceil(refPlatesNeeded / 10);
-                                
-                                lBoites = testPlatesNeeded + sterilityPlates + refPlatesNeeded;
-                                totalBoitesFertilite += testPlatesNeeded + refPlatesNeeded;
+                            // Boîtes de stérilité pour le milieu référence TSA (2 boîtes toujours incluses)
+                            if (boitesMap['TSA'].ster === 0) {
+                                boitesMap['TSA'].ster = 2;
+                                totalBoitesSterilite += 2;
+                                totalBoites += 2;
+                            }
 
-                                lFlacons = testFlacons + refFlacons;
-                                
+                            let testFlacons = 0;
+                            let refFlacons = 0;
+                            let testBoites = 0;
+                            let refBoites = 0;
+                            let testPrecoulees = 0;
+                            let refPrecoulees = 0;
+
+                            if (group.methode === 'surface') {
+                                testPrecoulees = testPlatesNeeded + sterilityPlates;
+                                refPrecoulees = refPlatesNeeded + 2;
+                                totalBoitesFertilite += testPlatesNeeded + refPlatesNeeded;
+                                totalBoites += testPrecoulees + refPrecoulees;
+                            } else { // Surfusion
+                                testFlacons = Math.ceil((testPlatesNeeded + sterilityPlates) / 10);
+                                refFlacons = Math.ceil((refPlatesNeeded + 2) / 10);
+                                testBoites = testPlatesNeeded + sterilityPlates;
+                                refBoites = refPlatesNeeded + 2;
+                                totalBoitesFertilite += testPlatesNeeded + refPlatesNeeded;
+                                totalBoites += testBoites + refBoites;
+
+                                totalFlacons += testFlacons + refFlacons;
+
                                 if (group.isGelose) {
                                     if (!flaconsMap[fName]) flaconsMap[fName] = 0;
                                     flaconsMap[fName] += testFlacons;
@@ -13949,29 +14024,39 @@ window.setPrepExpiry = function (months) {
                                     if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
                                     flaconsMap['TSA'] += testFlacons;
                                 }
-                                
+
                                 if (refFlacons > 0) {
                                     if (!flaconsMap['TSA']) flaconsMap['TSA'] = 0;
                                     flaconsMap['TSA'] += refFlacons;
                                 }
                             }
+
+                            // 1. Ligne Milieu Testé
+                            recapMC.push({
+                                nom: group.nom,
+                                milieuTest: group.milieuTest,
+                                lot: (useLots && testLotStr !== '—') ? testLotStr : '',
+                                souchesCount: mStrainsCount,
+                                boites: testBoites,
+                                precoulees: testPrecoulees,
+                                flacons: testFlacons,
+                                tubes: 0
+                            });
+
+                            // 2. Ligne Milieu de Référence (TSA ou SDA)
+                            const isFungal = /sabouraud|sda|levure|moisissure|candida|aspergillus/i.test(group.nom);
+                            const refMediumName = isFungal ? 'GÉLOSE SDA (RÉF)' : 'GÉLOSE TSA (RÉF)';
+                            recapMC.push({
+                                nom: group.nom + ' (Réf)',
+                                milieuTest: refMediumName,
+                                lot: (useLots && refLotStr !== '—') ? refLotStr : (useLots ? 'Lot Réf (TSA)' : ''),
+                                souchesCount: mStrainsCount,
+                                boites: refBoites,
+                                precoulees: refPrecoulees,
+                                flacons: refFlacons,
+                                tubes: 0
+                            });
                         }
-
-                        totalBoites += lBoites;
-                        totalFlacons += lFlacons;
-                        totalTubesMC += lTubes;
-                        totalBoites += lPrecoulees; // adds to overall boites
-
-                        recapMC.push({
-                            nom: group.nom,
-                            milieuTest: group.milieuTest,
-                            lot: testLotStr,
-                            souchesCount: mStrainsCount,
-                            boites: lBoites,
-                            precoulees: lPrecoulees,
-                            flacons: lFlacons,
-                            tubes: lTubes
-                        });
                     });
                 });
 
@@ -14224,10 +14309,15 @@ window.setPrepExpiry = function (months) {
             totalsBody.push(['Boîtes de Petri (TOTAL)', totalBoitesAll + ' boîtes (incuber dans ' + globalTempStr + ')']);
 
             if (Object.keys(flaconsMap).length > 0) {
+                let flTotal = 0;
                 for (let k in flaconsMap) {
                     if (flaconsMap[k] > 0) {
+                        flTotal += flaconsMap[k];
                         totalsBody.push(['- Flacons gélose fondue ' + k + ' 190mL *', flaconsMap[k] + ' flacon(s)']);
                     }
+                }
+                if (flTotal > 0) {
+                    totalsBody.push(['Flacons gélose fondue 190mL * (TOTAL)', flTotal + ' flacon(s)']);
                 }
             } else {
                 totalsBody.push(['Flacons gélose fondue 190mL *', totalFlacons + ' flacon(s)']);
@@ -14973,6 +15063,7 @@ window.setPrepExpiry = function (months) {
                             <div style="display:flex; gap:8px; flex-wrap:wrap;">
                                 <button onclick="window.generateConsommablesFromHistory(false)" style="background:linear-gradient(to right, #3b82f6, #2563eb); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 4px rgba(37,99,235,0.2);">📦 Cons. (Sans Lots)</button>
                                 <button onclick="window.generateConsommablesFromHistory(true)" style="background:linear-gradient(to right, #f59e0b, #d97706); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 4px rgba(217,119,6,0.2);">📦 Cons. (Avec Lots)</button>
+                                <button onclick="window.generateFeuillesResultatsFromHistory()" style="background:linear-gradient(to right, #059669, #047857); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 4px rgba(5,150,105,0.25);">📋 Feuilles Résultats</button>
                                 <button onclick="window.generateSouchesRapportPdf()" style="background:#0369a1; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">🧬 Rapport Souches PDF</button>
                                 <button onclick="window.generateFertiliteTracaPdf()" style="background:#111; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📄 Exporter Historique PDF</button>
                                 <button onclick="window._showingFertTraca=false; window.render()" style="background:#6b7280; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour</button>
@@ -15127,22 +15218,33 @@ window.setPrepExpiry = function (months) {
                         if (!f) {
                             f = fertiliteData.find(x => (x.nom || '').toLowerCase().includes((rec.milieu || '').toLowerCase()) || (rec.milieu || '').toLowerCase().includes((x.nom || '').toLowerCase()));
                         }
+                        const sList = (rec.souches && rec.souches !== '-') ? rec.souches.split(',').map(s => s.trim()).filter(Boolean) : [];
+                        const isBouillon = (rec.milieu || '').toLowerCase().includes('bouillon') || (rec.milieu || '').toLowerCase().includes('broth');
+
                         if (!f) {
-                            const sList = (rec.souches && rec.souches !== '-') ? rec.souches.split(',').map(s => s.trim()).filter(Boolean) : [];
                             f = {
                                 id: 'hist_' + rec.id,
                                 nom: rec.milieu || 'MC',
                                 milieuTest: rec.milieu || 'MC',
-                                souches: sList,
+                                methode: isBouillon ? ['direct'] : ['surfusion'],
+                                souches: sList.length > 0 ? sList : ['Souche test'],
                                 indSouches: [],
                                 inhSouches: [],
-                                categorie: (rec.milieu || '').toLowerCase().includes('bouillon') ? 'enrichissement' : 'gelose'
+                                categorie: isBouillon ? 'enrichissement' : 'gelose'
                             };
+                            fertiliteData.push(f);
+                        } else {
+                            if (sList.length > 0) {
+                                f = { ...f, souches: sList };
+                            } else if (!f.souches || f.souches.length === 0) {
+                                f = { ...f, souches: ['Souche test'] };
+                            }
                         }
 
                         itemsOverride.push({
                             fiche: f,
-                            lot: (rec.lot && rec.lot !== '-') ? rec.lot : 'S.L'
+                            lot: (rec.lot && rec.lot !== '-') ? rec.lot : 'S.L',
+                            refLot: 'TSA' // Milieu de référence TSA toujours pris en considération
                         });
                     });
 
@@ -15152,6 +15254,149 @@ window.setPrepExpiry = function (months) {
                     }
 
                     window.generateFertGlobalRecap(useLots, itemsOverride);
+                };
+
+                // ---- Feuilles de Résultats depuis l'Historique Traçabilité (comme les résultats de fertilité normal) ----
+                window.generateFeuillesResultatsFromHistory = function () {
+                    const checkboxes = document.querySelectorAll('.cb-traca-print:checked');
+                    if (checkboxes.length === 0) {
+                        if (window.showToast) window.showToast("Cochez au moins un MC dans l'historique !", "warning");
+                        return;
+                    }
+                    const checkedIds = Array.from(checkboxes).map(c => c.value);
+                    const fertiliteData = window._fertiliteData || [];
+                    const historyList = window._tracaFertHistory || [];
+
+                    // Regrouper par milieu pour gérer les multi-lots éventuels
+                    const mediaMap = {};
+                    let firstDate = null;
+
+                    checkedIds.forEach(id => {
+                        const rec = historyList.find(h => String(h.id) === String(id));
+                        if (!rec) return;
+                        if (!firstDate && rec.date) firstDate = rec.date;
+
+                        let f = fertiliteData.find(x => (x.nom || '').trim().toLowerCase() === (rec.milieu || '').trim().toLowerCase());
+                        if (!f) {
+                            f = fertiliteData.find(x => (x.nom || '').toLowerCase().includes((rec.milieu || '').toLowerCase()) || (rec.milieu || '').toLowerCase().includes((x.nom || '').toLowerCase()));
+                        }
+                        const sList = (rec.souches && rec.souches !== '-') ? rec.souches.split(',').map(s => s.trim()).filter(Boolean) : [];
+                        const isBouillon = (rec.milieu || '').toLowerCase().includes('bouillon') || (rec.milieu || '').toLowerCase().includes('broth');
+
+                        if (!f) {
+                            f = {
+                                id: 'hist_' + rec.id,
+                                nom: rec.milieu || 'MC',
+                                milieuTest: rec.milieu || 'MC',
+                                methode: isBouillon ? ['direct'] : ['surfusion'],
+                                souches: sList.length > 0 ? sList : ['Souche test'],
+                                indSouches: [],
+                                inhSouches: [],
+                                categorie: isBouillon ? 'enrichissement' : 'gelose'
+                            };
+                            fertiliteData.push(f);
+                        } else if (sList.length > 0 && (!f.souches || f.souches.length === 0)) {
+                            f.souches = sList;
+                        }
+
+                        const fid = String(f.id);
+                        if (!mediaMap[fid]) {
+                            mediaMap[fid] = { fiche: f, lots: [], date: rec.date };
+                        }
+                        const lotVal = (rec.lot && rec.lot !== '-') ? rec.lot : '';
+                        if (lotVal && !mediaMap[fid].lots.includes(lotVal)) {
+                            mediaMap[fid].lots.push(lotVal);
+                        }
+                    });
+
+                    const fids = Object.keys(mediaMap);
+                    if (fids.length === 0) {
+                        if (window.showToast) window.showToast("Aucun milieu valide sélectionné.", "error");
+                        return;
+                    }
+
+                    // Définir les IDs sélectionnés pour le système officiel
+                    window._fertCheckedIds = new Set(fids);
+
+                    const container = document.getElementById('feuillesResultatsLotsContainer');
+                    if (!container) return;
+                    container.innerHTML = '';
+
+                    // Définir la date globale si disponible
+                    if (firstDate) {
+                        const dFert = document.getElementById('frGlobalDateFert');
+                        if (dFert) dFert.value = firstDate;
+                    }
+
+                    fids.forEach(fid => {
+                        const item = mediaMap[fid];
+                        const f = item.fiche;
+                        const card = window._createMediumLotCard(f);
+                        container.appendChild(card);
+
+                        // Pré-remplir le premier lot (Lot #1)
+                        const firstLot = item.lots[0] || '';
+                        if (firstLot) {
+                            const selTest = document.getElementById(`fr_testLot_${fid}`);
+                            let matched = false;
+                            if (selTest) {
+                                for (let i = 0; i < selTest.options.length; i++) {
+                                    if (selTest.options[i].getAttribute('data-lot') === firstLot || selTest.options[i].text.includes(firstLot)) {
+                                        selTest.selectedIndex = i;
+                                        matched = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!matched) {
+                                // Basculer en saisie libre et renseigner le lot
+                                window.toggleFrManualLot(fid, 0, 'test');
+                                const manualInp = document.getElementById(`fr_testLotManual_${fid}_0`);
+                                if (manualInp) manualInp.value = firstLot;
+                            }
+                        }
+
+                        // Pré-remplir la date si disponible
+                        if (item.date) {
+                            const df = document.getElementById(`fr_df_${fid}`);
+                            if (df) df.value = item.date;
+                        }
+
+                        // Si plusieurs lots étaient sélectionnés pour ce milieu dans l'historique
+                        for (let lIdx = 1; lIdx < item.lots.length; lIdx++) {
+                            const extraLot = item.lots[lIdx];
+                            window.addExtraLotToMedium(fid);
+                            const extraSel = document.getElementById(`fr_testLot_${fid}_${lIdx}`);
+                            let extraMatched = false;
+                            if (extraSel) {
+                                for (let i = 0; i < extraSel.options.length; i++) {
+                                    if (extraSel.options[i].getAttribute('data-lot') === extraLot || extraSel.options[i].text.includes(extraLot)) {
+                                        extraSel.selectedIndex = i;
+                                        extraMatched = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!extraMatched) {
+                                window.toggleFrManualLot(fid, lIdx, 'test');
+                                const extraManual = document.getElementById(`fr_testLotManual_${fid}_${lIdx}`);
+                                if (extraManual) extraManual.value = extraLot;
+                            }
+                        }
+                    });
+
+                    // Mettre à jour la barre des oubliés
+                    window.updateForgottenMediaList();
+
+                    // Afficher l'Étape 1 et masquer l'Étape 2
+                    document.getElementById('frStep1Wrapper').style.display = '';
+                    document.getElementById('frStep2Wrapper').style.display = 'none';
+                    document.getElementById('frInoculumContainer').innerHTML = '';
+                    document.getElementById('frResultsContainer').innerHTML = '';
+
+                    // Ouvrir la modale officielle des Feuilles de Résultats
+                    window.openModal('feuillesResultatsModalOverlay');
+                    if (window.showToast) window.showToast("Milieux et lots pré-remplis depuis l'historique !", "success", 3000);
                 };
 
                 // ---- Rendu Modale Origines avec Milieux Oubliés ----

@@ -16169,14 +16169,108 @@ window.setPrepExpiry = function (months) {
                         }
 
                         window.rfState = JSON.parse(localStorage.getItem('micro_rfState')) || {};
+
+                        // Calcule le prochain numéro de lot logique
+                        window.computeNextLotString = function(lotStr) {
+                            if (!lotStr || typeof lotStr !== 'string' || !lotStr.trim()) {
+                                const yy = String(new Date().getFullYear()).slice(-2);
+                                return '01/' + yy;
+                            }
+                            const t = lotStr.trim();
+                            // Fraction num/yy ou num/yyyy (ex: 22/26, TSA-05/26)
+                            const fracMatch = t.match(/^(.*?)(\d+)\/(\d{2,4})$/);
+                            if (fracMatch) {
+                                const prefix = fracMatch[1], numStr = fracMatch[2], yearStr = fracMatch[3];
+                                const next = String(parseInt(numStr, 10) + 1).padStart(numStr.length, '0');
+                                return prefix + next + '/' + yearStr;
+                            }
+                            // Chiffre en fin (ex: LOT-09, 15, L24-003)
+                            const endMatch = t.match(/^(.*?)(\d+)(\D*)$/);
+                            if (endMatch) {
+                                const prefix = endMatch[1], numStr = endMatch[2], suffix = endMatch[3];
+                                const next = String(parseInt(numStr, 10) + 1).padStart(numStr.length, '0');
+                                return prefix + next + suffix;
+                            }
+                            return t + '-1';
+                        };
+
                         window.rf_onRowInputChange = function (pid) {
                             const chk = document.getElementById('chk_' + pid);
                             const lot = document.getElementById('lot_' + pid);
-                            window.rfState[pid] = { checked: chk?.checked || false, lot: lot?.value || '' };
+                            const st = window.rfState[pid] || {};
+                            window.rfState[pid] = {
+                                checked: chk?.checked || false,
+                                lot: lot?.value || '',
+                                lotHistory: st.lotHistory || []
+                            };
                             localStorage.setItem('micro_rfState', JSON.stringify(window.rfState));
                         };
+
+                        // Incrémente le lot en 1 clic et sauvegarde l'ancien
+                        window.rf_incrementLot = function(pid, event) {
+                            if (event) event.stopPropagation();
+                            const lotEl = document.getElementById('lot_' + pid);
+                            if (!lotEl) return;
+                            const oldLot = lotEl.value.trim();
+                            const nextLot = window.computeNextLotString(oldLot);
+                            // Sauvegarde ancien lot dans l'historique
+                            const st = window.rfState[pid] || {};
+                            const history = st.lotHistory || [];
+                            if (oldLot && !history.includes(oldLot)) history.unshift(oldLot);
+                            // On garde max 5 anciens lots
+                            if (history.length > 5) history.length = 5;
+                            lotEl.value = nextLot;
+                            window.rfState[pid] = {
+                                checked: (document.getElementById('chk_' + pid)?.checked) || st.checked || false,
+                                lot: nextLot,
+                                lotHistory: history
+                            };
+                            localStorage.setItem('micro_rfState', JSON.stringify(window.rfState));
+                            // Rafraîchit les badges historique
+                            window.rf_renderLotHistory(pid);
+                            if (window.showToast) window.showToast('Lot → ' + nextLot, 'success');
+                        };
+
+                        // Restaure un lot depuis l'historique
+                        window.rf_restoreLot = function(pid, targetLot, event) {
+                            if (event) event.stopPropagation();
+                            const lotEl = document.getElementById('lot_' + pid);
+                            if (!lotEl) return;
+                            const currentLot = lotEl.value.trim();
+                            const st = window.rfState[pid] || {};
+                            const history = st.lotHistory || [];
+                            // Swap: mettre le lot actuel dans l'historique, restaurer targetLot
+                            if (currentLot && !history.includes(currentLot)) history.unshift(currentLot);
+                            const idx = history.indexOf(targetLot);
+                            if (idx !== -1) history.splice(idx, 1);
+                            if (history.length > 5) history.length = 5;
+                            lotEl.value = targetLot;
+                            window.rfState[pid] = {
+                                checked: (document.getElementById('chk_' + pid)?.checked) || st.checked || false,
+                                lot: targetLot,
+                                lotHistory: history
+                            };
+                            localStorage.setItem('micro_rfState', JSON.stringify(window.rfState));
+                            window.rf_renderLotHistory(pid);
+                        };
+
+                        // Rafraîchit les badges d'historique sans re-render complet
+                        window.rf_renderLotHistory = function(pid) {
+                            const container = document.getElementById('hist_container_' + pid);
+                            if (!container) return;
+                            const st = window.rfState[pid] || {};
+                            const history = st.lotHistory || [];
+                            if (history.length === 0) { container.innerHTML = ''; return; }
+                            container.innerHTML = '<span style="font-size:0.7rem;color:#64748b;font-weight:600;">Anc: </span>' +
+                                history.map(h =>
+                                    `<span onclick="window.rf_restoreLot('${pid}', '${h.replace(/'/g,"\\'")}', event)"
+                                        style="display:inline-block;background:#e2e8f0;color:#0f172a;border-radius:10px;padding:1px 8px;font-size:0.7rem;font-weight:700;cursor:pointer;margin:1px;border:1px solid #cbd5e1;" title="Restaurer ce lot">
+                                        ${h} ↩</span>`
+                                ).join('');
+                        };
+
                         window.rf_toggleRow = function (pid, event) {
-                            if (event && (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT')) return;
+                            if (event && (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT' || event.target.tagName === 'SPAN' || event.target.tagName === 'BUTTON')) return;
                             const chk = document.getElementById('chk_' + pid);
                             if (chk) { chk.checked = !chk.checked; window.rf_onRowInputChange(pid); window.rf_onChkChange(pid); }
                         };
@@ -16186,6 +16280,12 @@ window.setPrepExpiry = function (months) {
                             const state = window.rfState[pid] || {};
                             const checkedAttr = state.checked ? 'checked' : '';
                             const currentLot = (state.lot !== undefined && state.lot !== '') ? state.lot : (p.lot || '');
+                            const lotHistory = state.lotHistory || [];
+                            const histHtml = lotHistory.length > 0
+                                ? '<span style="font-size:0.7rem;color:#64748b;font-weight:600;">Anc: </span>' + lotHistory.map(h =>
+                                    `<span onclick="window.rf_restoreLot('${pid}', '${h.replace(/'/g,"\\'")}', event)" style="display:inline-block;background:#e2e8f0;color:#0f172a;border-radius:10px;padding:1px 8px;font-size:0.7rem;font-weight:700;cursor:pointer;margin:1px;border:1px solid #cbd5e1;" title="Restaurer ce lot">${h} ↩</span>`
+                                ).join('')
+                                : '';
 
                             return `<tr id="row_${pid}" style="border-bottom:1.5px solid #cbd5e1; cursor:pointer;" onclick="window.rf_toggleRow('${pid}', event)">
                             <td style="padding:12px; vertical-align:middle; text-align:center; border-right:1.5px solid #cbd5e1; width:45px;">
@@ -16194,8 +16294,13 @@ window.setPrepExpiry = function (months) {
                             <td style="padding:12px 16px; color:#0f172a; font-weight:700; font-size:1.05rem; border-right:1.5px solid #cbd5e1;">
                                 ${p.designation || '-'}
                             </td>
-                            <td style="padding:10px 16px; text-align:center; width:220px;">
-                                <input type="text" id="lot_${pid}" value="${currentLot}" onchange="window.rf_onRowInputChange('${pid}')" oninput="window.rf_onRowInputChange('${pid}')" style="width:170px; padding:8px 12px; border-radius:6px; border:2px solid #94a3b8; text-align:center; font-weight:800; font-size:1.05rem; color:#0f172a; background:#f8fafc;" onclick="event.stopPropagation()">
+                            <td style="padding:8px 12px; text-align:center; width:260px;">
+                                <div style="display:flex; align-items:center; gap:6px; justify-content:center; flex-wrap:wrap;">
+                                    <button onclick="window.rf_incrementLot('${pid}', event)" title="Passer au lot suivant" style="background:#0f172a;color:#fff;border:none;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:800;white-space:nowrap;flex-shrink:0;">⚡ Suiv.</button>
+                                    <input type="text" id="lot_${pid}" value="${currentLot}" onchange="window.rf_onRowInputChange('${pid}')" oninput="window.rf_onRowInputChange('${pid}')" list="hist_lots_${pid}" style="width:130px; padding:7px 10px; border-radius:6px; border:2px solid #94a3b8; text-align:center; font-weight:800; font-size:1.05rem; color:#0f172a; background:#f8fafc;" onclick="event.stopPropagation()">
+                                    <datalist id="hist_lots_${pid}">${lotHistory.map(h => `<option value="${h}">`).join('')}</datalist>
+                                </div>
+                                <div id="hist_container_${pid}" style="margin-top:4px; display:flex; flex-wrap:wrap; gap:2px; justify-content:center; align-items:center; min-height:10px;">${histHtml}</div>
                             </td>
                         </tr>`;
                         }).join('');
@@ -16224,7 +16329,7 @@ window.setPrepExpiry = function (months) {
                                     ✕ Tout désélectionner
                                 </button>
                                 <button onclick="window.rf_generatePDF()" style="background:#0284c7; color:#fff; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-size:0.9rem; font-weight:800; margin-left:auto; box-shadow:0 3px 8px rgba(2,132,199,0.3);">
-                                    📄 IMPRIMER LE SUIVI (PDF GRAND FORMAT)
+                                    📄 IMPRIMER (PDF COMPACT TABLEAU D'AFFICHAGE)
                                 </button>
                                 <button onclick="if(confirm('Effacer toutes les sélections et lots sauvegardés ?')){ localStorage.removeItem('micro_rfState'); window.rfState={}; window.render(); }" style="background:#ef4444; color:#fff; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:700; margin-left:8px; box-shadow:0 3px 8px rgba(239,68,68,0.25);">
                                     🗑️ Réinitialiser
@@ -16237,7 +16342,7 @@ window.setPrepExpiry = function (months) {
                                         <tr style="background:#1e293b; color:#fff; text-align:left;">
                                             <th style="padding:14px; width:45px; text-align:center; border-right:1px solid #334155;"></th>
                                             <th style="padding:14px; font-size:1rem; border-right:1px solid #334155;">Milieu de Culture (MC)</th>
-                                            <th style="padding:14px; font-size:1rem; width:220px; text-align:center;">LOT</th>
+                                            <th style="padding:14px; font-size:1rem; width:260px; text-align:center;">LOT  <span style="font-size:0.75rem; font-weight:400; opacity:0.75;">(⚡ Suiv. = lot suivant)</span></th>
                                         </tr>
                                     </thead>
                                     <tbody id="rf_tbody">
@@ -16312,10 +16417,8 @@ window.setPrepExpiry = function (months) {
                             const pid = chk.id.replace('chk_', '');
                             const p = (window.preps || []).find(x => x.id === pid);
                             if (!p) return;
-
                             const state = (window.rfState || {})[pid] || {};
                             const editedLot = (state.lot !== undefined && state.lot !== '') ? state.lot : (p.lot || '-');
-
                             checked.push({ p, editedLot });
                         }
                     });
@@ -16328,81 +16431,152 @@ window.setPrepExpiry = function (months) {
                     try {
                         const { jsPDF } = window.jspdf;
                         const doc = new jsPDF('p', 'mm', 'a4');
-                        const pageWidth = doc.internal.pageSize.getWidth();
-                        const pageHeight = doc.internal.pageSize.getHeight();
+                        const pageWidth  = doc.internal.pageSize.getWidth();   // 210mm
+                        const pageHeight = doc.internal.pageSize.getHeight();  // 297mm
+                        const margin = 10;
 
-                        // En-tête principal noir et blanc (sans couleur, sans remplissage)
+                        // ── EN-TÊTE compact ──────────────────────────────────────────
                         doc.setFont("helvetica", "bold");
-                        doc.setFontSize(16);
+                        doc.setFontSize(13);
                         doc.setTextColor(0, 0, 0);
-                        doc.text("MILIEUX DE CULTURE FERTILES LIBÉRÉS POUR UTILISATION", pageWidth / 2, 18, { align: "center" });
+                        doc.text("MILIEUX DE CULTURE FERTILES LIBÉRÉS POUR UTILISATION", pageWidth / 2, 13, { align: "center" });
 
                         doc.setFont("helvetica", "normal");
-                        doc.setFontSize(10);
+                        doc.setFontSize(8.5);
                         const editionDate = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                        doc.text(`Édité le : ${editionDate}`, pageWidth / 2, 25, { align: "center" });
+                        doc.text("Édité le : " + editionDate, pageWidth / 2, 19, { align: "center" });
 
                         doc.setDrawColor(0, 0, 0);
                         doc.setLineWidth(0.6);
-                        doc.line(12, 29, pageWidth - 12, 29);
+                        doc.line(margin, 22, pageWidth - margin, 22);
 
-                        // Table des Milieux & Lots (NOIR ET BLANC, AUCUN REMPLISSAGE, QUADRILLAGE NET)
-                        const tableBody = checked.map(item => [
-                            item.p.designation || '-',
-                            item.editedLot || '-'
-                        ]);
+                        const startY = 25;
+                        const use2Col = checked.length > 14;
 
-                        doc.autoTable({
-                            startY: 33,
-                            head: [['MILIEU DE CULTURE', 'LOT']],
-                            body: tableBody,
-                            theme: 'grid',
-                            headStyles: {
-                                fillColor: [255, 255, 255],
-                                textColor: [0, 0, 0],
-                                fontStyle: 'bold',
-                                fontSize: 13,
-                                halign: 'center',
-                                valign: 'middle',
-                                cellPadding: 5.5,
-                                lineColor: [0, 0, 0],
-                                lineWidth: 0.6
-                            },
-                            styles: {
-                                fillColor: [255, 255, 255],
-                                textColor: [0, 0, 0],
-                                fontSize: 12.5,
-                                fontStyle: 'normal',
-                                cellPadding: 5,
-                                lineColor: [0, 0, 0],
-                                lineWidth: 0.5,
-                                valign: 'middle'
-                            },
-                            alternateRowStyles: {
-                                fillColor: [255, 255, 255]
-                            },
-                            columnStyles: {
-                                0: { halign: 'left', fontStyle: 'bold', cellWidth: 126, textColor: [0, 0, 0] },
-                                1: { halign: 'center', fontStyle: 'bold', fontSize: 13.5, cellWidth: 60, textColor: [0, 0, 0] }
-                            },
-                            margin: { left: 12, right: 12, top: 15, bottom: 20 },
-                            didDrawPage: function () {}
-                        });
+                        if (use2Col) {
+                            // ── TABLEAU 4 COLONNES (MILIEU1 | LOT1 | MILIEU2 | LOT2) ─
+                            // Largeurs : col0=70mm col1=24mm col2=70mm col3=24mm → total=188mm + 2 margin chaque côté
+                            const half = Math.ceil(checked.length / 2);
+                            const tableBody = [];
+                            for (let i = 0; i < half; i++) {
+                                const left  = checked[i];
+                                const right = checked[i + half] || null;
+                                tableBody.push([
+                                    left  ? (left.p.designation  || '-') : '',
+                                    left  ? (left.editedLot       || '-') : '',
+                                    right ? (right.p.designation || '-') : '',
+                                    right ? (right.editedLot      || '-') : ''
+                                ]);
+                            }
 
-                        // Numérotation des pages centrée en bas (sans visa ni signature)
+                            doc.autoTable({
+                                startY: startY,
+                                head: [['MILIEU DE CULTURE', 'LOT', 'MILIEU DE CULTURE', 'LOT']],
+                                body: tableBody,
+                                theme: 'grid',
+                                headStyles: {
+                                    fillColor: [255, 255, 255],
+                                    textColor: [0, 0, 0],
+                                    fontStyle: 'bold',
+                                    fontSize: 8,
+                                    halign: 'center',
+                                    valign: 'middle',
+                                    cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+                                    lineColor: [0, 0, 0],
+                                    lineWidth: 0.5
+                                },
+                                styles: {
+                                    fillColor: [255, 255, 255],
+                                    textColor: [0, 0, 0],
+                                    fontSize: 8,
+                                    fontStyle: 'normal',
+                                    cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+                                    lineColor: [0, 0, 0],
+                                    lineWidth: 0.4,
+                                    valign: 'middle'
+                                },
+                                alternateRowStyles: { fillColor: [255, 255, 255] },
+                                columnStyles: {
+                                    0: { halign: 'left',   fontStyle: 'bold', fontSize: 8,   cellWidth: 71, textColor: [0,0,0] },
+                                    1: { halign: 'center', fontStyle: 'bold', fontSize: 8.5, cellWidth: 23, textColor: [0,0,0], lineWidth: { right: 1.2 } },
+                                    2: { halign: 'left',   fontStyle: 'bold', fontSize: 8,   cellWidth: 71, textColor: [0,0,0] },
+                                    3: { halign: 'center', fontStyle: 'bold', fontSize: 8.5, cellWidth: 23, textColor: [0,0,0] }
+                                },
+                                margin: { left: margin, right: margin, top: 5, bottom: 12 },
+                                didDrawCell: function(data) {
+                                    // Cadre épais autour des colonnes LOT (col 1 et col 3)
+                                    if (data.column.index === 1 || data.column.index === 3) {
+                                        doc.setDrawColor(0, 0, 0);
+                                        doc.setLineWidth(0.9);
+                                        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height);
+                                    }
+                                    // Ligne de séparation verticale épaisse entre les 2 groupes (après colonne 1)
+                                    if (data.column.index === 1) {
+                                        doc.setDrawColor(0, 0, 0);
+                                        doc.setLineWidth(1.2);
+                                        doc.line(data.cell.x + data.cell.width, data.cell.y, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+                                    }
+                                },
+                                didDrawPage: function() {}
+                            });
+
+                        } else {
+                            // ── TABLEAU PLEINE LARGEUR (≤ 14 milieux) ────────────────
+                            const tableBody = checked.map(item => [
+                                item.p.designation || '-',
+                                item.editedLot     || '-'
+                            ]);
+
+                            doc.autoTable({
+                                startY: startY,
+                                head: [['MILIEU DE CULTURE', 'LOT']],
+                                body: tableBody,
+                                theme: 'grid',
+                                headStyles: {
+                                    fillColor: [255, 255, 255],
+                                    textColor: [0, 0, 0],
+                                    fontStyle: 'bold',
+                                    fontSize: 11,
+                                    halign: 'center',
+                                    valign: 'middle',
+                                    cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
+                                    lineColor: [0, 0, 0],
+                                    lineWidth: 0.6
+                                },
+                                styles: {
+                                    fillColor: [255, 255, 255],
+                                    textColor: [0, 0, 0],
+                                    fontSize: 11,
+                                    fontStyle: 'bold',
+                                    cellPadding: { top: 3.5, bottom: 3.5, left: 3, right: 3 },
+                                    lineColor: [0, 0, 0],
+                                    lineWidth: 0.5,
+                                    valign: 'middle'
+                                },
+                                alternateRowStyles: { fillColor: [255, 255, 255] },
+                                columnStyles: {
+                                    0: { halign: 'left',   cellWidth: 147, textColor: [0,0,0] },
+                                    1: { halign: 'center', fontSize: 12, cellWidth: 43, textColor: [0,0,0] }
+                                },
+                                margin: { left: margin, right: margin, top: 5, bottom: 12 },
+                                didDrawPage: function() {}
+                            });
+                        }
+
+                        // ── NUMÉROTATION des pages ───────────────────────────────────
                         const totalPages = doc.internal.getNumberOfPages();
                         for (let i = 1; i <= totalPages; i++) {
                             doc.setPage(i);
                             doc.setFont("helvetica", "normal");
-                            doc.setFontSize(10);
+                            doc.setFontSize(8);
                             doc.setTextColor(0, 0, 0);
-                            doc.text(`Page ${i} / ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: "center" });
+                            doc.text("Page " + i + " / " + totalPages, pageWidth / 2, pageHeight - 5, { align: "center" });
                         }
 
                         const d = new Date();
-                        const fname = "Milieux_Fertiles_Liberes_" + d.getFullYear() + (d.getMonth() + 1).toString().padStart(2, '0') + d.getDate().toString().padStart(2, '0') + ".pdf";
+                        const fname = "Milieux_Fertiles_Liberes_" + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0') + ".pdf";
                         doc.save(fname);
-                        if (window.showToast) window.showToast("PDF grand format généré : " + fname, "success");
+                        if (window.showToast) window.showToast("PDF généré : " + fname, "success");
 
                     } catch (err) {
                         console.error(err);

@@ -2037,7 +2037,9 @@
             <button onclick="window.switchTab('germes')" id="tab-germes" class="main-tab"
                 data-tab-id="germes">🦠 Germes</button>
             <button onclick="window.switchTab('fertilite')" id="tab-fertilite" class="main-tab"
-                data-tab-id="fertilite"> Fertilité</button>
+                data-tab-id="fertilite">🧫 Fertilité</button>
+            <button onclick="window.switchTab('resfert')" id="tab-resfert" class="main-tab"
+                data-tab-id="resfert">🧪 Milieux Libérés</button>
             <button onclick="window.switchTab('taches')" id="tab-taches" class="main-tab"
                 data-tab-id="taches">📝 Tâches</button>
             <button onclick="window.switchTab('instances')" id="tab-instances" class="main-tab"
@@ -4691,6 +4693,7 @@
             const oldGermesBar = document.getElementById('germes-header-bar');
             if (oldGermesBar) oldGermesBar.remove();
             window.currentTab = tab;
+            window._showingFertTraca = false;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
             const activeTab = document.getElementById('tab-' + tab);
             if (activeTab) {
@@ -4778,7 +4781,7 @@
         // --- GESTION DU SWIPE POUR CHANGER D'ONGLET ---
         let touchstartX = 0;
         let touchendX = 0;
-        const tabsOrder = ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'taches', 'instances', 'programme'];
+        const tabsOrder = ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'resfert', 'taches', 'instances', 'programme'];
 
         // ===========================
         // REORDER DES ONGLETs PRINCIPAUX (SortableJS)
@@ -4786,7 +4789,7 @@
         window.mainTabsOrderStorageKey = 'microbio_main_tabs_order';
 
         function getMainTabsDefaultOrder() {
-            return ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'taches', 'instances', 'programme'];
+            return ['accueil', 'fiches', 'analyses', 'preps', 'photos', 'registres', 'bulletins', 'germes', 'fertilite', 'resfert', 'taches', 'instances', 'programme'];
         }
 
         window.__mainTabsInitDone = false;
@@ -8169,6 +8172,7 @@ window.setPrepExpiry = function (months) {
                     { id: 'bulletins', icon: '📄', label: 'Stabilité',     sub: 'Bulletins & rapports',bg: 'linear-gradient(135deg, #06b6d4 0%, #0e7490 100%)', shadow: '0 12px 28px rgba(6,182,212,0.45)' },
                     { id: 'germes',    icon: '🦠', label: 'Germes',        sub: 'Base germes',         bg: 'linear-gradient(135deg, #6366f1 0%, #3730a3 100%)', shadow: '0 12px 28px rgba(99,102,241,0.45)' },
                     { id: 'fertilite', icon: '🧫', label: 'Fertilité',     sub: 'Test de fertilité',   bg: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)', shadow: '0 12px 28px rgba(20,184,166,0.45)' },
+                    { id: 'resfert',   icon: '🧪', label: 'Milieux Libérés', sub: 'Fertiles libérés',   bg: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)', shadow: '0 12px 28px rgba(15,118,110,0.45)' },
                     { id: 'taches',    icon: '📝', label: 'Tâches',        sub: 'Suivi des tâches',    bg: 'linear-gradient(135deg, #f43f5e 0%, #9f1239 100%)', shadow: '0 12px 28px rgba(244,63,94,0.45)' },
                     { id: 'instances', icon: '⚖️', label: 'Instances',     sub: 'Suivi des instances', bg: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', shadow: '0 12px 28px rgba(2,132,199,0.45)' },
                     { id: 'programme', icon: '📅', label: 'Programme',     sub: 'Planning mensuel',    bg: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', shadow: '0 12px 28px rgba(14,165,233,0.45)' },
@@ -8447,7 +8451,15 @@ window.setPrepExpiry = function (months) {
                     const exp = parts ? new Date(parts[0], parts[1] - 1, parts[2]) : null;
                     if (exp) exp.setHours(0, 0, 0, 0);
                     const daysLeft = exp ? Math.ceil((exp - today) / (1000 * 3600 * 24)) : null;
-                    return { exp, daysLeft, isExpired: exp && exp < today, isSoon: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7 };
+                    return {
+                        exp,
+                        daysLeft,
+                        isExpired: exp && exp < today,
+                        isSoon: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7,
+                        isWeek: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7,
+                        is15Days: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 15,
+                        isMonth: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 30
+                    };
                 };
 
                 let allFiltered = preps.filter(p => {
@@ -8474,8 +8486,10 @@ window.setPrepExpiry = function (months) {
 
                 // Compteurs pour la barre de filtres
                 const countExpired = allFiltered.filter(p => getExpStatus(p).isExpired).length;
-                const countSoon = allFiltered.filter(p => { const s = getExpStatus(p); return s.isSoon && !s.isExpired; }).length;
-                const countValid = allFiltered.filter(p => { const s = getExpStatus(p); return !s.isExpired && !s.isSoon; }).length;
+                const countWeek = allFiltered.filter(p => { const s = getExpStatus(p); return s.isWeek && !s.isExpired; }).length;
+                const count15j = allFiltered.filter(p => { const s = getExpStatus(p); return s.is15Days && !s.isExpired; }).length;
+                const countMonth = allFiltered.filter(p => { const s = getExpStatus(p); return s.isMonth && !s.isExpired; }).length;
+                const countValid = allFiltered.filter(p => { const s = getExpStatus(p); return !s.isExpired && !s.isWeek; }).length;
                 const countQuarantaine = allFiltered.filter(p => (p.statut || 'quarantaine') === 'quarantaine').length;
                 const countFertile = allFiltered.filter(p => p.statut === 'fertile').length;
                 const countNonDestocke = allFiltered.filter(p => window.isPrepPendingDestock(p)).length;
@@ -8536,10 +8550,12 @@ window.setPrepExpiry = function (months) {
                 prepFilterBar.innerHTML = `
                     ${alertBanner}
                     <div style="display:flex; gap:6px; flex-wrap:wrap; padding:0 20px 12px; align-items:center;">
-                        ${countExpired > 0 ? `<button onclick="window.prepExpiryFilter='expired'; render();" style="background:${activeFilter === 'expired' ? 'rgba(239,68,68,0.9)' : 'rgba(239,68,68,0.1)'}; color:${activeFilter === 'expired' ? 'white' : '#ef4444'}; border:1.5px solid rgba(239,68,68,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🔴 Périmés (${countExpired})</button>` : ''}
-                        ${countSoon > 0 ? `<button onclick="window.prepExpiryFilter='soon';    render();" style="background:${activeFilter === 'soon' ? 'rgba(245,158,11,0.9)' : 'rgba(245,158,11,0.1)'}; color:${activeFilter === 'soon' ? 'white' : '#d97706'}; border:1.5px solid rgba(245,158,11,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">⚠️ Bientôt (${countSoon})</button>` : ''}
-                        <button onclick="window.prepExpiryFilter='valid'; render();" style="background:${activeFilter === 'valid' ? 'var(--success)' : 'rgba(34,197,94,0.08)'}; color:${activeFilter === 'valid' ? 'white' : 'var(--success)'}; border:1.5px solid rgba(34,197,94,0.25); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">✅ Valides (${countValid})</button>
-                        <button onclick="window.prepExpiryFilter='all';   render();" style="background:${activeFilter === 'all' ? 'var(--text-main)' : 'rgba(0,0,0,0.05)'}; color:${activeFilter === 'all' ? 'white' : 'var(--text-dim)'}; border:1.5px solid rgba(0,0,0,0.1); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 Tous (${allFiltered.length})</button>
+                        ${countExpired > 0 ? `<button onclick="window.prepExpiryFilter='expired'; render();" style="background:${activeFilter === 'expired' ? '#ef4444' : 'rgba(239,68,68,0.1)'}; color:${activeFilter === 'expired' ? 'white' : '#ef4444'}; border:1.5px solid rgba(239,68,68,0.4); padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer;">🔴 Périmés (${countExpired})</button>` : ''}
+                        <button onclick="window.prepExpiryFilter='week'; render();" style="background:${activeFilter === 'week' ? '#dc2626' : (countWeek > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.04)')}; color:${activeFilter === 'week' ? 'white' : (countWeek > 0 ? '#dc2626' : 'var(--text-dim)')}; border:1.5px solid ${countWeek > 0 ? '#dc2626' : 'rgba(0,0,0,0.1)'}; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">⚠️ Cette Semaine (≤7j) (${countWeek})</button>
+                        <button onclick="window.prepExpiryFilter='15j'; render();" style="background:${activeFilter === '15j' ? '#ea580c' : (count15j > 0 ? 'rgba(234,88,12,0.12)' : 'rgba(0,0,0,0.04)')}; color:${activeFilter === '15j' ? 'white' : (count15j > 0 ? '#c2410c' : 'var(--text-dim)')}; border:1.5px solid ${count15j > 0 ? '#ea580c' : 'rgba(0,0,0,0.1)'}; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">⏳ Dans 15j (${count15j})</button>
+                        <button onclick="window.prepExpiryFilter='month'; render();" style="background:${activeFilter === 'month' ? '#0284c7' : (countMonth > 0 ? 'rgba(2,132,199,0.12)' : 'rgba(0,0,0,0.04)')}; color:${activeFilter === 'month' ? 'white' : (countMonth > 0 ? '#0369a1' : 'var(--text-dim)')}; border:1.5px solid ${countMonth > 0 ? '#0284c7' : 'rgba(0,0,0,0.1)'}; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">📅 Dans 1 Mois (${countMonth})</button>
+                        <button onclick="window.prepExpiryFilter='valid'; render();" style="background:${activeFilter === 'valid' ? 'var(--success)' : 'rgba(34,197,94,0.08)'}; color:${activeFilter === 'valid' ? 'white' : 'var(--success)'}; border:1.5px solid rgba(34,197,94,0.25); padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:800; cursor:pointer;">✅ Valides (${countValid})</button>
+                        <button onclick="window.prepExpiryFilter='all'; render();" style="background:${activeFilter === 'all' ? 'var(--text-main)' : 'rgba(0,0,0,0.05)'}; color:${activeFilter === 'all' ? 'white' : 'var(--text-dim)'}; border:1.5px solid rgba(0,0,0,0.1); padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:800; cursor:pointer;">📋 Tous (${allFiltered.length})</button>
                         <button onclick="window.prepExpiryFilter='mine'; render();" style="background:${activeFilter === 'mine' ? '#059669' : 'rgba(5,150,105,0.1)'}; color:${activeFilter === 'mine' ? 'white' : '#059669'}; border:1.5px solid rgba(5,150,105,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">👤 Par Moi (${countMine})</button>
                         <button onclick="window.prepExpiryFilter='others'; render();" style="background:${activeFilter === 'others' ? '#ea580c' : 'rgba(234,88,12,0.1)'}; color:${activeFilter === 'others' ? 'white' : '#c2410c'}; border:1.5px solid rgba(234,88,12,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">👥 Collègues (${countOthers})</button>
                         <button onclick="window.prepExpiryFilter='quarantaine'; render();" style="background:${activeFilter === 'quarantaine' ? 'rgba(249,115,22,0.9)' : 'rgba(249,115,22,0.1)'}; color:${activeFilter === 'quarantaine' ? 'white' : '#c2410c'}; border:1.5px solid rgba(249,115,22,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">🔶 Quarantaine (${countQuarantaine})</button>
@@ -8558,8 +8574,10 @@ window.setPrepExpiry = function (months) {
                 let filtered = allFiltered.filter(p => {
                     const s = getExpStatus(p);
                     if (activeFilter === 'expired') return s.isExpired;
-                    if (activeFilter === 'soon') return s.isSoon && !s.isExpired;
-                    if (activeFilter === 'valid') return !s.isExpired && !s.isSoon;
+                    if (activeFilter === 'soon' || activeFilter === 'week') return s.isWeek && !s.isExpired;
+                    if (activeFilter === '15j') return s.is15Days && !s.isExpired;
+                    if (activeFilter === 'month') return s.isMonth && !s.isExpired;
+                    if (activeFilter === 'valid') return !s.isExpired && !s.isWeek;
                     if (activeFilter === 'quarantaine') return (p.statut || 'quarantaine') === 'quarantaine';
                     if (activeFilter === 'fertile') return p.statut === 'fertile';
                     if (activeFilter === 'mine') return (p.preparePar || '').toLowerCase().trim() === myUserName && !!myUserName;
@@ -8575,6 +8593,11 @@ window.setPrepExpiry = function (months) {
 
                 // Tri des préparations
                 filtered.sort((a, b) => {
+                    if (activeFilter === 'expired' || activeFilter === 'week' || activeFilter === 'soon' || activeFilter === '15j' || activeFilter === 'month') {
+                        const da = a.datePeremption ? new Date(a.datePeremption).getTime() : 9999999999999;
+                        const db = b.datePeremption ? new Date(b.datePeremption).getTime() : 9999999999999;
+                        return da - db;
+                    }
                     if (window.sortBy === 'name') {
                         const na = (a.designation || '').toLowerCase();
                         const nb = (b.designation || '').toLowerCase();
@@ -8598,8 +8621,26 @@ window.setPrepExpiry = function (months) {
                     const partsPeremp = p.datePeremption ? p.datePeremption.split('-') : null;
                     const expDate = partsPeremp ? new Date(partsPeremp[0], partsPeremp[1] - 1, partsPeremp[2]) : null;
                     if (expDate) expDate.setHours(0, 0, 0, 0);
+                    const daysLeft = expDate ? Math.ceil((expDate - today) / (1000 * 3600 * 24)) : null;
                     const isExpired = expDate && expDate < today;
-                    const isExpiringSoon = expDate && (expDate - today) / (1000 * 3600 * 24) <= 7;
+                    const isExpiringSoon = expDate && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
+                    const isExpiring15 = expDate && daysLeft !== null && daysLeft > 7 && daysLeft <= 15;
+                    const isExpiringMonth = expDate && daysLeft !== null && daysLeft > 15 && daysLeft <= 30;
+
+                    let expStatusTag = '';
+                    if (isExpired) {
+                        expStatusTag = `<div style="font-size:0.62rem; font-weight:900; color:#dc2626; margin-top:3px;">⚠️ PÉRIMÉ (${Math.abs(daysLeft)}j)</div>`;
+                    } else if (daysLeft === 0) {
+                        expStatusTag = `<div style="font-size:0.62rem; font-weight:900; color:#dc2626; margin-top:3px;">⚠️ Expire AUJOURD'HUI</div>`;
+                    } else if (daysLeft === 1) {
+                        expStatusTag = `<div style="font-size:0.62rem; font-weight:900; color:#dc2626; margin-top:3px;">⚠️ Expire DEMAIN</div>`;
+                    } else if (isExpiringSoon) {
+                        expStatusTag = `<div style="font-size:0.62rem; font-weight:900; color:#dc2626; margin-top:3px;">⚠️ Dans ${daysLeft}j (cette sem.)</div>`;
+                    } else if (isExpiring15) {
+                        expStatusTag = `<div style="font-size:0.62rem; font-weight:900; color:#d97706; margin-top:3px;">⏳ Dans ${daysLeft}j (≤15j)</div>`;
+                    } else if (isExpiringMonth) {
+                        expStatusTag = `<div style="font-size:0.62rem; font-weight:900; color:#0284c7; margin-top:3px;">📅 Dans ${daysLeft}j (≤1 mois)</div>`;
+                    }
 
                     const isSelected = selectedFiches.has(p.id);
 
@@ -8665,9 +8706,10 @@ window.setPrepExpiry = function (months) {
                                     <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; font-weight:800; margin-bottom:3px;">Préparé le</div>
                                     <div style="font-size:0.78rem; font-weight:900; color:var(--text-main);">${window.formatStringToLongDate(p.datePrep)}</div>
                                 </div>
-                                <div style="background:${isExpired ? 'rgba(239,68,68,0.05)' : (isExpiringSoon ? 'rgba(251,191,36,0.05)' : 'rgba(34,197,94,0.05)')}; padding:10px; border-radius:10px; text-align:center; border:1px solid ${isExpired ? '#ef4444' : (isExpiringSoon ? '#fbbf24' : 'transparent')}">
-                                    <div style="font-size:0.6rem; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#f59e0b' : 'var(--success)')}; text-transform:uppercase; font-weight:800; margin-bottom:3px;">Péremption</div>
-                                    <div style="font-size:0.78rem; font-weight:900; color:${isExpired ? '#ef4444' : (isExpiringSoon ? '#f59e0b' : 'var(--text-main')}">${window.formatStringToLongDate(p.datePeremption)}</div>
+                                <div style="background:${isExpired || isExpiringSoon ? 'rgba(239,68,68,0.06)' : (isExpiring15 ? 'rgba(245,158,11,0.06)' : (isExpiringMonth ? 'rgba(2,132,199,0.06)' : 'rgba(34,197,94,0.05)'))}; padding:10px; border-radius:10px; text-align:center; border:1.5px solid ${isExpired || isExpiringSoon ? '#ef4444' : (isExpiring15 ? '#f59e0b' : (isExpiringMonth ? '#0284c7' : 'transparent'))};">
+                                    <div style="font-size:0.6rem; color:${isExpired || isExpiringSoon ? '#ef4444' : (isExpiring15 ? '#d97706' : (isExpiringMonth ? '#0284c7' : 'var(--success)'))}; text-transform:uppercase; font-weight:800; margin-bottom:3px;">Péremption</div>
+                                    <div style="font-size:0.78rem; font-weight:900; color:${isExpired || isExpiringSoon ? '#ef4444' : (isExpiring15 ? '#d97706' : (isExpiringMonth ? '#0284c7' : 'var(--text-main)'))};">${window.formatStringToLongDate(p.datePeremption)}</div>
+                                    ${expStatusTag}
                                 </div>
                             </div>
 
@@ -12344,6 +12386,7 @@ window.setPrepExpiry = function (months) {
                     <input type="date" id="tracaManualDate" style="padding:6px; border-radius:6px; border:1px solid #ccc; font-size:0.8rem;" value="${new Date().toISOString().split('T')[0]}">
                     <button class="menu-btn" onclick="window.saveManualFertiliteTraca()" style="background:#059669; color:white; font-weight:bold;">💾 Enregistrer</button>
                     <button class="menu-btn" onclick="window.showFertiliteTraca()" style="background:var(--success); color:white; border:none; margin-left:auto; font-weight:bold;">🔍 Historique Traçabilité</button>
+                    <button class="menu-btn" onclick="window.switchTab('resfert')" style="background:linear-gradient(to right, #0f766e, #115e59); color:white; border:none; font-weight:bold;">🧪 Milieux Libérés</button>
                 </div>
             </div>`;
 
@@ -15209,15 +15252,54 @@ window.setPrepExpiry = function (months) {
                     doc.save('Rapport_Souches_Fertilite.pdf');
                 };
 
+                                window.resetFertTracaDateFilter = function () {
+                    window._fertTracaStart = '';
+                    window._fertTracaEnd = '';
+                    if (typeof window.showFertiliteTraca === 'function') window.showFertiliteTraca();
+                };
+
+                window.setFertTracaSort = function (sortKey) {
+                    window._fertTracaSort = sortKey;
+                    if (typeof window.showFertiliteTraca === 'function') window.showFertiliteTraca();
+                };
+
+                window._getTracaDates = function (h) {
+                    const prepsList = window.preps || [];
+                    let matchPrep = null;
+                    const hMilieuNorm = (h.milieu || '').toLowerCase().trim();
+                    const hLotNorm = (h.lot || '').toLowerCase().trim();
+
+                    if (hLotNorm && hLotNorm !== '-') {
+                        matchPrep = prepsList.find(p =>
+                            (p.designation || '').toLowerCase().trim() === hMilieuNorm &&
+                            (p.lot || '').toLowerCase().trim() === hLotNorm
+                        );
+                    }
+                    if (!matchPrep) {
+                        const matching = prepsList.filter(p => (p.designation || '').toLowerCase().trim() === hMilieuNorm);
+                        if (matching.length > 0) {
+                            matching.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                            matchPrep = matching[0];
+                        }
+                    }
+
+                    return {
+                        datePrep: h.datePrep || (matchPrep ? matchPrep.datePrep : '') || '',
+                        datePeremption: h.datePeremption || (matchPrep ? matchPrep.datePeremption : '') || ''
+                    };
+                };
+
                 window.showFertiliteTraca = function () {
                     window._showingFertTraca = true;
                     const container = document.getElementById('fiches-list');
+                    if (!container) return;
 
                     const _ftStart = window._fertTracaStart || '';
                     const _ftEnd = window._fertTracaEnd || '';
+                    const _ftSort = window._fertTracaSort || 'date_desc';
+                    const _ftSearch = (window._fertTracaSearch || '').toLowerCase().trim();
 
-                    let history = window._tracaFertHistory || [];
-                    history.sort((a, b) => b.timestamp - a.timestamp);
+                    let history = [...(window._tracaFertHistory || [])];
 
                     if (_ftStart || _ftEnd) {
                         history = history.filter(h => {
@@ -15228,15 +15310,74 @@ window.setPrepExpiry = function (months) {
                         });
                     }
 
+                    if (_ftSearch) {
+                        history = history.filter(h =>
+                            (h.milieu || '').toLowerCase().includes(_ftSearch) ||
+                            (h.lot || '').toLowerCase().includes(_ftSearch) ||
+                            (h.date || '').includes(_ftSearch)
+                        );
+                    }
+
+                    if (_ftSort === 'date_desc') {
+                        history.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.timestamp || 0) - (a.timestamp || 0));
+                    } else if (_ftSort === 'date_asc') {
+                        history.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.timestamp || 0) - (b.timestamp || 0));
+                    } else if (_ftSort === 'alpha_asc') {
+                        history.sort((a, b) => (a.milieu || '').localeCompare(b.milieu || '') || (b.date || '').localeCompare(a.date || ''));
+                    } else if (_ftSort === 'alpha_desc') {
+                        history.sort((a, b) => (b.milieu || '').localeCompare(a.milieu || '') || (b.date || '').localeCompare(a.date || ''));
+                    } else if (_ftSort === 'lot_asc') {
+                        history.sort((a, b) => (a.lot || '').localeCompare(b.lot || '') || (a.milieu || '').localeCompare(b.milieu || ''));
+                    } else if (_ftSort === 'lot_desc') {
+                        history.sort((a, b) => (b.lot || '').localeCompare(a.lot || '') || (a.milieu || '').localeCompare(b.milieu || ''));
+                    } else if (_ftSort === 'prep_desc') {
+                        history.sort((a, b) => (window._getTracaDates(b).datePrep || '').localeCompare(window._getTracaDates(a).datePrep || ''));
+                    } else if (_ftSort === 'perem_asc') {
+                        history.sort((a, b) => {
+                            const da = window._getTracaDates(a).datePeremption || '9999-99-99';
+                            const db = window._getTracaDates(b).datePeremption || '9999-99-99';
+                            return da.localeCompare(db);
+                        });
+                    }
+
+                    const sortOptions = [
+                        { val: 'date_desc', lbl: '📅 Date ↓' },
+                        { val: 'date_asc', lbl: '📅 Date ↑' },
+                        { val: 'alpha_asc', lbl: '🔤 Nom A→Z' },
+                        { val: 'alpha_desc', lbl: '🔤 Nom Z→A' },
+                        { val: 'lot_asc', lbl: '🏷️ Lot ↑' },
+                        { val: 'lot_desc', lbl: '🏷️ Lot ↓' },
+                        { val: 'prep_desc', lbl: '🏭 Prép. récente' },
+                        { val: 'perem_asc', lbl: '⏳ Pér. proche' }
+                    ];
+
+                    const sortBtns = sortOptions.map(o => {
+                        const isActive = _ftSort === o.val;
+                        const bg = isActive ? '#059669' : '#e2e8f0';
+                        const color = isActive ? '#ffffff' : '#334155';
+                        const weight = isActive ? '800' : '600';
+                        return '<button onclick="window.setFertTracaSort(\'' + o.val + '\')" style="background:' + bg + '; color:' + color + '; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:' + weight + '; cursor:pointer; white-space:nowrap;">' + o.lbl + '</button>';
+                    }).join('');
+
+                    const resetBtnHtml = (_ftStart || _ftEnd)
+                        ? '<button onclick="window.resetFertTracaDateFilter()" style="background:#ef4444; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:0.8rem; cursor:pointer;" title="Effacer filtre dates">✕</button>'
+                        : '';
+
                     const filterBar = `
-                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px; background:#f0fdf4; padding:10px 14px; border-radius:10px; border:1px solid #d1fae5;">
-                    <span style="font-size:0.8rem; font-weight:bold; color:#065f46;">📅 Filtrer par période :</span>
-                    <input type="date" id="ftStart" value="${_ftStart}" onchange="window._fertTracaStart=this.value; window.showFertiliteTraca()" style="padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
-                    <span style="font-size:0.8rem; color:#6b7280;">au</span>
-                    <input type="date" id="ftEnd" value="${_ftEnd}" onchange="window._fertTracaEnd=this.value; window.showFertiliteTraca()" style="padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem;">
-                    ${(_ftStart || _ftEnd) ? '<button onclick="window._fertTracaStart=\'\'; window._fertTracaEnd=\'\'; window.showFertiliteTraca()" style="background:#ef4444; color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:0.8rem; cursor:pointer;">✕ R\u00e9initialiser</button>' : ''}
-                    <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
-                        <button id="btnSelectAll" onclick="(function(){ const boxes=document.querySelectorAll('.cb-traca-print'); const allChecked=[...boxes].every(b=>b.checked); boxes.forEach(b=>b.checked=!allChecked); document.getElementById('btnSelectAll').textContent=allChecked?'\u2611 Tout s\u00e9lectionner':'\u2610 Tout d\u00e9s\u00e9lectionner'; })()" style="background:#059669; color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:0.8rem; font-weight:bold; cursor:pointer;">&#9745; Tout s&#233;lectionner</button>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px; background:#f0fdf4; padding:12px 14px; border-radius:10px; border:1.5px solid #d1fae5;">
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <span style="font-size:0.82rem; font-weight:bold; color:#065f46;">📅 Période :</span>
+                        <input type="date" id="ftStart" value="${_ftStart}" onchange="window._fertTracaStart=this.value; window.showFertiliteTraca()" style="padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.82rem;">
+                        <span style="font-size:0.8rem; color:#6b7280;">au</span>
+                        <input type="date" id="ftEnd" value="${_ftEnd}" onchange="window._fertTracaEnd=this.value; window.showFertiliteTraca()" style="padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.82rem;">
+                        ${resetBtnHtml}
+                        <input type="text" id="ftSearch" value="${window._fertTracaSearch || ''}" oninput="window._fertTracaSearch=this.value; window.showFertiliteTraca()" placeholder="🔍 Chercher milieu, lot, date..." style="flex:1; min-width:160px; padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:0.82rem;">
+                        <button onclick="(function(){ const b=document.querySelectorAll('.cb-traca-print'); const a=[...b].every(x=>x.checked); b.forEach(x=>x.checked=!a); })()" style="background:#059669; color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:0.8rem; font-weight:bold; cursor:pointer; white-space:nowrap;">☑️ Tout sélectionner</button>
+                    </div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <span style="font-size:0.75rem; font-weight:700; color:#065f46;">Trier par :</span>
+                        ${sortBtns}
+                        <span style="margin-left:auto; font-size:0.75rem; color:#6b7280; font-weight:700;">${history.length} résultat(s)</span>
                     </div>
                 </div>`;
 
@@ -15245,90 +15386,137 @@ window.setPrepExpiry = function (months) {
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:2px solid #059669; padding-bottom:10px; flex-wrap:wrap; gap:8px;">
                             <h2 style="color:#059669; margin:0; font-size:1.3rem;">🔍 Historique Traçabilité Fertilité</h2>
                             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                <button onclick="window.generateConsommablesFromHistory(false)" style="background:linear-gradient(to right, #3b82f6, #2563eb); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 4px rgba(37,99,235,0.2);">📦 Cons. (Sans Lots)</button>
-                                <button onclick="window.generateConsommablesFromHistory(true)" style="background:linear-gradient(to right, #f59e0b, #d97706); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 4px rgba(217,119,6,0.2);">📦 Cons. (Avec Lots)</button>
-                                <button onclick="window.generateFeuillesResultatsFromHistory()" style="background:linear-gradient(to right, #059669, #047857); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 4px rgba(5,150,105,0.25);">📋 Feuilles Résultats</button>
+                                <button onclick="window.switchTab('resfert')" style="background:linear-gradient(to right,#0f766e,#115e59); color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 5px rgba(15,118,110,0.35);" title="Accéder aux milieux fertiles libérés pour utilisation">🧪 Milieux Libérés</button>
+                                <button onclick="window.generateConsommablesFromHistory(false)" style="background:linear-gradient(to right,#3b82f6,#2563eb); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📦 Cons. (Sans Lots)</button>
+                                <button onclick="window.generateConsommablesFromHistory(true)" style="background:linear-gradient(to right,#f59e0b,#d97706); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📦 Cons. (Avec Lots)</button>
+                                <button onclick="window.generateFeuillesResultatsFromHistory()" style="background:linear-gradient(to right,#059669,#047857); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📋 Feuilles Résultats</button>
                                 <button onclick="window.generateSouchesRapportPdf()" style="background:#0369a1; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">🧬 Rapport Souches PDF</button>
-                                <button onclick="window.generateFertiliteTracaPdf()" style="background:#111; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📄 Exporter Historique PDF</button>
+                                <button onclick="window.generateFertiliteTracaPdf()" style="background:#111; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📄 Exporter PDF</button>
                                 <button onclick="window._showingFertTraca=false; window.render()" style="background:#6b7280; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour</button>
                             </div>
                         </div>
                         ${filterBar}`;
 
+                    const isByDate = (_ftSort === 'date_desc' || _ftSort === 'date_asc');
+                    const isAlpha = (_ftSort === 'alpha_asc' || _ftSort === 'alpha_desc');
+
                     if (history.length === 0) {
-                        html += `<div style="padding:20px; text-align:center; color:#888; font-size:0.95rem;">Aucun enregistrement trouvé${(_ftStart || _ftEnd) ? ' pour la période sélectionnée' : ''}.</div>`;
-                    } else {
+                        html += '<div style="padding:30px; text-align:center; color:#888; font-size:1rem; font-weight:bold;">Aucun enregistrement trouvé.</div>';
+                    } else if (isByDate) {
                         const groups = {};
                         history.forEach(h => {
                             const d = h.date || 'Sans date';
                             if (!groups[d]) groups[d] = [];
                             groups[d].push(h);
                         });
-                        const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
-
+                        const sortedDates = Object.keys(groups).sort((a, b) => _ftSort === 'date_asc' ? a.localeCompare(b) : b.localeCompare(a));
                         sortedDates.forEach(dateKey => {
                             const entries = groups[dateKey];
-                            const dateLabel = window._fullDateLabel(dateKey);
+                            const dateLabel = (typeof window._fullDateLabel === 'function') ? window._fullDateLabel(dateKey) : dateKey;
                             const count = entries.length;
-
-                            html += `
-                        <div style="margin-bottom:22px; border-radius:12px; overflow:hidden; border:1.5px solid #d1fae5; box-shadow:0 2px 8px rgba(5,150,105,0.07);">
-                            <div style="background:linear-gradient(90deg,#059669 0%,#10b981 100%); color:#fff; padding:10px 18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                                <input type="checkbox" onchange="const list=this.closest('div').nextElementSibling.querySelectorAll('.cb-traca-print'); for(let i=0;i<list.length;i++) list[i].checked=this.checked;" title="Tout cocher" style="width:18px;height:18px;cursor:pointer; accent-color:#059669;">
-                                <span style="font-size:1.1rem;">📅</span>
-                                <span style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">${dateLabel}</span>
-                                <span style="background:rgba(255,255,255,0.25); border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700;">${count} MC validé${count > 1 ? 's' : ''}</span>
-                            </div>
-                            <div style="display:flex; flex-direction:column; gap:0; background:#fff;">`;
-
-                            entries.forEach((h, idx) => {
-                                const bg = idx % 2 === 0 ? '#fff' : '#f9fafb';
-                                const recOrig = h.souchesOrigines || {};
-                                const souchesList = h.souches && h.souches !== '-'
-                                    ? h.souches.split(',').map(s => {
-                                        const st = s.trim();
-                                        const orig = recOrig[st] || '';
-                                        return `<span style="display:inline-flex; align-items:center; gap:4px; margin:2px 4px 2px 0; flex-wrap:wrap;">
-                                        <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:5px; padding:2px 7px; font-size:0.75rem; font-weight:700;">${st}</span>
-                                        ${orig
-                                                ? `<span style="background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:5px; padding:2px 6px; font-size:0.72rem; font-weight:700;">${orig}</span>`
-                                                : '<span style="font-size:0.7rem; color:#bbb; font-style:italic;">origine ?</span>'}
-                                    </span>`;
-                                    }).join('')
-                                    : '<span style="color:#aaa; font-size:0.75rem;">-</span>';
-
-                                html += `
-                            <div style="border-bottom:1px solid #e5e7eb; background:${bg}; padding:10px 14px; display:flex; gap:12px; align-items:stretch;">
-                                <div style="display:flex; align-items:flex-start; padding-top:4px;">
-                                    <input type="checkbox" class="cb-traca-print" value="${h.id}" style="width:18px;height:18px;cursor:pointer; accent-color:#059669;" title="Imprimer ce MC">
+                            html += `<div style="margin-bottom:22px; border-radius:12px; overflow:hidden; border:1.5px solid #d1fae5; box-shadow:0 2px 8px rgba(5,150,105,0.07);">
+                                <div style="background:linear-gradient(90deg,#059669 0%,#10b981 100%); color:#fff; padding:10px 18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                    <input type="checkbox" onchange="const list=this.closest('div').nextElementSibling.querySelectorAll('.cb-traca-print'); for(let i=0;i<list.length;i++) list[i].checked=this.checked;" style="width:18px;height:18px;cursor:pointer;accent-color:#059669;" title="Tout cocher pour cette date">
+                                    <span style="font-size:1.1rem;">📅</span>
+                                    <span style="font-size:1rem; font-weight:800; letter-spacing:0.5px;">${dateLabel}</span>
+                                    <span style="background:rgba(255,255,255,0.25); border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700;">${count} MC validé${count>1?'s':''}</span>
                                 </div>
-                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; flex:1;">
-                                    <div style="flex:1; min-width:0;">
-                                        <div style="font-weight:800; color:#111; font-size:0.92rem; margin-bottom:4px; word-break:break-word;">${h.milieu || '-'}</div>
-                                        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; align-items:center;">
-                                            <span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:6px; padding:2px 9px; font-size:0.78rem; font-weight:700;">📦 ${h.lot || '-'}</span>
-                                            <span style="color:#555; font-size:0.78rem;">🌡️ ${h.incubation || '-'}</span>
-                                        </div>
-                                        <div style="display:flex; flex-wrap:wrap; gap:2px; align-items:center;">
-                                            <span style="font-size:0.72rem; color:#6b7280; margin-right:4px;">🧬 Souches :</span>
-                                            ${souchesList}
-                                        </div>
-                                    </div>
-                                    <div style="display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
-                                        <button onclick="window.editTracaOrigines('${h.id}')" style="background:none; border:1px solid #d1fae5; color:#059669; cursor:pointer; font-size:0.8rem; padding:4px 8px; border-radius:6px;" title="Modifier origines">✏️</button>
-                                        <button onclick="window.deleteFertiliteTraca('${h.id}')" style="background:none; border:1px solid #fee2e2; color:#ef4444; cursor:pointer; font-size:0.8rem; padding:4px 8px; border-radius:6px;" title="Supprimer">🗑️</button>
-                                    </div>
-                                </div>
-                            </div>`;
-                            });
-
-                            html += `</div></div>`;
-
+                                <div style="display:flex; flex-direction:column; gap:0; background:#fff;">`;
+                            entries.forEach((h, idx) => { html += window._renderTracaEntry(h, idx); });
+                            html += '</div></div>';
                         });
+                    } else {
+                        html += '<div style="border-radius:12px; overflow:hidden; border:1.5px solid #d1fae5; box-shadow:0 2px 8px rgba(5,150,105,0.07);"><div style="display:flex; flex-direction:column; background:#fff;">';
+                        let lastLetter = '';
+                        history.forEach((h, idx) => {
+                            if (isAlpha) {
+                                const letter = (h.milieu || '?').charAt(0).toUpperCase();
+                                if (letter !== lastLetter) {
+                                    lastLetter = letter;
+                                    html += '<div style="background:#ecfdf5; padding:6px 16px; font-size:0.82rem; font-weight:800; color:#059669; border-bottom:1px solid #d1fae5; border-top:' + (idx > 0 ? '2px solid #059669' : 'none') + ';">🔤 ' + letter + '</div>';
+                                }
+                            }
+                            html += window._renderTracaEntry(h, idx);
+                        });
+                        html += '</div></div>';
                     }
 
-                    html += `</div>`;
+                    html += '</div>';
                     container.innerHTML = html;
+                };
+
+                window._renderTracaEntry = function (h, idx) {
+                    const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+                    const recOrig = h.souchesOrigines || {};
+                    const dates = (typeof window._getTracaDates === 'function') ? window._getTracaDates(h) : { datePrep: '', datePeremption: '' };
+
+                    const fmtD = function (d) {
+                        if (!d) return null;
+                        const p = String(d).split('-');
+                        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d;
+                    };
+
+                    const datePrepFmt = fmtD(dates.datePrep);
+                    const datePerFmt = fmtD(dates.datePeremption);
+                    const testDateFmt = fmtD(h.date);
+
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const isExpired = dates.datePeremption && dates.datePeremption < todayStr;
+
+                    const datePrepBadge = datePrepFmt
+                        ? '<span style="background:#eff6ff; color:#1d4ed8; border:1.5px solid #bfdbfe; border-radius:6px; padding:3px 9px; font-size:0.78rem; font-weight:700;" title="Date de préparation / fabrication">🏭 Prép: ' + datePrepFmt + '</span>'
+                        : '<span style="background:#f1f5f9; color:#94a3b8; border:1px dashed #cbd5e1; border-radius:6px; padding:3px 8px; font-size:0.75rem;">🏭 Prép: -</span>';
+
+                    const datePerBadge = datePerFmt
+                        ? (isExpired
+                            ? '<span style="background:#fef2f2; color:#dc2626; border:1.5px solid #fecaca; border-radius:6px; padding:3px 9px; font-size:0.78rem; font-weight:800;" title="Milieu périmé !">⚠️ Pér: ' + datePerFmt + '</span>'
+                            : '<span style="background:#f0fdf4; color:#15803d; border:1.5px solid #bbf7d0; border-radius:6px; padding:3px 9px; font-size:0.78rem; font-weight:700;" title="Date de péremption">⏳ Pér: ' + datePerFmt + '</span>')
+                        : '<span style="background:#f1f5f9; color:#94a3b8; border:1px dashed #cbd5e1; border-radius:6px; padding:3px 8px; font-size:0.75rem;">⏳ Pér: -</span>';
+
+                    const testDateBadge = testDateFmt
+                        ? '<span style="background:#f8fafc; color:#475569; border:1px solid #cbd5e1; border-radius:6px; padding:3px 8px; font-size:0.75rem; font-weight:700;">📅 Test: ' + testDateFmt + '</span>'
+                        : '';
+
+                    const souchesList = (h.souches && h.souches !== '-')
+                        ? h.souches.split(',').map(s => {
+                            const st = s.trim();
+                            const orig = recOrig[st] || '';
+                            return '<span style="display:inline-flex; align-items:center; gap:4px; margin:2px 4px 2px 0; flex-wrap:wrap;">' +
+                                '<span style="background:#ecfdf5; color:#059669; border:1px solid #d1fae5; border-radius:5px; padding:2px 7px; font-size:0.75rem; font-weight:700;">' + st + '</span>' +
+                                (orig
+                                    ? '<span style="background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:5px; padding:2px 6px; font-size:0.72rem; font-weight:700;">' + orig + '</span>'
+                                    : '<span style="font-size:0.7rem; color:#bbb; font-style:italic;">origine ?</span>') +
+                                '</span>';
+                        }).join('')
+                        : '<span style="color:#aaa; font-size:0.75rem;">-</span>';
+
+                    return `<div style="border-bottom:1px solid #e5e7eb; background:${bg}; padding:11px 16px; display:flex; gap:12px; align-items:stretch;">
+                        <div style="display:flex; align-items:flex-start; padding-top:4px;">
+                            <input type="checkbox" class="cb-traca-print" value="${h.id}" style="width:18px;height:18px;cursor:pointer;accent-color:#059669;" title="Sélectionner ce milieu">
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; flex:1;">
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px; flex-wrap:wrap;">
+                                    <span style="font-weight:800; color:#0f172a; font-size:1rem; word-break:break-word;">${h.milieu || '-'}</span>
+                                    ${testDateBadge}
+                                </div>
+                                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; align-items:center;">
+                                    <span style="background:#ecfdf5; color:#059669; border:1.5px solid #a7f3d0; border-radius:6px; padding:3px 9px; font-size:0.8rem; font-weight:800;">📦 Lot: ${h.lot || '-'}</span>
+                                    ${datePrepBadge}
+                                    ${datePerBadge}
+                                    <span style="background:#f8fafc; color:#475569; border:1px solid #e2e8f0; border-radius:6px; padding:3px 8px; font-size:0.76rem; font-weight:600;">🌡️ ${h.incubation || '-'}</span>
+                                </div>
+                                <div style="display:flex; flex-wrap:wrap; gap:3px; align-items:center;">
+                                    <span style="font-size:0.72rem; color:#6b7280; font-weight:700; margin-right:4px;">🧬 Souches :</span>
+                                    ${souchesList}
+                                </div>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+                                <button onclick="window.editTracaOrigines('${h.id}')" style="background:#fff; border:1px solid #d1fae5; color:#059669; cursor:pointer; font-size:0.8rem; padding:5px 9px; border-radius:6px;" title="Modifier origines">✏️</button>
+                                <button onclick="window.deleteFertiliteTraca('${h.id}')" style="background:#fff; border:1px solid #fee2e2; color:#ef4444; cursor:pointer; font-size:0.8rem; padding:5px 9px; border-radius:6px;" title="Supprimer">🗑️</button>
+                            </div>
+                        </div>
+                    </div>`;
                 };
 
                 // Modifier les origines d'un enregistrement existant
@@ -15750,7 +15938,12 @@ window.setPrepExpiry = function (months) {
                             lotStr = manual;
                         }
 
-                        entries.push({ f, inc, souchStr, uniqueSouches, lotStr });
+                        let matchedPrep = matchingPreps.find(p => p.lot === lotStr) || matchingPreps[0] || null;
+                        entries.push({
+                            f, inc, souchStr, uniqueSouches, lotStr,
+                            datePrep: matchedPrep ? (matchedPrep.datePrep || '') : '',
+                            datePeremption: matchedPrep ? (matchedPrep.datePeremption || '') : ''
+                        });
                     }
                     if (entries.length === 0) return;
 
@@ -15790,6 +15983,8 @@ window.setPrepExpiry = function (months) {
                         date: dateVal,
                         milieu: e.f.nom || '-',
                         lot: e.lotStr,
+                        datePrep: e.datePrep || '',
+                        datePeremption: e.datePeremption || '',
                         incubation: e.inc,
                         souches: e.souchStr,
                         souchesOrigines: origines,
@@ -15847,6 +16042,8 @@ window.setPrepExpiry = function (months) {
                             date: dateVal,
                             milieu: p.designation || '-',
                             lot: p.lot || '-',
+                            datePrep: p.datePrep || '',
+                            datePeremption: p.datePeremption || '',
                             incubation: inc,
                             souches: souchStr,
                             souchesOrigines: window._soucheOrigines || {},

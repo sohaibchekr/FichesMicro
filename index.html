@@ -8215,26 +8215,117 @@ window.setPrepExpiry = function (months) {
         };
 
         window._afficherPrepsActuels = function() {
-            const filter = window.prepExpiryFilter || 'all';
-            const allPreps = window.preps || [];
-            const now = new Date(); now.setHours(0,0,0,0);
+            // Helper local pour le statut péremption
+            const now = new Date(); now.setHours(0, 0, 0, 0);
             function getExp(p) {
-                const perDate = p.datePeremption ? new Date(p.datePeremption) : null;
-                const daysLeft = perDate ? Math.round((perDate - now) / 86400000) : null;
-                return { daysLeft, isExpired: daysLeft !== null && daysLeft < 0, isWeek: daysLeft !== null && daysLeft >= 0 && daysLeft <= 7, is15Days: daysLeft !== null && daysLeft >= 0 && daysLeft <= 15, isMonth: daysLeft !== null && daysLeft >= 0 && daysLeft <= 30 };
+                const parts = p.datePeremption ? p.datePeremption.split('-') : null;
+                const exp = parts ? new Date(parts[0], parts[1] - 1, parts[2]) : null;
+                if (exp) exp.setHours(0, 0, 0, 0);
+                const daysLeft = exp ? Math.ceil((exp - now) / 86400000) : null;
+                return {
+                    exp, daysLeft,
+                    isExpired: exp && exp < now,
+                    isWeek: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7,
+                    is15Days: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 15,
+                    isMonth: exp && daysLeft !== null && daysLeft >= 0 && daysLeft <= 30
+                };
             }
-            let items = allPreps;
-            let title = '📋 Toutes les préparations';
-            if (filter === 'expired') { items = allPreps.filter(p => getExp(p).isExpired); title = '🔴 MC Périmées'; }
-            else if (filter === 'week') { items = allPreps.filter(p => { const e=getExp(p); return !e.isExpired && e.isWeek; }); title = '⚠️ MC échant cette semaine (≤7j)'; }
-            else if (filter === '15j') { items = allPreps.filter(p => { const e=getExp(p); return !e.isExpired && e.is15Days; }); title = '⏳ MC échant dans 15j'; }
-            else if (filter === 'month') { items = allPreps.filter(p => { const e=getExp(p); return !e.isExpired && e.isMonth; }); title = '📅 MC échant dans 1 mois'; }
-            else if (filter === 'valid') { items = allPreps.filter(p => { const e=getExp(p); return e.daysLeft === null || (!e.isExpired && e.daysLeft > 30); }); title = '✅ MC Valides'; }
-            else if (filter === 'mine') { const me = (window.currentUser || '').toLowerCase().trim(); items = allPreps.filter(p => (p.preparateur||'').toLowerCase().trim() === me); title = '👤 Mes préparations'; }
-            else if (filter === 'quarantaine') { items = allPreps.filter(p => p.statut === 'Quarantaine'); title = '🔶 Quarantaine'; }
-            else if (filter === 'fertile') { items = allPreps.filter(p => p.statut === 'Fertile'); title = '🧫 Fertiles'; }
+
+            // Priorité 1: En mode sélection avec des cases cochées
+            const selSet = (typeof isSelectionMode !== 'undefined' && isSelectionMode)
+                ? ((typeof selectedFiches !== 'undefined' && selectedFiches && selectedFiches.size > 0 ? selectedFiches : null) || (window.selectedFiches && window.selectedFiches.size > 0 ? window.selectedFiches : null))
+                : null;
+            if (selSet && selSet.size > 0) {
+                const allPreps = window.preps || [];
+                const selected = allPreps.filter(p => selSet.has(p.id));
+                if (selected.length > 0) {
+                    if (typeof window.showPreviewModal === 'function') {
+                        window.showPreviewModal('\u2611\ufe0f Préparations Sélectionnées', selected, window._renderPrepPreviewCard, {
+                            subtitle: selected.length + ' préparation(s) sélectionnée(s)',
+                            emptyMsg: 'Aucune préparation sélectionnée.'
+                        });
+                    }
+                    return;
+                }
+            }
+
+            // Priorité 2: Filtres actuels (filtre rapide actif + recherche + dates)
+            const filter = window.prepExpiryFilter || 'all';
+            const searchEl = document.getElementById('searchInput');
+            const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            const dateStart = document.getElementById('dateFilterStart') ? document.getElementById('dateFilterStart').value : '';
+            const dateEnd = document.getElementById('dateFilterEnd') ? document.getElementById('dateFilterEnd').value : '';
+            const myUserRaw = localStorage.getItem('microbio_current_user') || '';
+            const myUserName = myUserRaw.toLowerCase().trim();
+
+            let items = null;
+
+            // Si window._currentlyVisiblePreps existe et est un tableau, on peut l'utiliser
+            if (Array.isArray(window._currentlyVisiblePreps)) {
+                items = window._currentlyVisiblePreps;
+            } else {
+                // Recalcul précis identique au render()
+                const allPreps = window.preps || [];
+                items = allPreps.filter(p => {
+                    const hasFlacons = p.flaconEntames && p.flaconEntames.length > 0;
+                    const isDestockKw = q.includes('destock') || q.includes('déstock') || q.includes('carnet') || q.includes('classeur') || q.includes('non destock') || q.includes('sortie');
+                    const matchesDestockKeyword = isDestockKw ? (typeof window.isPrepPendingDestock === 'function' && window.isPrepPendingDestock(p)) : (q.includes('entam') && hasFlacons);
+                    const matchesFlaconData = hasFlacons && p.flaconEntames.some(f =>
+                        (f.num && f.num.toLowerCase().includes(q)) ||
+                        (f.info && f.info.toLowerCase().includes(q))
+                    );
+
+                    const matchesText = !q || (p.designation && p.designation.toLowerCase().includes(q)) ||
+                        (p.lot && p.lot.toLowerCase().includes(q)) ||
+                        (p.code && p.code.toLowerCase().includes(q)) ||
+                        (p.supplier && p.supplier.toLowerCase().includes(q)) ||
+                        (p.boite && p.boite.toLowerCase().includes(q)) ||
+                        (p.destockBoite && p.destockBoite.toLowerCase().includes(q)) ||
+                        matchesDestockKeyword || matchesFlaconData;
+                    const matchesDate = (!dateStart || p.datePrep >= dateStart) && (!dateEnd || p.datePrep <= dateEnd);
+                    if (!matchesText || !matchesDate) return false;
+
+                    const s = getExp(p);
+                    if (filter === 'expired') return s.isExpired;
+                    if (filter === 'soon' || filter === 'week') return s.isWeek && !s.isExpired;
+                    if (filter === '15j') return s.is15Days && !s.isExpired;
+                    if (filter === 'month') return s.isMonth && !s.isExpired;
+                    if (filter === 'valid') return !s.isExpired && !s.isWeek;
+                    if (filter === 'quarantaine') return (p.statut || 'quarantaine') === 'quarantaine';
+                    if (filter === 'fertile') return p.statut === 'fertile';
+                    if (filter === 'mine') return (p.preparePar || '').toLowerCase().trim() === myUserName && !!myUserName;
+                    if (filter === 'others') {
+                        const op = (p.preparePar || '').toLowerCase().trim();
+                        return op && (!myUserName || op !== myUserName);
+                    }
+                    if (filter === 'non_destocke') return typeof window.isPrepPendingDestock === 'function' ? window.isPrepPendingDestock(p) : true;
+                    if (filter === 'destock_classeur') return typeof window.isPrepPendingClasseur === 'function' ? window.isPrepPendingClasseur(p) : true;
+                    if (filter === 'destock_carnet') return typeof window.isPrepPendingCarnet === 'function' ? window.isPrepPendingCarnet(p) : true;
+                    return true;
+                });
+            }
+
+            // Titre adapté au filtre
+            let title = '\ud83d\udccb Préparations Affichées';
+            if (filter === 'expired')        title = '\ud83d\udd34 MC Périmées';
+            else if (filter === 'week')      title = '\u26a0\ufe0f Cette Semaine (\u22647j)';
+            else if (filter === '15j')       title = '\u23f3 Dans 15 Jours';
+            else if (filter === 'month')     title = '\ud83d\udcc5 Dans 1 Mois';
+            else if (filter === 'valid')     title = '\u2705 MC Valides';
+            else if (filter === 'quarantaine') title = '\ud83d\udd36 En Quarantaine';
+            else if (filter === 'fertile')   title = '\ud83e\uddeb Statut Fertile';
+            else if (filter === 'mine')      title = '\ud83d\udc64 Préparées par Moi';
+            else if (filter === 'others')    title = '\ud83d\udc65 Préparées par Collègues';
+            else if (filter === 'non_destocke')    title = '\ud83d\udce6 Non Déstockés';
+            else if (filter === 'destock_classeur') title = '\ud83d\udcd5 Déstockage Classeur';
+            else if (filter === 'destock_carnet')   title = '\ud83d\udcd8 Déstockage Carnet';
+            if (q) title += ' (Recherche: "' + q + '")';
+
             if (typeof window.showPreviewModal === 'function') {
-                window.showPreviewModal(title, items, window._renderPrepPreviewCard, { emptyMsg: 'Aucune préparation correspondante.' });
+                window.showPreviewModal(title, items, window._renderPrepPreviewCard, {
+                    subtitle: items.length + ' résultat(s)',
+                    emptyMsg: 'Aucune préparation ne correspond aux filtres actuels.'
+                });
             }
         };
 
@@ -8707,6 +8798,8 @@ window.setPrepExpiry = function (months) {
                         return window.sortOrder === 'desc' ? db - da : da - db;
                     }
                 });
+
+                window._currentlyVisiblePreps = filtered;
 
                 if (filtered.length === 0) {
                     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚗️</div><h3>Aucune préparation dans ce filtre</h3></div>`;
@@ -12433,6 +12526,43 @@ window.setPrepExpiry = function (months) {
 
         // ---- Rendu de l'onglet (injecté dans render()) ----
         const _origRender = window.renderFertilite || null;
+        window._afficherFertiliteSelection = function() {
+            const checked = Array.from(document.querySelectorAll('.fert-card-chk:checked')).map(cb => cb.value);
+            const allData = window.fertiliteData || (typeof fertiliteData !== 'undefined' ? fertiliteData : []);
+
+            function renderFertPreviewCard(f) {
+                const souchesStr = (f.souches && f.souches.length > 0) ? f.souches.join(', ') : 'Aucune souche';
+                const codeBadge = f.code ? '<span style="background:#1e293b;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.72rem;font-weight:800;">' + f.code + '</span>' : '';
+                const fournBadge = f.fourn ? '<span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">' + f.fourn + '</span>' : '';
+                const methodeBadge = f.methode ? '<span style="background:#f0fdf4;color:#065f46;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">' + (Array.isArray(f.methode) ? f.methode.join(', ') : f.methode) + '</span>' : '';
+                return '<div style="border-bottom:1px solid #e5e7eb;padding:12px 16px;">' +
+                    '<div style="font-weight:800;font-size:0.95rem;color:#0f172a;">' + (f.nom || 'Sans nom') + '</div>' +
+                    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' + codeBadge + fournBadge + methodeBadge + '</div>' +
+                    '<div style="font-size:0.75rem;color:#4b5563;margin-top:6px;">🧬 <strong>Souches :</strong> ' + souchesStr + '</div>' +
+                '</div>';
+            }
+
+            if (checked.length > 0) {
+                const selected = allData.filter(f => checked.includes(String(f.id)));
+                if (typeof window.showPreviewModal === 'function') {
+                    window.showPreviewModal('☑️ Milieux Fertilité Sélectionnés', selected, renderFertPreviewCard, {
+                        subtitle: selected.length + ' milieu(x) sélectionné(s)',
+                        emptyMsg: 'Aucun milieu sélectionné.'
+                    });
+                }
+                return;
+            }
+
+            const query = (document.getElementById('searchInput') ? document.getElementById('searchInput').value.trim().toLowerCase() : '');
+            const filtered = allData.filter(f => !query || (f.nom && f.nom.toLowerCase().includes(query)) || (f.code && f.code.toLowerCase().includes(query)));
+            if (typeof window.showPreviewModal === 'function') {
+                window.showPreviewModal('🧫 Milieux Fertilité Affichés', filtered, renderFertPreviewCard, {
+                    subtitle: filtered.length + ' milieu(x)',
+                    emptyMsg: 'Aucun milieu trouvé.'
+                });
+            }
+        };
+
         window.renderFertiliteTab = function (container, query) {
             const methodeStr = (f) => {
                 const m = f.methode;
@@ -12479,6 +12609,7 @@ window.setPrepExpiry = function (months) {
                     <button class="menu-btn" onclick="window.generateFertFeuillesResultats()" style="background:linear-gradient(to right, #f59e0b, #d97706); color:white;">📊 Cons. (Avec Lots)</button>
                     <button class="menu-btn" onclick="window.generateFertFeuillesResultats()" style="background:linear-gradient(to right, #059669, #047857); color:white;">📋 Feuilles Résultats</button>
                     <button class="menu-btn" onclick="window.showResultatsFertiliteHistory()" style="background:linear-gradient(135deg, #7c3aed, #5b21b6); color:white; border:none; font-weight:bold; box-shadow:0 2px 6px rgba(124,58,237,0.3);">📑 Résultats Enregistrés</button>
+                    <button class="menu-btn" onclick="window._afficherFertiliteSelection()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6); color:white; border:none; font-weight:bold; box-shadow:0 2px 6px rgba(124,58,237,0.3);">👁️ Afficher sélection</button>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:5px; padding-top:10px; border-top:1px dashed rgba(59,130,246,0.3); align-items:center;">
                     <span style="font-size:0.75rem; color:#1e40af; font-weight:800;">Traçabilité Manuelle :</span>
@@ -15908,23 +16039,6 @@ window.setPrepExpiry = function (months) {
                 };
 
                 window._afficherHistoFert = function() {
-                    const _ftSort = window._fertTracaSort || 'date_desc';
-                    const _ftSearch = (window._fertTracaSearch || '').toLowerCase().trim();
-                    const _ftStart = window._fertTracaStart || '';
-                    const _ftEnd = window._fertTracaEnd || '';
-                    let history = [...(window._tracaFertHistory || [])];
-                    if (_ftStart || _ftEnd) {
-                        history = history.filter(h => { const d = h.date || ''; if (_ftStart && d < _ftStart) return false; if (_ftEnd && d > _ftEnd) return false; return true; });
-                    }
-                    if (_ftSearch) {
-                        history = history.filter(h => (h.milieu||'').toLowerCase().includes(_ftSearch) || (h.lot||'').toLowerCase().includes(_ftSearch) || (h.date||'').includes(_ftSearch));
-                    }
-                    if (_ftSort === 'alpha_asc') history.sort((a,b) => (a.milieu||'').localeCompare(b.milieu||''));
-                    else if (_ftSort === 'alpha_desc') history.sort((a,b) => (b.milieu||'').localeCompare(a.milieu||''));
-                    else if (_ftSort === 'lot_asc') history.sort((a,b) => (a.lot||'').localeCompare(b.lot||''));
-                    else if (_ftSort === 'lot_desc') history.sort((a,b) => (b.lot||'').localeCompare(a.lot||''));
-                    else history.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-
                     function renderHistoItem(h) {
                         const dates = window._getTracaDates ? window._getTracaDates(h) : {};
                         const prepBadge = dates.datePrep ? '<span style="background:#f0fdf4;color:#065f46;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">Prép: ' + dates.datePrep + '</span>' : '';
@@ -15936,8 +16050,92 @@ window.setPrepExpiry = function (months) {
                             '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' + dateBadge + lotBadge + prepBadge + perBadge + '</div>' +
                         '</div>';
                     }
+
+                    // Priorité 1 : Éléments sélectionnés avec les cases à cocher (.cb-traca-print:checked)
+                    const checkedBoxes = document.querySelectorAll('.cb-traca-print:checked');
+                    if (checkedBoxes.length > 0) {
+                        const checkedIds = new Set(Array.from(checkedBoxes).map(cb => String(cb.value)));
+                        const allHisto = window._currentlyVisibleTracaFert || window._tracaFertHistory || [];
+                        const selected = allHisto.filter(h => checkedIds.has(String(h.id)));
+                        if (selected.length > 0) {
+                            if (typeof window.showPreviewModal === 'function') {
+                                window.showPreviewModal('☑️ Traçabilité Fertilité Sélectionnée', selected, renderHistoItem, {
+                                    subtitle: selected.length + ' enregistrement(s) sélectionné(s)',
+                                    emptyMsg: 'Aucun enregistrement sélectionné.'
+                                });
+                            }
+                            return;
+                        }
+                    }
+
+                    // Priorité 2 : Ce qui est actuellement affiché (filtres dates + recherche + tri actif)
+                    let history = window._currentlyVisibleTracaFert;
+                    const _ftSort = window._fertTracaSort || 'date_desc';
+
+                    if (!history) {
+                        const _ftStart = window._fertTracaStart || '';
+                        const _ftEnd = window._fertTracaEnd || '';
+                        const _ftSearch = (window._fertTracaSearch || '').toLowerCase().trim();
+                        history = [...(window._tracaFertHistory || [])];
+
+                        if (_ftStart || _ftEnd) {
+                            history = history.filter(h => {
+                                const d = h.date || '';
+                                if (_ftStart && d < _ftStart) return false;
+                                if (_ftEnd && d > _ftEnd) return false;
+                                return true;
+                            });
+                        }
+                        if (_ftSearch) {
+                            history = history.filter(h =>
+                                (h.milieu || '').toLowerCase().includes(_ftSearch) ||
+                                (h.lot || '').toLowerCase().includes(_ftSearch) ||
+                                (h.date || '').includes(_ftSearch)
+                            );
+                        }
+
+                        // Tri complet identique à showFertiliteTraca
+                        if (_ftSort === 'date_desc') {
+                            history.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.timestamp || 0) - (a.timestamp || 0));
+                        } else if (_ftSort === 'date_asc') {
+                            history.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.timestamp || 0) - (b.timestamp || 0));
+                        } else if (_ftSort === 'alpha_asc') {
+                            history.sort((a, b) => (a.milieu || '').localeCompare(b.milieu || '') || (b.date || '').localeCompare(a.date || ''));
+                        } else if (_ftSort === 'alpha_desc') {
+                            history.sort((a, b) => (b.milieu || '').localeCompare(a.milieu || '') || (b.date || '').localeCompare(a.date || ''));
+                        } else if (_ftSort === 'lot_asc') {
+                            history.sort((a, b) => (a.lot || '').localeCompare(b.lot || '') || (a.milieu || '').localeCompare(b.milieu || ''));
+                        } else if (_ftSort === 'lot_desc') {
+                            history.sort((a, b) => (b.lot || '').localeCompare(a.lot || '') || (a.milieu || '').localeCompare(b.milieu || ''));
+                        } else if (_ftSort === 'prep_desc') {
+                            history.sort((a, b) => (window._getTracaDates(b).datePrep || '').localeCompare(window._getTracaDates(a).datePrep || ''));
+                        } else if (_ftSort === 'perem_asc') {
+                            history.sort((a, b) => {
+                                const da = window._getTracaDates(a).datePeremption || '9999-99-99';
+                                const db = window._getTracaDates(b).datePeremption || '9999-99-99';
+                                return da.localeCompare(db);
+                            });
+                        }
+                    }
+
+                    const sortLabels = {
+                        'date_desc': '📅 Date ↓',
+                        'date_asc': '📅 Date ↑',
+                        'alpha_asc': '🔤 Nom A→Z',
+                        'alpha_desc': '🔤 Nom Z→A',
+                        'lot_asc': '🏷️ Lot ↑',
+                        'lot_desc': '🏷️ Lot ↓',
+                        'prep_desc': '🏭 Prép. récente',
+                        'perem_asc': '⏳ Pér. proche'
+                    };
+                    const sortLbl = sortLabels[_ftSort] || 'Date';
+                    const title = '🔍 Historique Traçabilité (' + sortLbl + ')';
+
                     if (typeof window.showPreviewModal === 'function') {
-                        window.showPreviewModal('🔍 Historique Traçabilité Fertilité', history, renderHistoItem, { emptyMsg: 'Aucun enregistrement trouvé.' });
+                        window.showPreviewModal(title, history, renderHistoItem, {
+                            subtitle: history.length + ' enregistrement(s)',
+                            emptyMsg: 'Aucun enregistrement trouvé.'
+                        });
                     }
                 };
 
@@ -15991,6 +16189,8 @@ window.setPrepExpiry = function (months) {
                             return da.localeCompare(db);
                         });
                     }
+
+                    window._currentlyVisibleTracaFert = history;
 
                     const sortOptions = [
                         { val: 'date_desc', lbl: '📅 Date ↓' },

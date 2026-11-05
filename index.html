@@ -4335,6 +4335,8 @@
                 <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
                     <button type="button" onclick="window.closeModal('feuillesResultatsModalOverlay')"
                         class="cancel-btn" style="flex:1 1 100px;">Annuler</button>
+                    <button type="button" onclick="window.showResultatsFertiliteHistory()" class="save-btn"
+                        style="flex:1 1 160px; background:linear-gradient(135deg, #7c3aed, #5b21b6); color:white; box-shadow:0 2px 6px rgba(124,58,237,0.3);">📑 Résultats Enregistrés</button>
                     <button type="button" onclick="window.generateFertGlobalRecap(true)" class="save-btn"
                         style="flex:1 1 150px; background:#f59e0b;">📊 Consommables (Avec Lots)</button>
                     <button type="button" onclick="window.goToResultsStep2()" class="save-btn"
@@ -4347,6 +4349,12 @@
                 <h2
                     style="margin-bottom:10px; color:#3b82f6; font-size:1.2rem; font-weight:900; background:none;-webkit-text-fill-color:#3b82f6;letter-spacing:0;">
                     📊 Étape 2/2 — Saisie des Résultats</h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:8px 14px; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:0.75rem; font-weight:800; color:#166534; display:flex; align-items:center; gap:6px;">
+                        <span>💾</span> Vos résultats sont mémorisés pour pouvoir y revenir n'importe quand !
+                    </div>
+                    <button type="button" onclick="window.saveFertiliteResults(false)" style="background:#059669; color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:0.75rem; font-weight:900; cursor:pointer; box-shadow:0 2px 5px rgba(5,150,105,0.25);">💾 Enregistrer</button>
+                </div>
                 <div
                     style="background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; margin-bottom:14px;">
                     <div
@@ -4358,12 +4366,10 @@
                 <div id="frResultsContainer"
                     style="display:flex; flex-direction:column; gap:20px; max-height:48vh; overflow-y:auto; padding:4px;">
                 </div>
-                <div style="display:flex; gap:10px; margin-top:20px;">
-                    <button type="button" onclick="window.goBackToStep1()" class="cancel-btn" style="flex:1;">←
-                        Retour</button>
-                    <button type="button" onclick="window.confirmAndGenerateFertFeuillesResultats()" class="save-btn"
-                        style="flex:2; background:linear-gradient(to right, #059669, #10b981);">🖨️ GÉNÉRER LE
-                        PDF</button>
+                <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
+                    <button type="button" onclick="window.goBackToStep1()" class="cancel-btn" style="flex:1 1 100px;">← Retour</button>
+                    <button type="button" onclick="window.saveFertiliteResults(false)" class="save-btn" style="flex:2 1 180px; background:linear-gradient(135deg, #7c3aed, #5b21b6); color:white; box-shadow:0 2px 6px rgba(124,58,237,0.3);">💾 ENREGISTRER RÉSULTATS</button>
+                    <button type="button" onclick="window.confirmAndGenerateFertFeuillesResultats()" class="save-btn" style="flex:2 1 180px; background:linear-gradient(to right, #059669, #10b981);">🖨️ GÉNÉRER LE PDF & ENREGISTRER</button>
                 </div>
             </div>
         </div>
@@ -7775,6 +7781,15 @@ window.setPrepExpiry = function (months) {
             console.error("Traca Fertilite Sync Error:", err);
         });
 
+        window._fertResultsHistory = [];
+        if (window.db) {
+            window.db.collection('Resultats_Fertilite').orderBy('timestamp', 'desc').onSnapshot(snap => {
+                window._fertResultsHistory = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            }, err => {
+                console.error("Resultats Fertilite Sync Error:", err);
+            });
+        }
+
         window.tachesJournalieres = [];
         window.db.collection('taches').onSnapshot(snap => {
             window.tachesJournalieres = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
@@ -8139,6 +8154,88 @@ window.setPrepExpiry = function (months) {
 
         window.toggleFicheSelection = function (id, e) {
             window.toggleItemSelection(id, 'fiches', e);
+        };
+
+        // ===== GLOBAL PREVIEW MODAL (mobile-optimized bottom sheet) =====
+        window.showPreviewModal = function(title, items, renderItemFn, opts) {
+            // Remove existing overlay if any
+            const existing = document.getElementById('previewModalOverlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'previewModalOverlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:9999;display:flex;flex-direction:column;align-items:stretch;';
+
+            const rows = items.length > 0 ? items.map(function(item, idx){ return renderItemFn(item, idx); }).join('') : '';
+
+            overlay.innerHTML =
+                '<div style="background:#fff;border-radius:16px 16px 0 0;margin-top:auto;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;">' +
+                    '<div style="background:#0f172a;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:16px 16px 0 0;flex-shrink:0;">' +
+                        '<div>' +
+                            '<div style="font-weight:800;font-size:1rem;">' + title + '</div>' +
+                            '<div style="font-size:0.75rem;opacity:0.75;">' + (opts && opts.subtitle ? opts.subtitle : items.length + ' résultat(s)') + '</div>' +
+                        '</div>' +
+                        '<button onclick="document.getElementById(\x27previewModalOverlay\x27).remove()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:700;">✕ Fermer</button>' +
+                    '</div>' +
+                    '<div style="overflow-y:auto;flex:1;padding:0;-webkit-overflow-scrolling:touch;">' +
+                        (items.length === 0
+                            ? '<div style="padding:40px;text-align:center;color:#888;font-size:0.95rem;">' + (opts && opts.emptyMsg ? opts.emptyMsg : 'Aucun résultat.') + '</div>'
+                            : rows) +
+                    '</div>' +
+                '</div>';
+
+            overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+        };
+
+        // Helper: render a prep item card for preview modal
+        window._renderPrepPreviewCard = function(p) {
+            const now = new Date(); now.setHours(0,0,0,0);
+            const perDate = p.datePeremption ? new Date(p.datePeremption) : null;
+            const prepDate = p.datePrep ? new Date(p.datePrep) : null;
+            let daysLeft = perDate ? Math.round((perDate - now) / 86400000) : null;
+            let badge = '';
+            if (daysLeft !== null) {
+                if (daysLeft < 0) badge = '<span style="background:#ef4444;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:900;">PÉRIMÉ (' + Math.abs(daysLeft) + 'j)</span>';
+                else if (daysLeft <= 7) badge = '<span style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:900;">⚠️ ' + daysLeft + 'j (cette sem.)</span>';
+                else if (daysLeft <= 15) badge = '<span style="background:#ea580c;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:900;">⏳ ' + daysLeft + 'j (≤15j)</span>';
+                else if (daysLeft <= 30) badge = '<span style="background:#0284c7;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:900;">📅 ' + daysLeft + 'j (≤30j)</span>';
+                else badge = '<span style="background:#059669;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:900;">✅ ' + daysLeft + 'j</span>';
+            }
+            const lotBadge = p.lot ? '<span style="background:#1e293b;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.72rem;font-weight:800;">LOT ' + p.lot + '</span>' : '';
+            const prepStr = prepDate ? ('<span style="background:#f0fdf4;color:#065f46;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">Prép: ' + p.datePrep + '</span>') : '';
+            const perStr = perDate ? ('<span style="background:#fef2f2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">Pér: ' + p.datePeremption + '</span>') : '';
+            const statutBadge = p.statut ? '<span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">' + p.statut + '</span>' : '';
+            return '<div style="border-bottom:1px solid #e5e7eb;padding:12px 16px;">' +
+                '<div style="font-weight:800;font-size:0.95rem;color:#0f172a;">' + (p.designation || p.nom || 'Sans nom') + '</div>' +
+                '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' +
+                    lotBadge + badge + prepStr + perStr + statutBadge +
+                '</div>' +
+            '</div>';
+        };
+
+        window._afficherPrepsActuels = function() {
+            const filter = window.prepExpiryFilter || 'all';
+            const allPreps = window.preps || [];
+            const now = new Date(); now.setHours(0,0,0,0);
+            function getExp(p) {
+                const perDate = p.datePeremption ? new Date(p.datePeremption) : null;
+                const daysLeft = perDate ? Math.round((perDate - now) / 86400000) : null;
+                return { daysLeft, isExpired: daysLeft !== null && daysLeft < 0, isWeek: daysLeft !== null && daysLeft >= 0 && daysLeft <= 7, is15Days: daysLeft !== null && daysLeft >= 0 && daysLeft <= 15, isMonth: daysLeft !== null && daysLeft >= 0 && daysLeft <= 30 };
+            }
+            let items = allPreps;
+            let title = '📋 Toutes les préparations';
+            if (filter === 'expired') { items = allPreps.filter(p => getExp(p).isExpired); title = '🔴 MC Périmées'; }
+            else if (filter === 'week') { items = allPreps.filter(p => { const e=getExp(p); return !e.isExpired && e.isWeek; }); title = '⚠️ MC échant cette semaine (≤7j)'; }
+            else if (filter === '15j') { items = allPreps.filter(p => { const e=getExp(p); return !e.isExpired && e.is15Days; }); title = '⏳ MC échant dans 15j'; }
+            else if (filter === 'month') { items = allPreps.filter(p => { const e=getExp(p); return !e.isExpired && e.isMonth; }); title = '📅 MC échant dans 1 mois'; }
+            else if (filter === 'valid') { items = allPreps.filter(p => { const e=getExp(p); return e.daysLeft === null || (!e.isExpired && e.daysLeft > 30); }); title = '✅ MC Valides'; }
+            else if (filter === 'mine') { const me = (window.currentUser || '').toLowerCase().trim(); items = allPreps.filter(p => (p.preparateur||'').toLowerCase().trim() === me); title = '👤 Mes préparations'; }
+            else if (filter === 'quarantaine') { items = allPreps.filter(p => p.statut === 'Quarantaine'); title = '🔶 Quarantaine'; }
+            else if (filter === 'fertile') { items = allPreps.filter(p => p.statut === 'Fertile'); title = '🧫 Fertiles'; }
+            if (typeof window.showPreviewModal === 'function') {
+                window.showPreviewModal(title, items, window._renderPrepPreviewCard, { emptyMsg: 'Aucune préparation correspondante.' });
+            }
         };
 
         window.getFicheTime = function (f) {
@@ -8566,6 +8663,7 @@ window.setPrepExpiry = function (months) {
                         <button onclick="window.openDestockChecklistModal()" style="background:#ffffff; color:#c2410c; border:1.5px solid #fdba74; padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 1px 3px rgba(234,88,12,0.12);">📋 Suivi Déstockage</button>
                         <button onclick="window.generatePrepPdf('quarantaine')" style="background:rgba(249,115,22,0.1); color:#c2410c; border:1.5px solid rgba(249,115,22,0.4); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📄 PDF Quarantaine</button>
                         <button onclick="window.generatePrepPdf('fertile', window.currentFilteredPreps)" style="background:rgba(5,150,105,0.1); color:#059669; border:1.5px solid rgba(5,150,105,0.3); padding:6px 12px; border-radius:10px; font-size:0.6rem; font-weight:800; cursor:pointer;">📋 PDF Fertiles</button>
+                        <button onclick="window._afficherPrepsActuels()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border:none; padding:6px 14px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 6px rgba(124,58,237,0.3);">👁️ Afficher résultats</button>
                         <button onclick="window.promptChangeCurrentUser()" style="background:#f0fdf4; color:#059669; border:1.5px solid #10b981; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer;" title="Changer mon nom d'opérateur">👤 Profil : ${myUserRaw || 'Définir mon nom'}</button>
                         <div style="margin-left:auto; background:rgba(16,185,129,0.1); border:1.5px solid #10b981; padding:6px 12px; border-radius:10px; color:#10b981; font-weight:900; font-size:0.7rem;">🧫 TOTAL MC = ${totalUnits}</div>
                     </div>`;
@@ -12380,6 +12478,7 @@ window.setPrepExpiry = function (months) {
                     <button class="menu-btn" onclick="window.generateFertGlobalRecap()" style="background:linear-gradient(to right, #3b82f6, #2563eb); color:white;">📊 Cons. (Sans Lots)</button>
                     <button class="menu-btn" onclick="window.generateFertFeuillesResultats()" style="background:linear-gradient(to right, #f59e0b, #d97706); color:white;">📊 Cons. (Avec Lots)</button>
                     <button class="menu-btn" onclick="window.generateFertFeuillesResultats()" style="background:linear-gradient(to right, #059669, #047857); color:white;">📋 Feuilles Résultats</button>
+                    <button class="menu-btn" onclick="window.showResultatsFertiliteHistory()" style="background:linear-gradient(135deg, #7c3aed, #5b21b6); color:white; border:none; font-weight:bold; box-shadow:0 2px 6px rgba(124,58,237,0.3);">📑 Résultats Enregistrés</button>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:5px; padding-top:10px; border-top:1px dashed rgba(59,130,246,0.3); align-items:center;">
                     <span style="font-size:0.75rem; color:#1e40af; font-weight:800;">Traçabilité Manuelle :</span>
@@ -13573,6 +13672,8 @@ window.setPrepExpiry = function (months) {
             // Mettre à jour la liste des oubliés
             window.updateForgottenMediaList();
 
+            // Reset session doc id pour une nouvelle feuille
+            window._currentFertSessionDocId = null;
             // Reset toujours à l'étape 1 avant d'ouvrir
             document.getElementById('frStep1Wrapper').style.display = '';
             document.getElementById('frStep2Wrapper').style.display = 'none';
@@ -13809,7 +13910,524 @@ window.setPrepExpiry = function (months) {
             document.getElementById('frStep1Wrapper').style.display = '';
         };
 
+        // ===== GESTION ET ENREGISTREMENT PERSISTANT DES RESULTATS DE FERTILITE =====
+        window._currentFertSessionDocId = null;
+
+        // Calculer une signature unique pour une session de test (date + milieux + lots)
+        window._computeFertSessionSig = function (record) {
+            if (!record) return '';
+            const dayStr = record.dateFertilite || (record.timestamp ? new Date(record.timestamp).toISOString().split('T')[0] : '');
+            const mediaSig = (record.milieux || []).map(function (m) {
+                const lots = (m.lots || []).map(function (l) { return (l.lotTest || '').trim(); }).sort().join(',');
+                return (m.nom || '').trim().toLowerCase() + '[' + lots + ']';
+            }).sort().join('|');
+            return dayStr + '___' + mediaSig;
+        };
+
+        window.saveFertiliteResults = async function (isSilent) {
+            try {
+                const checkedIds = Array.from(window._fertCheckedIds || new Set());
+                const fertiliteData = window._fertiliteData || [];
+                
+                // Déduplication stricte des fiches sélectionnées
+                const seenFicheIds = new Set();
+                const selectedFiches = [];
+                fertiliteData.forEach(function (f) {
+                    const strId = String(f.id);
+                    if (checkedIds.includes(strId) && !seenFicheIds.has(strId)) {
+                        seenFicheIds.add(strId);
+                        selectedFiches.push(f);
+                    }
+                });
+
+                if (selectedFiches.length === 0) {
+                    if (!isSilent && window.showToast) window.showToast("Selectionnez au moins un MC pour enregistrer.", "warning");
+                    return null;
+                }
+
+                const gDateFert = document.getElementById('frGlobalDateFert') ? document.getElementById('frGlobalDateFert').value : '';
+                const gDateSter = document.getElementById('frGlobalDateSter') ? document.getElementById('frGlobalDateSter').value : '';
+                const gDateLect = document.getElementById('frGlobalDateLect') ? document.getElementById('frGlobalDateLect').value : '';
+
+                // Inoculums
+                const inoculumsFert = {};
+                const inoculumsInh = {};
+                document.querySelectorAll('.fr-inoc-input').forEach(function (el) {
+                    const s = el.getAttribute('data-souche');
+                    if (s && el.value.trim()) inoculumsFert[s] = el.value.trim();
+                });
+                document.querySelectorAll('.fr-inoc-input-inh').forEach(function (el) {
+                    const s = el.getAttribute('data-souche');
+                    if (s && el.value.trim()) inoculumsInh[s] = el.value.trim();
+                });
+
+                const rawInputs = {};
+                const milieux = [];
+
+                selectedFiches.forEach(function (f) {
+                    let fSouches = [];
+                    const addFS = function (arr, secK, secL) {
+                        (arr || []).forEach(function (s) { fSouches.push({ s: s, secKey: secK, secLabel: secL }); });
+                    };
+                    addFS(f.souches, 'fert', 'Fertilite');
+                    addFS(f.indSouches, 'ind', 'Indication');
+                    addFS(f.inhSouches, 'inh', 'Inhibition');
+
+                    let lotRows = Array.from(document.querySelectorAll('.fr-lot-row[data-fid="' + f.id + '"]'));
+                    if (lotRows.length === 0) lotRows = [{ getAttribute: function () { return '0'; } }];
+
+                    const lotsData = [];
+
+                    lotRows.forEach(function (lRow, rowIdx) {
+                        const lIdx = lRow.getAttribute ? (parseInt(lRow.getAttribute('data-lot-idx'), 10) || rowIdx) : rowIdx;
+                        const testL = window._getFrLotValue ? window._getFrLotValue(f.id, lIdx, 'test') : '';
+                        const refL = window._getFrLotValue ? window._getFrLotValue(f.id, lIdx, 'ref') : '';
+
+                        const dfEl = document.getElementById('fr_df_' + f.id);
+                        const dsEl = document.getElementById('fr_ds_' + f.id);
+                        const resEl = document.getElementById('fr_res_' + f.id);
+
+                        const dateFertItem = dfEl ? dfEl.value : gDateFert;
+                        const dateSterItem = dsEl ? dsEl.value : gDateSter;
+                        const steriliteRes = resEl ? resEl.value : 'OK';
+
+                        const souchesRes = [];
+
+                        window.sortStrainsList(fSouches).forEach(function (t) {
+                            const s = t.s;
+                            const sk = window._frSoucheKey(s);
+                            const b = 'frr_' + f.id + '_l' + lIdx + '_' + t.secKey + '_' + sk;
+                            const g = function (suf) {
+                                const el = document.getElementById(b + suf) || document.getElementById('frr_' + f.id + '_' + t.secKey + '_' + sk + suf);
+                                const val = el ? el.value.trim() : '';
+                                if (el && el.id) rawInputs[el.id] = val;
+                                return val;
+                            };
+
+                            const rb1 = g('_rb1'), rb2 = g('_rb2'), rmoy = g('_rmoy');
+                            const tb1 = g('_tb1'), tb2 = g('_tb2'), tmoy = g('_tmoy');
+                            const ratio = g('_ratio');
+                            const inocV = t.secKey === 'inh' ? (inoculumsInh[s] || '') : (inoculumsFert[s] || '');
+
+                            souchesRes.push({
+                                souche: s,
+                                secKey: t.secKey,
+                                secLabel: t.secLabel,
+                                inoculum: inocV,
+                                rb1: rb1, rb2: rb2, rmoy: rmoy,
+                                tb1: tb1, tb2: tb2, tmoy: tmoy,
+                                ratio: ratio
+                            });
+                        });
+
+                        lotsData.push({
+                            lotIdx: lIdx,
+                            lotTest: testL,
+                            lotRef: refL,
+                            dateFert: dateFertItem,
+                            dateSter: dateSterItem,
+                            sterilite: steriliteRes,
+                            souches: souchesRes
+                        });
+                    });
+
+                    milieux.push({
+                        ficheId: f.id,
+                        nom: f.nom || 'Sans nom',
+                        lots: lotsData
+                    });
+                });
+
+                const nowTs = Date.now();
+                const record = {
+                    timestamp: nowTs,
+                    dateEnregistrement: new Date().toISOString(),
+                    dateFertilite: gDateFert,
+                    dateSterilite: gDateSter,
+                    dateLecture: gDateLect,
+                    user: window.currentUser || 'Operateur',
+                    checkedIds: checkedIds,
+                    inoculumsFert: inoculumsFert,
+                    inoculumsInh: inoculumsInh,
+                    milieux: milieux,
+                    rawInputs: rawInputs
+                };
+
+                const currentSig = window._computeFertSessionSig(record);
+                record.sessionSig = currentSig;
+
+                // Recherche si cette session existe déjà (pour la mettre à jour au lieu de la dupliquer)
+                let targetDocId = window._currentFertSessionDocId;
+                if (!targetDocId && currentSig) {
+                    const existingInHistory = (window._fertResultsHistory || []).find(function (d) {
+                        if (!d || !d.id) return false;
+                        const sig = d.sessionSig || window._computeFertSessionSig(d);
+                        // Même signature et créé il y a moins de 12 heures
+                        return (sig === currentSig) && (Math.abs(nowTs - (d.timestamp || 0)) < 12 * 3600 * 1000);
+                    });
+                    if (existingInHistory) {
+                        targetDocId = existingInHistory.id;
+                    }
+                }
+
+                // Sauvegarde / Mise à jour dans Firestore
+                if (window.db) {
+                    if (targetDocId) {
+                        await window.db.collection('Resultats_Fertilite').doc(targetDocId).set(record);
+                        record.id = targetDocId;
+                        window._currentFertSessionDocId = targetDocId;
+                    } else {
+                        const docRef = await window.db.collection('Resultats_Fertilite').add(record);
+                        targetDocId = docRef.id;
+                        record.id = docRef.id;
+                        window._currentFertSessionDocId = docRef.id;
+                    }
+                } else {
+                    if (!targetDocId) {
+                        targetDocId = 'local_' + nowTs;
+                        record.id = targetDocId;
+                        window._currentFertSessionDocId = targetDocId;
+                    }
+                }
+
+                // Sauvegarde locale persistante (avec remplacement pour éviter les doublons locaux)
+                try {
+                    localStorage.setItem('micro_last_fert_results', JSON.stringify(record));
+                    let allLocal = JSON.parse(localStorage.getItem('micro_fert_results_history') || '[]');
+                    
+                    // Remplacer si même ID ou même sessionSig récente
+                    const existingIdx = allLocal.findIndex(function (item) {
+                        if (!item) return false;
+                        if (targetDocId && item.id === targetDocId) return true;
+                        const s = item.sessionSig || window._computeFertSessionSig(item);
+                        return (s === currentSig) && (Math.abs(nowTs - (item.timestamp || 0)) < 12 * 3600 * 1000);
+                    });
+
+                    if (existingIdx !== -1) {
+                        allLocal[existingIdx] = record;
+                    } else {
+                        allLocal.unshift(record);
+                    }
+                    if (allLocal.length > 50) allLocal = allLocal.slice(0, 50);
+                    localStorage.setItem('micro_fert_results_history', JSON.stringify(allLocal));
+                } catch (e) {
+                    console.warn("Erreur localStorage resultats fert:", e);
+                }
+
+                if (!isSilent && window.showToast) {
+                    window.showToast("Resultats enregistres avec succes !", "success", 3000);
+                }
+                return targetDocId;
+            } catch (err) {
+                console.error("Erreur saveFertiliteResults:", err);
+                if (!isSilent && window.showToast) {
+                    window.showToast("Erreur lors de l'enregistrement des resultats.", "error");
+                }
+                return null;
+            }
+        };
+
+        // Recharger des résultats enregistrés directement dans la feuille de résultats
+        window.loadFertiliteResultsIntoForm = function (record) {
+            try {
+                if (!record) return;
+
+                // Mémoriser l'ID de session pour mettre à jour cette session lors des futures sauvegardes
+                window._currentFertSessionDocId = record.id || null;
+
+                // 1. Fermer le modal d'historique si ouvert
+                const existingOverlay = document.getElementById('previewModalOverlay');
+                if (existingOverlay) existingOverlay.remove();
+
+                // 2. Cocher les milieux
+                const checkedIds = record.checkedIds || (record.milieux || []).map(function (m) { return m.ficheId; });
+                window._fertCheckedIds = new Set(checkedIds);
+
+                // 3. Ouvrir la feuille de calcul
+                window.generateFertFeuillesResultats();
+                window._currentFertSessionDocId = record.id || null;
+
+                // 4. Restaurer les dates globales
+                if (document.getElementById('frGlobalDateFert')) document.getElementById('frGlobalDateFert').value = record.dateFertilite || '';
+                if (document.getElementById('frGlobalDateSter')) document.getElementById('frGlobalDateSter').value = record.dateSterilite || '';
+                if (document.getElementById('frGlobalDateLect')) document.getElementById('frGlobalDateLect').value = record.dateLecture || '';
+
+                // 5. Passer à l'étape 2
+                window.goToResultsStep2();
+
+                // 6. Restaurer les inoculums
+                if (record.inoculumsFert) {
+                    Object.keys(record.inoculumsFert).forEach(function (s) {
+                        const sk = window._frSoucheKey(s);
+                        const el = document.getElementById('fr_inoc_' + sk);
+                        if (el) el.value = record.inoculumsFert[s];
+                    });
+                }
+                if (record.inoculumsInh) {
+                    Object.keys(record.inoculumsInh).forEach(function (s) {
+                        const sk = window._frSoucheKey(s);
+                        const el = document.getElementById('fr_inoc_inh_' + sk);
+                        if (el) el.value = record.inoculumsInh[s];
+                    });
+                }
+
+                // 7. Restaurer chaque champ résultat depuis rawInputs ou structure
+                if (record.rawInputs) {
+                    Object.keys(record.rawInputs).forEach(function (id) {
+                        const el = document.getElementById(id);
+                        if (el) el.value = record.rawInputs[id];
+                    });
+                }
+
+                // Synchroniser les affichages
+                if (typeof window._syncFrInoculumReadouts === 'function') {
+                    window._syncFrInoculumReadouts();
+                }
+
+                if (window.showToast) {
+                    window.showToast("Resultats charges dans la feuille avec succes !", "success", 3000);
+                }
+            } catch (ex) {
+                console.error("Erreur loadFertiliteResultsIntoForm:", ex);
+                if (window.showToast) window.showToast("Erreur lors du chargement des resultats.", "error");
+            }
+        };
+
+        // Supprimer un enregistrement de résultats
+        window.deleteFertiliteResultRecord = async function (id, timestamp, sessionSig) {
+            if (!confirm("Voulez-vous vraiment supprimer cet enregistrement de resultats ?")) return;
+            try {
+                if (window.db && id && !id.startsWith('local_')) {
+                    await window.db.collection('Resultats_Fertilite').doc(id).delete();
+                }
+                // Supprimer aussi du localStorage (et tous les doublons éventuels de la même session)
+                try {
+                    let allLocal = JSON.parse(localStorage.getItem('micro_fert_results_history') || '[]');
+                    allLocal = allLocal.filter(function (r) {
+                        if (!r) return false;
+                        if (id && r.id === id) return false;
+                        if (sessionSig && (r.sessionSig === sessionSig || window._computeFertSessionSig(r) === sessionSig)) return false;
+                        if (timestamp && r.timestamp === timestamp) return false;
+                        return true;
+                    });
+                    localStorage.setItem('micro_fert_results_history', JSON.stringify(allLocal));
+                } catch (e) {}
+
+                if (window.showToast) window.showToast("Enregistrement supprime.", "info", 2500);
+                // Rafraîchir l'affichage
+                window.showResultatsFertiliteHistory();
+            } catch (err) {
+                console.error("Erreur suppression:", err);
+                if (window.showToast) window.showToast("Erreur lors de la suppression.", "error");
+            }
+        };
+
+        // Afficher les détails complets d'un test dans une vue mobile
+        window.showSavedTestDetails = function (idx) {
+            const history = window._getAllSavedFertResults();
+            const r = history[idx];
+            if (!r) return;
+
+            const existing = document.getElementById('previewModalOverlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'previewModalOverlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:9999;display:flex;flex-direction:column;align-items:stretch;';
+
+            let tablesHtml = '';
+            const seenLots = new Set();
+            (r.milieux || []).forEach(function (m) {
+                (m.lots || []).forEach(function (lot) {
+                    const lotKey = (m.nom || '') + '___' + (lot.lotTest || '');
+                    if (seenLots.has(lotKey)) return;
+                    seenLots.add(lotKey);
+
+                    const rows = (lot.souches || []).map(function (s) {
+                        return '<tr style="border-bottom:1px solid #e2e8f0;">' +
+                            '<td style="padding:6px; font-weight:800; font-size:0.75rem; color:#1e293b;">' + s.souche + '<br><span style="font-size:0.65rem; color:#64748b; font-weight:normal;">' + (s.secLabel || '') + '</span></td>' +
+                            '<td style="padding:6px; text-align:center; font-size:0.72rem; color:#059669; font-weight:700;">' + (s.inoculum || '—') + '</td>' +
+                            '<td style="padding:6px; text-align:center; font-size:0.72rem; background:#fefce8; font-weight:800; color:#b45309;">' + (s.rmoy || '—') + '</td>' +
+                            '<td style="padding:6px; text-align:center; font-size:0.72rem; background:#f0fdf4; font-weight:800; color:#059669;">' + (s.tmoy || '—') + '</td>' +
+                            '<td style="padding:6px; text-align:center; font-size:0.75rem; font-weight:900; color:' + (s.ratio === 'OK' || (parseFloat(s.ratio) >= 0.5) ? '#059669' : '#dc2626') + ';">' + (s.ratio || '—') + '</td>' +
+                        '</tr>';
+                    }).join('');
+
+                    tablesHtml += '<div style="background:#fff; border:1px solid #cbd5e1; border-radius:10px; margin-bottom:12px; overflow:hidden;">' +
+                        '<div style="background:#1e293b; color:#fff; padding:8px 12px; font-weight:800; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">' +
+                            '<span>🧪 ' + m.nom + '</span>' +
+                            '<span style="background:#334155; padding:2px 8px; border-radius:6px; font-size:0.7rem;">Lot: ' + (lot.lotTest || 'S.L') + ' (Ref: ' + (lot.lotRef || '—') + ')</span>' +
+                        '</div>' +
+                        '<div style="overflow-x:auto;">' +
+                            '<table style="width:100%; border-collapse:collapse; font-size:0.75rem;">' +
+                                '<thead style="background:#f1f5f9; color:#475569; font-size:0.68rem; text-transform:uppercase;">' +
+                                    '<tr>' +
+                                        '<th style="padding:6px; text-align:left;">Souche</th>' +
+                                        '<th style="padding:6px; text-align:center;">Inoc.</th>' +
+                                        '<th style="padding:6px; text-align:center;">R.Moy</th>' +
+                                        '<th style="padding:6px; text-align:center;">T.Moy</th>' +
+                                        '<th style="padding:6px; text-align:center;">Ratio</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody>' + rows + '</tbody>' +
+                            '</table>' +
+                        '</div>' +
+                    '</div>';
+                });
+            });
+
+            overlay.innerHTML =
+                '<div style="background:#f8fafc; border-radius:16px 16px 0 0; margin-top:auto; max-height:92vh; display:flex; flex-direction:column; overflow:hidden;">' +
+                    '<div style="background:#0f172a; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">' +
+                        '<div>' +
+                            '<div style="font-weight:800; font-size:0.95rem;">📊 Resultats du ' + (r.dateFertilite || 'Sans date') + '</div>' +
+                            '<div style="font-size:0.7rem; opacity:0.75;">Lecture: ' + (r.dateLecture || '—') + ' | Saisi par: ' + (r.user || '—') + '</div>' +
+                        '</div>' +
+                        '<button onclick="document.getElementById(\x27previewModalOverlay\x27).remove()" style="background:rgba(255,255,255,0.15); border:none; color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:700; font-size:0.8rem;">✕ Fermer</button>' +
+                    '</div>' +
+                    '<div style="overflow-y:auto; flex:1; padding:12px; -webkit-overflow-scrolling:touch;">' +
+                        tablesHtml +
+                    '</div>' +
+                    '<div style="background:#fff; border-top:1px solid #cbd5e1; padding:10px 14px; display:flex; gap:8px;">' +
+                        '<button onclick="window.loadFertiliteResultsIntoForm(window._getAllSavedFertResults()[' + idx + '])" style="flex:1; background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border:none; padding:10px; border-radius:8px; font-weight:800; font-size:0.8rem; cursor:pointer;">🔄 Modifier dans la feuille</button>' +
+                    '</div>' +
+                '</div>';
+
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+        };
+
+        // Obtenir tous les résultats fusionnés (Firestore + LocalStorage) avec DÉDUPLICATION STRICTE
+        window._getAllSavedFertResults = function () {
+            const rawList = [];
+
+            // 1. Firestore
+            (window._fertResultsHistory || []).forEach(function (doc) {
+                if (doc) rawList.push(Object.assign({}, doc, { _source: 'firestore' }));
+            });
+
+            // 2. LocalStorage
+            try {
+                const local = JSON.parse(localStorage.getItem('micro_fert_results_history') || '[]');
+                local.forEach(function (doc) {
+                    if (doc) rawList.push(Object.assign({}, doc, { _source: 'local' }));
+                });
+            } catch (e) {}
+
+            // Trier par timestamp décroissant (le plus récent en premier)
+            rawList.sort(function (a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
+
+            // 3. Déduplication par ID et par Signature de session
+            const list = [];
+            const seenIds = new Set();
+            const seenSignatures = new Set();
+            const duplicateDocIdsToDelete = [];
+
+            rawList.forEach(function (r) {
+                if (!r) return;
+
+                // Si un ID existe déjà dans la liste finale, ignorer
+                if (r.id && seenIds.has(r.id)) {
+                    return;
+                }
+
+                // Signature unique du test (date + milieux + lots)
+                const sig = r.sessionSig || window._computeFertSessionSig(r);
+
+                if (sig && seenSignatures.has(sig)) {
+                    // C'est un doublon d'une session plus récente déjà gardée !
+                    if (r._source === 'firestore' && r.id) {
+                        duplicateDocIdsToDelete.push(r.id);
+                    }
+                    return;
+                }
+
+                if (r.id) seenIds.add(r.id);
+                if (sig) seenSignatures.add(sig);
+                list.push(r);
+            });
+
+            // Nettoyage en tâche de fond des doublons Firestore superflus
+            if (duplicateDocIdsToDelete.length > 0 && window.db) {
+                duplicateDocIdsToDelete.forEach(function (dupId) {
+                    window.db.collection('Resultats_Fertilite').doc(dupId).delete().catch(function () {});
+                });
+            }
+
+            // Mettre à jour le localStorage avec la liste propre sans doublons
+            try {
+                const cleanLocal = list.map(function (item) {
+                    const c = Object.assign({}, item);
+                    delete c._source;
+                    return c;
+                });
+                localStorage.setItem('micro_fert_results_history', JSON.stringify(cleanLocal));
+            } catch (e) {}
+
+            return list;
+        };
+
+        // Afficher l'historique de tous les résultats enregistrés
+        window.showResultatsFertiliteHistory = function () {
+            const items = window._getAllSavedFertResults();
+
+            function renderResultCard(r, idx) {
+                const dateF = r.dateFertilite ? '<span style="background:#e0e7ff; color:#3730a3; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.72rem;">📅 Fert: ' + r.dateFertilite + '</span>' : '';
+                const dateL = r.dateLecture ? '<span style="background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.72rem;">📅 Lect: ' + r.dateLecture + '</span>' : '';
+                const userBadge = r.user ? '<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-size:0.7rem;">👤 ' + r.user + '</span>' : '';
+
+                // Badges des milieux (sans répétition de nom)
+                const seenMc = new Set();
+                const mcBadges = (r.milieux || []).filter(function (m) {
+                    if (seenMc.has(m.nom)) return false;
+                    seenMc.add(m.nom);
+                    return true;
+                }).map(function (m) {
+                    const lots = (m.lots || []).map(function (l) { return l.lotTest; }).filter(Boolean).join(', ');
+                    return '<span style="background:#0f766e; color:#fff; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.7rem;">' + m.nom + (lots ? ' (' + lots + ')' : '') + '</span>';
+                }).join(' ');
+
+                const nbSouches = (r.milieux || []).reduce(function (acc, m) {
+                    return acc + (m.lots || []).reduce(function (lAcc, l) { return lAcc + (l.souches || []).length; }, 0);
+                }, 0);
+
+                const countBadge = '<span style="background:rgba(5,150,105,0.1); color:#059669; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.7rem;">' + (r.milieux || []).length + ' MC (' + nbSouches + ' souche' + (nbSouches > 1 ? 's' : '') + ')</span>';
+
+                const sigEscaped = (r.sessionSig || window._computeFertSessionSig(r) || '').replace(/'/g, "\\'");
+
+                return '<div style="border-bottom:1px solid #e5e7eb; padding:14px 16px; background:#fff;">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">' +
+                        '<div>' +
+                            '<div style="font-weight:900; font-size:0.95rem; color:#0f172a;">Session du ' + (r.dateFertilite || new Date(r.timestamp).toLocaleDateString('fr-FR')) + '</div>' +
+                            '<div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">' +
+                                dateF + dateL + userBadge + countBadge +
+                            '</div>' +
+                        '</div>' +
+                        '<button onclick="window.deleteFertiliteResultRecord(\x27' + (r.id || '') + '\x27, ' + (r.timestamp || 0) + ', \x27' + sigEscaped + '\x27)" style="background:#fee2e2; color:#dc2626; border:none; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:0.75rem;" title="Supprimer">🗑️</button>' +
+                    '</div>' +
+                    '<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">' +
+                        mcBadges +
+                    '</div>' +
+                    '<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">' +
+                        '<button onclick="window.showSavedTestDetails(' + idx + ')" style="background:#0284c7; color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px;">👁️ Voir Resultats</button>' +
+                        '<button onclick="window.loadFertiliteResultsIntoForm(window._getAllSavedFertResults()[' + idx + '])" style="background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px;">🔄 Modifier / Recharger</button>' +
+                    '</div>' +
+                '</div>';
+            }
+
+            if (typeof window.showPreviewModal === 'function') {
+                window.showPreviewModal('📝 Resultats de Fertilite Enregistres', items, renderResultCard, {
+                    emptyMsg: 'Aucun resultat enregistre pour l\x27instant. Remplissez une feuille de resultats et cliquez sur Enregistrer !',
+                    subtitle: items.length + ' session(s) unique(s) en memoire'
+                });
+            }
+        };
+
         window.confirmAndGenerateFertFeuillesResultats = function () {
+            // Sauvegarde automatique des résultats avant de fermer
+            if (typeof window.saveFertiliteResults === 'function') {
+                window.saveFertiliteResults(true);
+            }
             window.closeModal('feuillesResultatsModalOverlay');
             const checkedIds = Array.from(window._fertCheckedIds || new Set());
             const fertiliteData = window._fertiliteData || [];
@@ -15289,6 +15907,40 @@ window.setPrepExpiry = function (months) {
                     };
                 };
 
+                window._afficherHistoFert = function() {
+                    const _ftSort = window._fertTracaSort || 'date_desc';
+                    const _ftSearch = (window._fertTracaSearch || '').toLowerCase().trim();
+                    const _ftStart = window._fertTracaStart || '';
+                    const _ftEnd = window._fertTracaEnd || '';
+                    let history = [...(window._tracaFertHistory || [])];
+                    if (_ftStart || _ftEnd) {
+                        history = history.filter(h => { const d = h.date || ''; if (_ftStart && d < _ftStart) return false; if (_ftEnd && d > _ftEnd) return false; return true; });
+                    }
+                    if (_ftSearch) {
+                        history = history.filter(h => (h.milieu||'').toLowerCase().includes(_ftSearch) || (h.lot||'').toLowerCase().includes(_ftSearch) || (h.date||'').includes(_ftSearch));
+                    }
+                    if (_ftSort === 'alpha_asc') history.sort((a,b) => (a.milieu||'').localeCompare(b.milieu||''));
+                    else if (_ftSort === 'alpha_desc') history.sort((a,b) => (b.milieu||'').localeCompare(a.milieu||''));
+                    else if (_ftSort === 'lot_asc') history.sort((a,b) => (a.lot||'').localeCompare(b.lot||''));
+                    else if (_ftSort === 'lot_desc') history.sort((a,b) => (b.lot||'').localeCompare(a.lot||''));
+                    else history.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+                    function renderHistoItem(h) {
+                        const dates = window._getTracaDates ? window._getTracaDates(h) : {};
+                        const prepBadge = dates.datePrep ? '<span style="background:#f0fdf4;color:#065f46;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">Prép: ' + dates.datePrep + '</span>' : '';
+                        const perBadge = dates.datePeremption ? '<span style="background:#fef2f2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">Pér: ' + dates.datePeremption + '</span>' : '';
+                        const dateBadge = h.date ? '<span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">' + h.date + '</span>' : '';
+                        const lotBadge = h.lot ? '<span style="background:#1e293b;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.72rem;font-weight:800;">LOT ' + h.lot + '</span>' : '';
+                        return '<div style="border-bottom:1px solid #e5e7eb;padding:12px 16px;">' +
+                            '<div style="font-weight:800;font-size:0.95rem;color:#0f172a;">' + (h.milieu || 'MC inconnu') + '</div>' +
+                            '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' + dateBadge + lotBadge + prepBadge + perBadge + '</div>' +
+                        '</div>';
+                    }
+                    if (typeof window.showPreviewModal === 'function') {
+                        window.showPreviewModal('🔍 Historique Traçabilité Fertilité', history, renderHistoItem, { emptyMsg: 'Aucun enregistrement trouvé.' });
+                    }
+                };
+
                 window.showFertiliteTraca = function () {
                     window._showingFertTraca = true;
                     const container = document.getElementById('fiches-list');
@@ -15390,8 +16042,10 @@ window.setPrepExpiry = function (months) {
                                 <button onclick="window.generateConsommablesFromHistory(false)" style="background:linear-gradient(to right,#3b82f6,#2563eb); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📦 Cons. (Sans Lots)</button>
                                 <button onclick="window.generateConsommablesFromHistory(true)" style="background:linear-gradient(to right,#f59e0b,#d97706); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📦 Cons. (Avec Lots)</button>
                                 <button onclick="window.generateFeuillesResultatsFromHistory()" style="background:linear-gradient(to right,#059669,#047857); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📋 Feuilles Résultats</button>
+                                <button onclick="window.showResultatsFertiliteHistory()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border:none; padding:8px 13px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 6px rgba(124,58,237,0.3);">📑 Résultats Enregistrés</button>
                                 <button onclick="window.generateSouchesRapportPdf()" style="background:#0369a1; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">🧬 Rapport Souches PDF</button>
                                 <button onclick="window.generateFertiliteTracaPdf()" style="background:#111; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold;">📄 Exporter PDF</button>
+                                <button onclick="window._afficherHistoFert()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:bold; box-shadow:0 2px 6px rgba(124,58,237,0.3);">👁️ Afficher</button>
                                 <button onclick="window._showingFertTraca=false; window.render()" style="background:#6b7280; color:#fff; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.85rem;">← Retour</button>
                             </div>
                         </div>
@@ -16528,6 +17182,7 @@ window.setPrepExpiry = function (months) {
                                 <button onclick="window.rf_generatePDF()" style="background:#0284c7; color:#fff; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-size:0.9rem; font-weight:800; margin-left:auto; box-shadow:0 3px 8px rgba(2,132,199,0.3);">
                                     📄 IMPRIMER (PDF COMPACT TABLEAU D'AFFICHAGE)
                                 </button>
+                                <button onclick="window._afficherResfertSelection()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:800; box-shadow:0 2px 6px rgba(124,58,237,0.3);">👁️ Afficher sélection</button>
                                 <button onclick="if(confirm('Effacer toutes les sélections et lots sauvegardés ?')){ localStorage.removeItem('micro_rfState'); window.rfState={}; window.render(); }" style="background:#ef4444; color:#fff; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:700; margin-left:8px; box-shadow:0 3px 8px rgba(239,68,68,0.25);">
                                     🗑️ Réinitialiser
                                 </button>
@@ -16554,6 +17209,36 @@ window.setPrepExpiry = function (months) {
                 };
 
                 // === HELPER FUNCTIONS ===
+                window._afficherResfertSelection = function() {
+                    const state = window.rfState || {};
+                    const allPreps = window.preps || [];
+                    // Build list of checked items with their lots
+                    const checked = document.querySelectorAll('[id^="chk_"]');
+                    const selectedItems = [];
+                    checked.forEach(function(chk) {
+                        if (chk.checked) {
+                            const pid = chk.id.replace('chk_', '');
+                            const prep = allPreps.find(p => p.id === pid);
+                            if (prep) {
+                                const lot = (state[pid] && state[pid].lot) ? state[pid].lot : (prep.lot || '');
+                                selectedItems.push({ designation: prep.designation || prep.nom || 'MC', lot: lot, datePrep: prep.datePrep, datePeremption: prep.datePeremption, statut: prep.statut });
+                            }
+                        }
+                    });
+                    function renderRfItem(item) {
+                        const lotBadge = item.lot ? '<span style="background:#0f766e;color:#fff;padding:2px 10px;border-radius:6px;font-size:0.75rem;font-weight:900;">LOT ' + item.lot + '</span>' : '<span style="background:#cbd5e1;color:#334155;padding:2px 10px;border-radius:6px;font-size:0.72rem;">Pas de lot</span>';
+                        const prepStr = item.datePrep ? '<span style="background:#f0fdf4;color:#065f46;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">Prép: ' + item.datePrep + '</span>' : '';
+                        const perStr = item.datePeremption ? '<span style="background:#fef2f2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;">Pér: ' + item.datePeremption + '</span>' : '';
+                        return '<div style="border-bottom:1px solid #e5e7eb;padding:12px 16px;">' +
+                            '<div style="font-weight:800;font-size:0.95rem;color:#0f172a;">' + item.designation + '</div>' +
+                            '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' + lotBadge + prepStr + perStr + '</div>' +
+                        '</div>';
+                    }
+                    if (typeof window.showPreviewModal === 'function') {
+                        window.showPreviewModal('🧪 Milieux Libérés Sélectionnés', selectedItems, renderRfItem, { emptyMsg: 'Aucun milieu sélectionné. Cochez des milieux d\x27abord.' });
+                    }
+                };
+
                 window.rf_toggleRow = function (pid) {
                     const chk = document.getElementById('chk_' + pid);
                     if (chk) {

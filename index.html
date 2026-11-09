@@ -4698,6 +4698,8 @@
             if (oldBullBar) oldBullBar.remove();
             const oldGermesBar = document.getElementById('germes-header-bar');
             if (oldGermesBar) oldGermesBar.remove();
+            const oldRegBar = document.getElementById('registre-filter-bar');
+            if (oldRegBar) oldRegBar.remove();
             window.currentTab = tab;
             window._showingFertTraca = false;
             document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
@@ -9355,48 +9357,139 @@ window.setPrepExpiry = function (months) {
 
                 container.innerHTML = htmlOut;
             } else if (window.currentTab === 'registres') {
+                // Collecter et analyser tous les équipements de tous les registres
+                const allParsedEntries = [];
+                (registres || []).forEach(reg => {
+                    const entries = (rEntries || []).filter(e => e.regId === reg.id);
+                    entries.forEach(e => {
+                        allParsedEntries.push(window.parseRegistreEntry(e, reg));
+                    });
+                });
+
+                // Statistiques de qualification pour la barre de filtres
+                const countExp = allParsedEntries.filter(i => i.isExpired).length;
+                const count7 = allParsedEntries.filter(i => i.is7j).length;
+                const count15 = allParsedEntries.filter(i => i.is15j).length;
+                const count30 = allParsedEntries.filter(i => i.is30j).length;
+                const countVal = allParsedEntries.filter(i => i.isValid).length;
+                const totalEq = allParsedEntries.length;
+
+                const activeFilter = window.registreFilter || 'all';
+
+                // Barre de filtres et d'actions rapides dédiée au suivi des qualifications
+                const regFilterBarId = 'registre-filter-bar';
+                let regFilterBar = document.getElementById(regFilterBarId);
+                if (!regFilterBar) {
+                    regFilterBar = document.createElement('div');
+                    regFilterBar.id = regFilterBarId;
+                    container.parentNode.insertBefore(regFilterBar, container);
+                }
+
+                // Bannière d'alerte rouge si des équipements sont expirés ou urgents
+                const alertHtml = (countExp > 0 || count7 > 0)
+                    ? `<div style="background:linear-gradient(90deg, rgba(239,68,68,0.12) 0%, rgba(249,115,22,0.1) 100%); border:1.5px solid rgba(239,68,68,0.35); border-radius:14px; padding:12px 16px; margin:0 20px 14px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 8px rgba(239,68,68,0.06); flex-wrap:wrap;">
+                           <span style="font-size:1.4rem;">🚨</span>
+                           <div style="flex:1; min-width:200px;">
+                               <div style="font-size:0.82rem; font-weight:900; color:#dc2626; letter-spacing:0.3px;">
+                                   ALERTE QUALIFICATIONS : ${countExp} EXPIRÉ(S) &bull; ${count7} URGENT(S) &le; 7 JOURS
+                               </div>
+                               <div style="font-size:0.7rem; color:#7f1d1d; margin-top:2px;">
+                                   Cliquez sur les filtres pour isoler les matériels et générer le rapport destiné à la responsable.
+                               </div>
+                           </div>
+                           <button onclick="window.registreFilter='7j'; render();" style="background:#dc2626; color:white; border:none; padding:6px 12px; border-radius:8px; font-size:0.65rem; font-weight:800; cursor:pointer; white-space:nowrap;">⚠️ VOIR LES URGENTS (&le;7j)</button>
+                       </div>`
+                    : '';
+
+                regFilterBar.innerHTML = `
+                    ${alertHtml}
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; padding:0 20px 14px; align-items:center;">
+                        ${countExp > 0 ? `<button onclick="window.registreFilter='expired'; render();" style="background:${activeFilter === 'expired' ? '#ef4444' : 'rgba(239,68,68,0.1)'}; color:${activeFilter === 'expired' ? 'white' : '#ef4444'}; border:1.5px solid rgba(239,68,68,0.4); padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer;">🔴 Expirés (${countExp})</button>` : ''}
+                        <button onclick="window.registreFilter='7j'; render();" style="background:${activeFilter === '7j' ? '#ea580c' : (count7 > 0 ? 'rgba(234,88,12,0.12)' : 'rgba(0,0,0,0.04)')}; color:${activeFilter === '7j' ? 'white' : (count7 > 0 ? '#c2410c' : 'var(--text-dim)')}; border:1.5px solid ${count7 > 0 ? '#ea580c' : 'rgba(0,0,0,0.1)'}; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">⚠️ Urgent &le; 7j (${count7})</button>
+                        <button onclick="window.registreFilter='15j'; render();" style="background:${activeFilter === '15j' ? '#d97706' : (count15 > 0 ? 'rgba(217,119,6,0.12)' : 'rgba(0,0,0,0.04)')}; color:${activeFilter === '15j' ? 'white' : (count15 > 0 ? '#b45309' : 'var(--text-dim)')}; border:1.5px solid ${count15 > 0 ? '#d97706' : 'rgba(0,0,0,0.1)'}; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">⏳ Dans 15j (${count15})</button>
+                        <button onclick="window.registreFilter='30j'; render();" style="background:${activeFilter === '30j' ? '#0284c7' : (count30 > 0 ? 'rgba(2,132,199,0.12)' : 'rgba(0,0,0,0.04)')}; color:${activeFilter === '30j' ? 'white' : (count30 > 0 ? '#0369a1' : 'var(--text-dim)')}; border:1.5px solid ${count30 > 0 ? '#0284c7' : 'rgba(0,0,0,0.1)'}; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:4px;">📅 Dans 1 Mois (${count30})</button>
+                        <button onclick="window.registreFilter='valid'; render();" style="background:${activeFilter === 'valid' ? 'var(--success)' : 'rgba(34,197,94,0.08)'}; color:${activeFilter === 'valid' ? 'white' : 'var(--success)'}; border:1.5px solid rgba(34,197,94,0.25); padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:800; cursor:pointer;">✅ Valides (${countVal})</button>
+                        <button onclick="window.registreFilter='all'; render();" style="background:${activeFilter === 'all' ? 'var(--text-main)' : 'rgba(0,0,0,0.05)'}; color:${activeFilter === 'all' ? 'white' : 'var(--text-dim)'}; border:1.5px solid rgba(0,0,0,0.1); padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:800; cursor:pointer;">📋 Tous (${totalEq})</button>
+
+                        <!-- Actions Spéciales Responsable -->
+                        <button id="btnRegAfficherResultats" onclick="window._afficherRegistresActuels()" style="background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border:none; padding:6px 14px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 6px rgba(124,58,237,0.3);">👁️ Afficher résultats</button>
+                        <button id="btnRegExportPdf" onclick="window.generateRegistreEquipementsPdf()" style="background:linear-gradient(135deg,#0f172a,#1e293b); color:#fff; border:1px solid #334155; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">📄 Rapport PDF Responsable</button>
+                        <button onclick="window.copierAlerteResponsable()" style="background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; border:none; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 6px rgba(245,158,11,0.25);" title="Copier un message prêt à coller dans WhatsApp ou Email pour la responsable">📲 Copier Alerte Responsable</button>
+                        <button onclick="window.creerRegistreEquipementStandard()" style="background:#f0fdf4; color:#059669; border:1.5px solid #10b981; padding:6px 12px; border-radius:10px; font-size:0.62rem; font-weight:900; cursor:pointer;" title="Créer un registre pré-configuré avec colonnes métrologie">+ Registre Qualif ✨</button>
+                    </div>`;
+
                 if (registres.length === 0) {
-                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📓</div><h3>Aucun registre configuré</h3><p style="font-size:0.7rem; opacity:0.6;">Cliquez sur + RÉGLAGES pour créer votre premier carnet.</p></div>`;
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📓</div><h3>Aucun registre configuré</h3><p style="font-size:0.7rem; opacity:0.6;">Cliquez sur <strong>+ Registre Qualif ✨</strong> ci-dessus pour configurer immédiatement votre premier carnet d'équipements.</p></div>`;
                     return;
                 }
-                container.innerHTML = registres.map(reg => {
-                    let entries = rEntries.filter(e => e.regId === reg.id);
+
+                // Filtrage global selon dateStart / dateEnd
+                const dateStart = document.getElementById('dateFilterStart') ? document.getElementById('dateFilterStart').value : '';
+                const dateEnd = document.getElementById('dateFilterEnd') ? document.getElementById('dateFilterEnd').value : '';
+
+                // Filtrer et trier pour chaque registre
+                const currentlyVisibleItems = [];
+
+                const registresHtml = registres.map(reg => {
+                    let entries = (rEntries || []).filter(e => e.regId === reg.id);
 
                     // Filtrage par recherche texte
                     if (query) {
                         const matchesName = (reg.name || "").toLowerCase().includes(query);
-                        const filteredEntries = entries.filter(e => Object.values(e.data || {}).some(v => String(v).toLowerCase().includes(query)));
-
-                        if (!matchesName && filteredEntries.length === 0) return ""; // Rien ne correspond
-                        if (!matchesName) entries = filteredEntries; // On ne garde que les lignes qui matchent
+                        const filteredEntries = entries.filter(e => {
+                            const parsed = window.parseRegistreEntry(e, reg);
+                            return (parsed.name || '').toLowerCase().includes(query) ||
+                                   (parsed.code || '').toLowerCase().includes(query) ||
+                                   (parsed.room || '').toLowerCase().includes(query) ||
+                                   (parsed.statut || '').toLowerCase().includes(query) ||
+                                   Object.values(e.data || {}).some(v => String(v).toLowerCase().includes(query));
+                        });
+                        if (!matchesName && filteredEntries.length === 0) return "";
+                        if (!matchesName) entries = filteredEntries;
                     }
 
-                    // Filtrage par date (dateStart / dateEnd)
-                    const dateStart = document.getElementById('dateFilterStart') ? document.getElementById('dateFilterStart').value : '';
-                    const dateEnd = document.getElementById('dateFilterEnd') ? document.getElementById('dateFilterEnd').value : '';
-
+                    // Filtrage par date de saisie/mise à jour
                     if (dateStart || dateEnd) {
                         entries = entries.filter(e => {
-                            // Chercher des champs date dans la ligne
                             const rowDates = Object.values(e.data || {}).filter(v => typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}$/));
                             if (rowDates.length > 0) {
                                 return rowDates.some(d => (!dateStart || d >= dateStart) && (!dateEnd || d <= dateEnd));
                             } else {
-                                // Si pas de champ date, on filtre sur la date de création/maj
                                 const d = new Date(e.updatedAt || 0).toISOString().split('T')[0];
                                 return (!dateStart || d >= dateStart) && (!dateEnd || d <= dateEnd);
                             }
                         });
-                        if (entries.length === 0) return ""; // Rien ne correspond aux dates
+                        if (entries.length === 0) return "";
                     }
 
+                    // Filtrage selon le filtre actif (expired, 7j, 15j, 30j, valid)
+                    if (activeFilter !== 'all') {
+                        entries = entries.filter(e => {
+                            const p = window.parseRegistreEntry(e, reg);
+                            if (activeFilter === 'expired') return p.isExpired;
+                            if (activeFilter === '7j') return p.is7j;
+                            if (activeFilter === '15j') return p.is15j;
+                            if (activeFilter === '30j') return p.is30j;
+                            if (activeFilter === 'valid') return p.isValid;
+                            return true;
+                        });
+                        if (entries.length === 0) return "";
+                    }
+
+                    // Tri des entrées
                     entries.sort((a, b) => {
+                        const pa = window.parseRegistreEntry(a, reg);
+                        const pb = window.parseRegistreEntry(b, reg);
+
+                        // Si filtre d'échéance actif, tri par date de prochaine échéance (les plus proches en premier)
+                        if (activeFilter === 'expired' || activeFilter === '7j' || activeFilter === '15j' || activeFilter === '30j') {
+                            const da = pa.nextDate || '9999-99-99';
+                            const db = pb.nextDate || '9999-99-99';
+                            return da.localeCompare(db);
+                        }
+
                         if (window.sortBy === 'name') {
-                            // Sort by first column value
-                            const firstCol = (reg.columns && reg.columns[0]) ? (typeof reg.columns[0] === 'string' ? reg.columns[0] : reg.columns[0].name) : null;
-                            const va = firstCol && a.data ? (a.data[firstCol] || '') : '';
-                            const vb = firstCol && b.data ? (b.data[firstCol] || '') : '';
-                            return window.sortOrder === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+                            return (pa.name || '').localeCompare(pb.name || '');
                         } else {
                             return window.sortOrder === 'desc'
                                 ? (b.updatedAt || 0) - (a.updatedAt || 0)
@@ -9404,92 +9497,97 @@ window.setPrepExpiry = function (months) {
                         }
                     });
 
+                    // Stocker dans la liste globale des éléments actuellement visibles
+                    entries.forEach(e => {
+                        currentlyVisibleItems.push(window.parseRegistreEntry(e, reg));
+                    });
+
                     return `
                         <div style="background:#ffffff; border-radius:24px; border:1px solid var(--glass-border); margin-bottom:20px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
-                            <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(0,0,0,0.01);">
+                            <div style="padding:16px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(0,0,0,0.01); border-bottom:1px solid var(--glass-border);">
                                 <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                                    ${isSelectionMode ? `
-                                        <div onclick="window.toggleItemSelection('reg:${reg.id}', 'registres_config', event); render();" 
-                                             style="width:24px; height:24px; border:2px solid ${selectedFiches.has('reg:' + reg.id) ? '#ef4444' : 'rgba(255,255,255,0.2)'}; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#ef4444; font-weight:bold; background:${selectedFiches.has('reg:' + reg.id) ? 'rgba(239, 68, 68, 0.1)' : 'transparent'};">
-                                            ${selectedFiches.has('reg:' + reg.id) ? '✓' : ''}
-                                        </div>
-                                    ` : ''}
                                     <span style="font-size:1.5rem;">${reg.icon || '📓'}</span>
                                     <div>
                                         <div style="font-weight:900; color:var(--text-main); font-size:1rem;">${reg.name}</div>
-                                        <div style="font-size:0.55rem; color:var(--text-dim); font-weight:700;">${entries.length} LIGNES</div>
+                                        <div style="font-size:0.6rem; color:var(--text-dim); font-weight:700;">${entries.length} ÉLÉMENT(S) AFFICHÉ(S)</div>
                                     </div>
                                 </div>
-                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    <button onclick="window.importRegistry('${reg.id}')" style="background:rgba(59, 130, 246, 0.1); color:#3b82f6; border:1px solid #3b82f6; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">📤 IMPORT</button>
-                                    <button onclick="window.exportRegistry('${reg.id}')" style="background:rgba(34, 197, 94, 0.1); color:var(--success); border:1px solid var(--success); padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">📥 EXCEL</button>
-                                    <button onclick="window.openEntryModal('${reg.id}')" style="background:var(--success); color:white; border:none; padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.7rem; cursor:pointer;">+ LIGNE</button>
-                                    <button onclick="window.openRegistreConfig('${reg.id}')" style="background:rgba(255,255,255,0.05); color:var(--text-dim); border:1px solid rgba(255,255,255,0.1); padding:8px 12px; border-radius:10px; font-weight:800; font-size:0.6rem; cursor:pointer;">⚙️</button>
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                    <button onclick="window.importRegistry('${reg.id}')" style="background:rgba(59, 130, 246, 0.1); color:#3b82f6; border:1px solid #3b82f6; padding:6px 12px; border-radius:8px; font-weight:800; font-size:0.62rem; cursor:pointer;">📤 IMPORT</button>
+                                    <button onclick="window.exportRegistry('${reg.id}')" style="background:rgba(34, 197, 94, 0.1); color:var(--success); border:1px solid var(--success); padding:6px 12px; border-radius:8px; font-weight:800; font-size:0.62rem; cursor:pointer;">📥 EXCEL</button>
+                                    <button onclick="window.openEntryModal('${reg.id}')" style="background:var(--success); color:white; border:none; padding:6px 12px; border-radius:8px; font-weight:800; font-size:0.68rem; cursor:pointer;">+ LIGNE</button>
+                                    <button onclick="window.openRegistreConfig('${reg.id}')" style="background:rgba(255,255,255,0.05); color:var(--text-dim); border:1px solid rgba(0,0,0,0.1); padding:6px 10px; border-radius:8px; font-weight:800; font-size:0.62rem; cursor:pointer;">⚙️</button>
                                 </div>
                             </div>
                             
                             <div style="overflow-x:auto; padding: 0 4px 4px;">
-                                <table class="reg-table">
+                                <table class="reg-table" style="width:100%; border-collapse:collapse;">
                                     <thead>
                                         <tr>
-                                            ${isSelectionMode ? '<th style="width:40px;"></th>' : ''}
-                                            ${(reg.columns || []).map(c => `<th>${typeof c === 'string' ? c : c.name}</th>`).join('')}
+                                            <th style="width:36px; text-align:center;">
+                                                <input type="checkbox" onchange="const cbs=this.closest('table').querySelectorAll('.cb-reg-equip'); cbs.forEach(c=>c.checked=this.checked); window.updateRegSelectionUI();" style="transform:scale(1.1); cursor:pointer;" title="Tout sélectionner pour ce carnet">
+                                            </th>
+                                            ${(reg.columns || []).map(c => `<th style="font-size:0.75rem; text-align:left; padding:10px 12px;">${typeof c === 'string' ? c : c.name}</th>`).join('')}
+                                            <th style="font-size:0.72rem; text-align:center; padding:10px 12px;">SIGNAL & STATUT</th>
                                             <th style="width:40px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${entries.length === 0 ? `<tr><td colspan="${(reg.columns || []).length + (isSelectionMode ? 2 : 1)}" style="padding:30px; text-align:center; color:var(--text-dim); font-style:italic; font-size:0.8rem;">Aucune donnée enregistrée</td></tr>` : ''}
-                                        ${entries.map(e => `
-                                            <tr onclick="${isSelectionMode ? `window.toggleItemSelection('${e.id}', 'registres', event); render();` : `window.openEntryModal('${reg.id}', '${e.id}')`}" style="${selectedFiches.has(e.id) ? 'background:rgba(239, 68, 68, 0.07) !important;' : ''}">
-                                                ${isSelectionMode ? `<td style="padding:12px; text-align:center;"><div style="width:20px; height:20px; border-radius:6px; border:2px solid ${selectedFiches.has(e.id) ? '#ef4444' : 'var(--glass-border)'}; display:flex; align-items:center; justify-content:center; color:#ef4444; font-weight:bold;">${selectedFiches.has(e.id) ? '✓' : ''}</div></td>` : ''}
+                                        ${entries.length === 0 ? `<tr><td colspan="${(reg.columns || []).length + 3}" style="padding:30px; text-align:center; color:var(--text-dim); font-style:italic; font-size:0.8rem;">Aucun équipement ne correspond aux filtres actuels.</td></tr>` : ''}
+                                        ${entries.map(e => {
+                                            const parsed = window.parseRegistreEntry(e, reg);
+                                            const isSelected = (typeof selectedFiches !== 'undefined' && selectedFiches && selectedFiches.has(e.id));
+                                            const rowBg = parsed.isExpired
+                                                ? 'background:rgba(239, 68, 68, 0.05); border-left:4px solid #ef4444;'
+                                                : parsed.is7j
+                                                    ? 'background:rgba(249, 115, 22, 0.05); border-left:4px solid #f97316;'
+                                                    : '';
+
+                                            return `
+                                            <tr style="${rowBg} ${isSelected ? 'background:rgba(239, 68, 68, 0.08) !important;' : ''}">
+                                                <td style="text-align:center; padding:10px;">
+                                                    <input type="checkbox" class="cb-reg-equip" value="${e.id}" data-reg="${reg.id}" onchange="window.updateRegSelectionUI()" style="width:18px; height:18px; cursor:pointer; accent-color:#059669;">
+                                                </td>
                                                 ${(reg.columns || []).map(c => {
-                        const colName = typeof c === 'string' ? c : c.name;
-                        let val = e.data ? e.data[colName] : null;
+                                                    const colName = typeof c === 'string' ? c : c.name;
+                                                    let val = e.data ? e.data[colName] : null;
 
-                        if (typeof c === 'object' && c.type === 'checkbox') {
-                            return `<td>${(val === true || val === 'true') ? '<span style="color:var(--success); font-size:1rem;">✅</span>' : '<span style="opacity:0.3; font-size:1rem;">❌</span>'}</td>`;
-                        }
-                        if (typeof c === 'object' && c.type === 'multicheckbox') {
-                            const opts = (c.options || '').split(',').filter(x => x.trim());
-                            const checkedCount = Object.values(val || {}).filter(v => v === true || v === 'true').length;
-                            return `<td><span style="background:rgba(79,70,229,0.08); padding:2px 8px; border-radius:50px; font-size:0.65rem; font-weight:800; color:var(--primary);">${checkedCount}/${opts.length} ✅</span></td>`;
-                        }
-                        if (typeof c === 'object' && c.type === 'date') {
-                            let dateHtml = window.formatStringToDate(val, '<span style="opacity:0.3;">—</span>');
-                            let colorStyle = "";
-                            if (val) {
-                                const isExp = /(périm|peremp|expir|limite|validité|fin|dlc|dluo|libération)/i.test(colName);
-                                if (isExp) {
-                                    const today = new Date();
-                                    today.setHours(0, 0, 0, 0);
-                                    const d = new Date(val);
-                                    const diffDays = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-
-                                    if (diffDays < 0) {
-                                        colorStyle = 'background: rgba(239, 68, 68, 0.1); color: #ef4444; font-weight: 800; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;';
-                                    } else if (diffDays <= 7) { // Orange for <= 7 days (or 3 days depending on setting, using 7 generally)
-                                        colorStyle = 'background: rgba(245, 158, 11, 0.1); color: #d97706; font-weight: 800; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;';
-                                    } else {
-                                        colorStyle = 'background: rgba(34, 197, 94, 0.1); color: #15803d; font-weight: 800; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;';
-                                    }
-                                }
-                            }
-                            if (colorStyle) {
-                                return `<td><span style="${colorStyle}">${dateHtml}</span></td>`;
-                            }
-                            return `<td>${dateHtml}</td>`;
-                        }
-                        return `<td>${val || '<span style="opacity:0.3;">—</span>'}</td>`;
-                    }).join('')}
-                                                <td style="text-align:center; color:var(--primary); opacity:0.5; font-size:0.75rem;">✏️</td>
-                                            </tr>
-                                        `).join('')}
+                                                    if (typeof c === 'object' && c.type === 'checkbox') {
+                                                        return `<td style="padding:10px 12px;">${(val === true || val === 'true') ? '<span style="color:var(--success); font-size:1rem;">✅</span>' : '<span style="opacity:0.3; font-size:1rem;">❌</span>'}</td>`;
+                                                    }
+                                                    if (typeof c === 'object' && c.type === 'multicheckbox') {
+                                                        const opts = (c.options || '').split(',').filter(x => x.trim());
+                                                        const checkedCount = Object.values(val || {}).filter(v => v === true || v === 'true').length;
+                                                        return `<td style="padding:10px 12px;"><span style="background:rgba(79,70,229,0.08); padding:2px 8px; border-radius:50px; font-size:0.65rem; font-weight:800; color:var(--primary);">${checkedCount}/${opts.length} ✅</span></td>`;
+                                                    }
+                                                    if (typeof c === 'object' && c.type === 'date') {
+                                                        let dateHtml = window.formatStringToDate(val, '<span style="opacity:0.3;">—</span>');
+                                                        return `<td style="padding:10px 12px; font-weight:700; font-size:0.75rem;">${dateHtml}</td>`;
+                                                    }
+                                                    return `<td style="padding:10px 12px; font-size:0.75rem;">${val || '<span style="opacity:0.3;">—</span>'}</td>`;
+                                                }).join('')}
+                                                <td style="text-align:center; padding:10px 12px;">
+                                                    ${parsed.badgeHtml || '-'}
+                                                </td>
+                                                <td style="text-align:center; padding:10px; cursor:pointer;" onclick="window.openEntryModal('${reg.id}', '${e.id}')" title="Modifier cette entrée">
+                                                    <span style="color:var(--primary); font-size:0.85rem;">✏️</span>
+                                                </td>
+                                            </tr>`;
+                                        }).join('')}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     `;
                 }).join('');
+
+                window._currentlyVisibleRegEntries = currentlyVisibleItems;
+
+                if (!registresHtml.trim()) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>Aucun équipement trouvé</h3><p style="font-size:0.75rem; opacity:0.7;">Aucune entrée ne correspond aux filtres ou à la recherche actuels.</p><button onclick="window.registreFilter='all'; render();" style="margin-top:12px; background:var(--primary); color:white; border:none; padding:8px 16px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Réinitialiser les filtres</button></div>`;
+                } else {
+                    container.innerHTML = registresHtml;
+                }
             } else if (window.currentTab === 'bulletins') {
                 let filtered = bulletins.filter(b =>
                     (b.designation && b.designation.toLowerCase().includes(query)) ||
@@ -16915,7 +17013,555 @@ window.setPrepExpiry = function (months) {
                     });
                 };
 
-                window.render = function () {
+                // ===== MODULE QUALIFICATIONS & SUIVI DES ÉQUIPEMENTS (ONGLET REGISTRES) =====
+        window.registreFilter = window.registreFilter || 'all';
+
+        // Parseur intelligent pour extraire les données d'équipement et d'échéance de qualification
+        window.parseRegistreEntry = function(e, reg) {
+            const data = (e && e.data) || {};
+            const cols = (reg && reg.columns) || [];
+
+            const findCol = (pattern) => {
+                for (const c of cols) {
+                    const name = typeof c === 'string' ? c : (c.name || '');
+                    if (pattern.test(name)) return name;
+                }
+                return null;
+            };
+
+            const colName = findCol(/(equipement|équipement|appareil|materiel|matériel|instrument|designation|désignation|nom)/i) || (cols[0] ? (typeof cols[0] === 'string' ? cols[0] : cols[0].name) : 'Nom');
+            const colCode = findCol(/(code|ref|réf|id|num|série|serie|inventaire|tag)/i);
+            const colRoom = findCol(/(local|salle|piece|pièce|emplacement|labo|zone)/i);
+            const colType = findCol(/(type|controle|contrôle|operation|opération|qualification|nature)/i);
+            const colNext = findCol(/(prochaine|echeance|échéance|fin|validite|validité|peremption|périm|expir|limite)/i) || findCol(/date/i);
+            const colLast = findCol(/(derniere|dernière|realisation|réalisation|qualif|etalonnage|étalonnage|maintenance)/i);
+            const colStatut = findCol(/(statut|etat|état|resultat|résultat|conform)/i);
+            const colPeriod = findCol(/(period|périod|frequence|fréquence)/i);
+            const colInterv = findCol(/(intervenant|organisme|prestataire|responsable|technicien)/i);
+            const colObs = findCol(/(obs|remarque|action|commentaire|decision|décision)/i);
+
+            const eqName = (colName && data[colName]) ? String(data[colName]) : 'Équipement sans nom';
+            const eqCode = (colCode && data[colCode]) ? String(data[colCode]) : '-';
+            const eqRoom = (colRoom && data[colRoom]) ? String(data[colRoom]) : '-';
+            const eqType = (colType && data[colType]) ? String(data[colType]) : 'Qualification';
+            const nextDate = (colNext && data[colNext]) ? String(data[colNext]) : '';
+            const lastDate = (colLast && data[colLast] && data[colLast] !== nextDate) ? String(data[colLast]) : '';
+            const eqStatut = (colStatut && data[colStatut]) ? String(data[colStatut]) : '';
+            const eqPeriod = (colPeriod && data[colPeriod]) ? String(data[colPeriod]) : '';
+            const eqInterv = (colInterv && data[colInterv]) ? String(data[colInterv]) : '';
+            const eqObs = (colObs && data[colObs]) ? String(data[colObs]) : '';
+
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            let daysLeft = null;
+            let isExpired = false;
+            let is7j = false;
+            let is15j = false;
+            let is30j = false;
+            let isValid = false;
+
+            if (nextDate) {
+                const parts = nextDate.split('-');
+                if (parts.length === 3) {
+                    const expDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                    expDate.setHours(0, 0, 0, 0);
+                    if (!isNaN(expDate.getTime())) {
+                        daysLeft = Math.ceil((expDate - today) / (1000 * 3600 * 24));
+                        isExpired = daysLeft < 0;
+                        is7j = daysLeft >= 0 && daysLeft <= 7;
+                        is15j = daysLeft >= 0 && daysLeft <= 15;
+                        is30j = daysLeft >= 0 && daysLeft <= 30;
+                        isValid = daysLeft > 30;
+                    }
+                }
+            }
+
+            let badgeHtml = '';
+            let signalText = 'Non planifié';
+            let signalColor = '#64748b';
+
+            if (daysLeft === null) {
+                badgeHtml = '<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:6px; font-size:0.7rem; font-weight:700;">⚪ DATE INDÉFINIE</span>';
+            } else if (isExpired) {
+                const retard = Math.abs(daysLeft);
+                badgeHtml = '<span style="background:#fee2e2; color:#b91c1c; border:1px solid #f87171; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:900;">🔴 EXPIRÉ (-' + retard + 'j)</span>';
+                signalText = '🔴 EXPIRÉ (-' + retard + 'j)';
+                signalColor = '#dc2626';
+            } else if (is7j) {
+                badgeHtml = '<span style="background:#ffedd5; color:#c2410c; border:1px solid #fb923c; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:900;">⚠️ URGENT (J-' + daysLeft + ')</span>';
+                signalText = '⚠️ URGENT (J-' + daysLeft + ')';
+                signalColor = '#ea580c';
+            } else if (is15j) {
+                badgeHtml = '<span style="background:#fef9c3; color:#a16207; border:1px solid #facc15; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800;">⏳ DANS ' + daysLeft + 'j (≤15j)</span>';
+                signalText = '⏳ Proche (J-' + daysLeft + ')';
+                signalColor = '#d97706';
+            } else if (is30j) {
+                badgeHtml = '<span style="background:#e0f2fe; color:#0369a1; border:1px solid #7dd3fc; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800;">📅 DANS ' + daysLeft + 'j (≤30j)</span>';
+                signalText = '📅 Dans le mois (' + daysLeft + 'j)';
+                signalColor = '#0284c7';
+            } else {
+                badgeHtml = '<span style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800;">✅ CONFORME (+' + daysLeft + 'j)</span>';
+                signalText = '✅ Conforme (+' + daysLeft + 'j)';
+                signalColor = '#16a34a';
+            }
+
+            return {
+                id: e.id,
+                regId: reg.id,
+                regName: reg.name,
+                name: eqName,
+                code: eqCode,
+                room: eqRoom,
+                type: eqType,
+                nextDate,
+                lastDate,
+                statut: eqStatut,
+                period: eqPeriod,
+                intervenant: eqInterv,
+                obs: eqObs,
+                daysLeft,
+                isExpired,
+                is7j,
+                is15j,
+                is30j,
+                isValid,
+                badgeHtml,
+                signalText,
+                signalColor,
+                rawData: data
+            };
+        };
+
+        // Rendu d'une carte équipement pour la modale mobile
+        window._renderEquipPreviewCard = function(item) {
+            const codeBadge = item.code && item.code !== '-' ? '<span style="background:#1e293b; color:#fff; padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">' + item.code + '</span>' : '';
+            const roomBadge = item.room && item.room !== '-' ? '<span style="background:#f1f5f9; color:#334155; padding:2px 8px; border-radius:6px; font-size:0.7rem; font-weight:700;">📍 ' + item.room + '</span>' : '';
+            const regBadge = '<span style="background:rgba(124,58,237,0.08); color:#7c3aed; padding:2px 8px; border-radius:6px; font-size:0.7rem; font-weight:700;">📓 ' + (item.regName || 'Registre') + '</span>';
+            const lastDateBadge = item.lastDate ? '<span style="background:#f8fafc; color:#64748b; padding:2px 8px; border-radius:6px; font-size:0.7rem;">Dernière: ' + item.lastDate + '</span>' : '';
+            const nextDateBadge = item.nextDate ? '<span style="background:#fef2f2; color:#991b1b; padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">Échéance: ' + item.nextDate + '</span>' : '';
+
+            return '<div style="border-bottom:1px solid #e5e7eb; padding:14px 16px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">' +
+                    '<div style="font-weight:900; font-size:1rem; color:#0f172a;">' + item.name + '</div>' +
+                    (item.badgeHtml || '') +
+                '</div>' +
+                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
+                    codeBadge + roomBadge + regBadge +
+                '</div>' +
+                '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:0.75rem; color:#475569;">' +
+                    lastDateBadge + nextDateBadge +
+                '</div>' +
+                (item.obs ? '<div style="margin-top:6px; font-size:0.72rem; color:#64748b; background:rgba(0,0,0,0.02); padding:4px 8px; border-radius:6px;">📝 ' + item.obs + '</div>' : '') +
+            '</div>';
+        };
+
+        // Afficher les équipements filtrés ou sélectionnés dans la modale mobile
+        window._afficherRegistresActuels = function() {
+            // Priorité 1 : Éléments sélectionnés avec les cases à cocher (.cb-reg-equip:checked)
+            const checkedBoxes = document.querySelectorAll('.cb-reg-equip:checked');
+            const allItems = window._currentlyVisibleRegEntries || [];
+
+            if (checkedBoxes.length > 0) {
+                const checkedIds = new Set(Array.from(checkedBoxes).map(cb => String(cb.value)));
+                const selected = allItems.filter(item => checkedIds.has(String(item.id)));
+                if (selected.length > 0) {
+                    if (typeof window.showPreviewModal === 'function') {
+                        window.showPreviewModal('\u2611\ufe0f Équipements Sélectionnés', selected, window._renderEquipPreviewCard, {
+                            subtitle: selected.length + ' équipement(s) sélectionné(s)',
+                            emptyMsg: 'Aucun équipement sélectionné.'
+                        });
+                    }
+                    return;
+                }
+            }
+
+            // Priorité 2 : Éléments visibles selon le filtre actif
+            const items = allItems;
+            const filter = window.registreFilter || 'all';
+            let title = '🔬 Qualifications Équipements';
+            if (filter === 'expired') title = '🔴 Équipements Expirés';
+            else if (filter === '7j') title = '⚠️ Équipements Expirant dans ≤ 7 Jours';
+            else if (filter === '15j') title = '⏳ Équipements Expirant dans ≤ 15 Jours';
+            else if (filter === '30j') title = '📅 Équipements Expirant dans ≤ 1 Mois';
+            else if (filter === 'valid') title = '✅ Équipements Conformes & Valides';
+            else title = '📋 Parc Équipements du Laboratoire';
+
+            if (typeof window.showPreviewModal === 'function') {
+                window.showPreviewModal(title, items, window._renderEquipPreviewCard, {
+                    subtitle: items.length + ' équipement(s)',
+                    emptyMsg: 'Aucun équipement ne correspond au filtre actif.'
+                });
+            }
+        };
+
+        // Génération du Rapport PDF officiel pour la responsable de laboratoire
+        window.generateRegistreEquipementsPdf = function() {
+            const checkedBoxes = document.querySelectorAll('.cb-reg-equip:checked');
+            const allItems = window._currentlyVisibleRegEntries || [];
+            let list = allItems;
+
+            if (checkedBoxes.length > 0) {
+                const checkedIds = new Set(Array.from(checkedBoxes).map(cb => String(cb.value)));
+                const selected = allItems.filter(item => checkedIds.has(String(item.id)));
+                if (selected.length > 0) {
+                    list = selected;
+                }
+            }
+
+            if (list.length === 0) {
+                window.showToast("Aucun équipement à exporter dans ce filtre.", "warning", 3000);
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf || {};
+                if (!jsPDF) {
+                    window.showToast("Erreur: Bibliothèque jsPDF non chargée.", "error", 4000);
+                    return;
+                }
+
+                const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                const filter = window.registreFilter || 'all';
+                const checkedCount = checkedBoxes.length;
+                const dateNow = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                // ── TITRE DYNAMIQUE SELON LA SÉLECTION / FILTRE ──────────────
+                let pdfTitle = 'États de qualification des équipements';
+                if (checkedCount > 0 && list !== (window._currentlyVisibleRegEntries || [])) {
+                    pdfTitle = 'Équipements sélectionnés – État des qualifications';
+                } else if (filter === 'expired') {
+                    pdfTitle = 'Équipements expirés – Qualifications dépassées';
+                } else if (filter === '7j') {
+                    pdfTitle = 'Équipements urgents – Qualification ≤ 7 jours';
+                } else if (filter === '15j') {
+                    pdfTitle = 'Équipements à qualifier – Échéance ≤ 15 jours';
+                } else if (filter === '30j') {
+                    pdfTitle = 'Équipements à qualifier dans le mois';
+                } else if (filter === 'valid') {
+                    pdfTitle = 'Équipements conformes – Qualifications valides';
+                }
+
+                // ── EN-TÊTE ÉPURÉ ET SIMPLE ───────────────────────────────────
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(13);
+                doc.setTextColor(15, 23, 42);
+                doc.text("Suivi l'état de Qualifications des Équipements", 14, 10);
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(55, 65, 81);
+                doc.text(pdfTitle, 14, 17);
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                doc.setTextColor(100, 116, 139);
+                doc.text("Date d'édition : " + dateNow + "   |   Total : " + list.length + " équipement(s)", 14, 23);
+
+                // ── FORMATAGE DATE ISO → JJ/MM/AAAA ──────────────────────────
+                const fmtDate = (d) => {
+                    if (!d || d === '-') return '-';
+                    const parts = String(d).split('-');
+                    if (parts.length === 3 && parts[0].length === 4) return parts[2] + '/' + parts[1] + '/' + parts[0];
+                    return d;
+                };
+
+                // ── FORMATAGE DURÉE : mois si >= 30j, sinon jours ─────────────
+                const fmtDuree = (days) => {
+                    const abs = Math.abs(days);
+                    if (abs >= 30) {
+                        const mois = Math.round(abs / 30.44);
+                        return mois + (mois > 1 ? ' mois' : ' mois');
+                    }
+                    return abs + ' j';
+                };
+
+                // ── TABLEAU AUTOTABLE ÉPURÉ ───────────────────────────────────
+                // Colonne 'État' dynamique selon l'échéance/sélection
+                const tableBody = list.map(item => {
+                    let etatText = '';
+
+                    if (item.daysLeft !== null && item.daysLeft !== undefined) {
+                        if (item.daysLeft < 0) {
+                            etatText = "Expiré (-" + fmtDuree(item.daysLeft) + ")";
+                        } else if (item.daysLeft === 0) {
+                            etatText = "Expire aujourd'hui";
+                        } else {
+                            etatText = "Expire dans " + fmtDuree(item.daysLeft);
+                        }
+                    } else {
+                        etatText = item.statut || '-';
+                    }
+
+                    return [
+                        item.code || '-',
+                        item.name || '-',
+                        item.room || '-',
+                        fmtDate(item.nextDate),
+                        etatText,
+                        item.obs || '-'
+                    ];
+                });
+
+                if (doc.autoTable) {
+                    doc.autoTable({
+                        startY: 28,
+                        margin: { left: 10, right: 10 },
+                        head: [['Code', 'Désignation Matériel', 'Salle / Local', 'Prochaine Qualification', 'État', 'Observations']],
+                        body: tableBody,
+                        theme: 'grid',
+                        styles: { fontSize: 7.5, cellPadding: 2.2, font: 'helvetica', textColor: [15, 23, 42] },
+                        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+                        columnStyles: {
+                            0: { cellWidth: 28, fontStyle: 'bold' },
+                            1: { cellWidth: 85, fontStyle: 'bold' },
+                            2: { cellWidth: 35 },
+                            3: { cellWidth: 32, halign: 'center', fontStyle: 'bold' },
+                            4: { cellWidth: 40, halign: 'center' },
+                            5: { cellWidth: 'auto' }
+                        },
+                        didParseCell: function(data) {
+                            if (data.section === 'body') {
+                                // Lire l'état de la ligne (colonne 4) pour colorier aussi les Observations
+                                const etatRaw = String(
+                                    data.row.cells && data.row.cells[4] ? data.row.cells[4].raw || '' : ''
+                                ).toLowerCase();
+
+                                const isExpire   = etatRaw.includes('expiré');
+                                const isAujourdhui = etatRaw.includes("aujourd'hui");
+                                const isUrgent   = etatRaw.includes('expire dans') &&
+                                                   (etatRaw.includes(' j)') || etatRaw.match(/dans \d+ j/));
+                                const isValide   = etatRaw.includes('conforme') || etatRaw.includes('valide');
+
+                                // Colonne État (index 4)
+                                if (data.column.index === 4) {
+                                    if (isExpire) {
+                                        data.cell.styles.textColor = [185, 28, 28];
+                                        data.cell.styles.fontStyle = 'bold';
+                                        data.cell.styles.fillColor = [254, 242, 242];
+                                    } else if (isAujourdhui) {
+                                        data.cell.styles.textColor = [185, 28, 28];
+                                        data.cell.styles.fontStyle = 'bold';
+                                        data.cell.styles.fillColor = [255, 237, 213];
+                                    } else if (isUrgent) {
+                                        data.cell.styles.textColor = [194, 65, 12];
+                                        data.cell.styles.fontStyle = 'bold';
+                                    } else if (isValide) {
+                                        data.cell.styles.textColor = [21, 128, 61];
+                                    }
+                                }
+
+                                // Colonne Observations (index 5) : suit la couleur de l'état
+                                if (data.column.index === 5) {
+                                    if (isExpire) {
+                                        data.cell.styles.textColor = [185, 28, 28];
+                                        data.cell.styles.fillColor = [254, 242, 242];
+                                    } else if (isAujourdhui) {
+                                        data.cell.styles.textColor = [185, 28, 28];
+                                        data.cell.styles.fillColor = [255, 237, 213];
+                                    } else if (isUrgent) {
+                                        data.cell.styles.textColor = [194, 65, 12];
+                                    } else if (isValide) {
+                                        data.cell.styles.textColor = [21, 128, 61];
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // ── MENTION EN BAS DU DOCUMENT ────────────────────────────────
+                let finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 180) + 8;
+                if (finalY > 195) {
+                    doc.addPage();
+                    finalY = 15;
+                }
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                doc.setTextColor(30, 41, 59);
+                doc.text("Fait par : CHSO", 14, finalY);
+
+                const fileName = "Qualifications_Equipements_" + (filter || 'all') + "_" + new Date().toISOString().split('T')[0] + ".pdf";
+                doc.save(fileName);
+                window.showToast("Rapport PDF généré avec succès ! 📄", "success", 4000);
+            } catch (err) {
+                console.error("PDF Export Error:", err);
+                window.showToast("Erreur lors de la création du PDF: " + err.message, "error", 5000);
+            }
+        };
+
+        window.copierAlerteResponsable = function() {
+            const checkedBoxes = document.querySelectorAll('.cb-reg-equip:checked');
+            const allItems = window._currentlyVisibleRegEntries || [];
+            let list = allItems;
+            let isSelection = false;
+
+            if (checkedBoxes.length > 0) {
+                const checkedIds = new Set(Array.from(checkedBoxes).map(cb => String(cb.value)));
+                const selected = allItems.filter(item => checkedIds.has(String(item.id)));
+                if (selected.length > 0) {
+                    list = selected;
+                    isSelection = true;
+                }
+            }
+
+            if (list.length === 0) {
+                window.showToast("Aucun équipement à copier.", "warning", 3000);
+                return;
+            }
+
+            const myUserName = localStorage.getItem('microbio_current_user') || 'Technicien';
+            const dateStr = new Date().toLocaleDateString('fr-FR');
+            const filter = window.registreFilter || 'all';
+
+            let msg = "🔬 *SUIVI DES QUALIFICATIONS ÉQUIPEMENTS LABO* 🔬\n";
+            msg += "📅 Date : " + dateStr + " | Opérateur : " + myUserName + "\n";
+            if (isSelection) {
+                msg += "📌 Sélection de " + list.length + " équipement(s)\n\n";
+            } else {
+                msg += "🎯 Filtre : " + (filter === '7j' ? 'Échéance <= 7 jours (Urgent)' : filter === 'expired' ? 'Équipements Expirés' : filter === '15j' ? 'Échéance <= 15 jours' : filter === '30j' ? 'Échéance dans le mois' : 'Tous les équipements') + " (" + list.length + " équipement(s))\n\n";
+            }
+
+            msg += "⚠️ *DÉTAIL DES ÉQUIPEMENTS CONCERNÉS :*\n";
+            list.slice(0, 15).forEach((item, idx) => {
+                const signal = item.isExpired ? '🔴 EXPIRÉ' : item.is7j ? '⚠️ URGENT' : item.is15j ? '⏳ PROCHE' : '✅ CONFORME';
+                const countTxt = item.daysLeft !== null ? (item.daysLeft < 0 ? 'retard de ' + Math.abs(item.daysLeft) + 'j' : 'dans ' + item.daysLeft + 'j') : 'date indéfinie';
+                msg += (idx + 1) + ". *" + item.name + "* (" + (item.code || 'Sans code') + ")\n";
+                msg += "   • Salle : " + item.room + "\n";
+                msg += "   • Prochaine échéance : " + (item.nextDate || 'Non renseignée') + " (" + countTxt + ")\n";
+                msg += "   • Statut : " + signal + "\n";
+                if (item.obs) msg += "   • Action : " + item.obs + "\n";
+                msg += "\n";
+            });
+
+            if (list.length > 15) {
+                msg += "... et " + (list.length - 15) + " autre(s) équipement(s) sur le rapport complet.\n\n";
+            }
+
+            msg += "📄 Le rapport PDF officiel détaillé a été généré pour validation.";
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(msg).then(() => {
+                    window.showToast("Message copié ! Vous pouvez le coller sur WhatsApp ou Email pour la responsable 📲", "success", 5000);
+                }).catch(() => {
+                    window.showToast("Impossible de copier automatiquement.", "error", 3000);
+                });
+            } else {
+                window.showToast("Presse-papier non disponible sur ce navigateur.", "warning", 3000);
+            }
+        };
+
+        // Créer en un clic le carnet de qualification d'équipements avec colonnes pré-configurées
+        window.creerRegistreEquipementStandard = async function() {
+            if (!confirm("Voulez-vous créer le registre standard '🔬 Qualifications & Métrologie Équipements' avec colonnes pré-configurées et exemples ?")) return;
+
+            const cols = [
+                { name: 'Équipement', type: 'text' },
+                { name: 'Code Interne', type: 'text' },
+                { name: 'Localisation', type: 'text' },
+                { name: 'Type de Contrôle', type: 'text' },
+                { name: 'Dernière Qualification', type: 'date' },
+                { name: 'Prochaine Échéance', type: 'date' },
+                { name: 'Périodicité', type: 'text' },
+                { name: 'Statut', type: 'text' },
+                { name: 'Intervenant', type: 'text' },
+                { name: 'Actions / Observations', type: 'text' }
+            ];
+
+            const regData = {
+                name: '🔬 Qualifications & Métrologie Équipements',
+                icon: '🔬',
+                columns: cols,
+                updatedAt: Date.now()
+            };
+
+            try {
+                const regDoc = await window.db.collection(REGISTRES_COL).add(regData);
+                const regId = regDoc.id;
+
+                const today = new Date();
+                const pad = (n) => String(n).padStart(2, '0');
+                const fmt = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+
+                // Exemples réalistes : 1 urgent (5j), 1 expiré (-4j), 1 valide (180j)
+                const dUrgent = new Date(today.getTime() + 5 * 86400000);
+                const dExpired = new Date(today.getTime() - 4 * 86400000);
+                const dValid = new Date(today.getTime() + 180 * 86400000);
+                const dLast = new Date(today.getTime() - 360 * 86400000);
+
+                const sampleEntries = [
+                    {
+                        regId: regId,
+                        data: {
+                            'Équipement': 'Étuve Bactériologique 37°C',
+                            'Code Interne': 'EQ-ETU-01',
+                            'Localisation': 'Salle Ensemencement',
+                            'Type de Contrôle': 'Qualification Périodique (QP)',
+                            'Dernière Qualification': fmt(dLast),
+                            'Prochaine Échéance': fmt(dUrgent),
+                            'Périodicité': '1 an',
+                            'Statut': "À qualifier d'urgence",
+                            'Intervenant': 'Métrologue externe',
+                            'Actions / Observations': 'Contacter prestataire pour étalonnage des sondes PT100'
+                        },
+                        updatedAt: Date.now()
+                    },
+                    {
+                        regId: regId,
+                        data: {
+                            'Équipement': 'Autoclave Vertical Principal',
+                            'Code Interne': 'EQ-AUT-01',
+                            'Localisation': 'Laverie / Préparation',
+                            'Type de Contrôle': 'Vérification Manomètre & Soupape',
+                            'Dernière Qualification': fmt(dLast),
+                            'Prochaine Échéance': fmt(dExpired),
+                            'Périodicité': '1 an',
+                            'Statut': 'Expiré - Non conforme',
+                            'Intervenant': 'Service Maintenance',
+                            'Actions / Observations': "Dépassement de date. Bloquer l'accès jusqu'au contrôle technique"
+                        },
+                        updatedAt: Date.now()
+                    },
+                    {
+                        regId: regId,
+                        data: {
+                            'Équipement': 'Balance Analytique 0.1 mg',
+                            'Code Interne': 'EQ-BAL-02',
+                            'Localisation': 'Salle de Pesée',
+                            'Type de Contrôle': 'Étalonnage Masses Étalons',
+                            'Dernière Qualification': fmt(today),
+                            'Prochaine Échéance': fmt(dValid),
+                            'Périodicité': '6 mois',
+                            'Statut': 'Conforme',
+                            'Intervenant': 'Interne',
+                            'Actions / Observations': 'Contrôle journalier avec masse F1 conforme'
+                        },
+                        updatedAt: Date.now()
+                    }
+                ];
+
+                for (const item of sampleEntries) {
+                    await window.db.collection(R_ENTRIES_COL).add(item);
+                }
+
+                window.showToast("Registre 'Qualifications & Métrologie Équipements' créé avec succès ! ✨", "success", 4000);
+            } catch (err) {
+                console.error("Create standard reg error:", err);
+                window.showToast("Erreur lors de la création : " + err.message, "error", 4000);
+            }
+        };
+
+        window.updateRegSelectionUI = function() {
+            const count = document.querySelectorAll('.cb-reg-equip:checked').length;
+            const btnAffiche = document.getElementById('btnRegAfficherResultats');
+            if (btnAffiche) {
+                btnAffiche.innerHTML = count > 0 ? '👁️ Afficher sélection (' + count + ')' : '👁️ Afficher résultats';
+            }
+            const btnPdf = document.getElementById('btnRegExportPdf');
+            if (btnPdf) {
+                btnPdf.innerHTML = count > 0 ? '📄 PDF Sélection (' + count + ')' : '📄 Rapport PDF Responsable';
+            }
+        };
+
+        window.render = function () {
                     const viewExcel = document.getElementById('view-excel');
                     if (window.currentTab === 'excel') {
                         document.getElementById('fiches-list').style.display = 'none';

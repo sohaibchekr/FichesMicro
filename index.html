@@ -7820,8 +7820,7 @@ window.setPrepExpiry = function (months) {
                 const active = document.activeElement;
                 const isEditingTache = active && (
                     (active.id && active.id.startsWith('tache_texte_')) ||
-                    (active.id && active.id.startsWith('tache_debut_')) ||
-                    (active.id && active.id.startsWith('tache_fin_')) ||
+                    active.id === 'multiTachesInput' ||
                     (active.id && active.id.startsWith('tache_date_'))
                 );
                 if (!isEditingTache) {
@@ -17839,81 +17838,144 @@ window.setPrepExpiry = function (months) {
 
                         window._tacheSaveTimers = window._tacheSaveTimers || {};
                         window.saveTache = function (id) {
-                            // Lire les valeurs immédiatement depuis le DOM
                             const texteEl = document.getElementById('tache_texte_' + id);
-                            const debutEl = document.getElementById('tache_debut_' + id);
-                            const finEl = document.getElementById('tache_fin_' + id);
                             const dateEl = document.getElementById('tache_date_' + id);
                             if (!texteEl) return;
 
-                            // Mettre à jour le cache local immédiatement (pas de re-render)
                             const t = window.tachesJournalieres.find(x => x.id === id);
                             if (t) {
                                 t.texte = texteEl.value;
-                                if (debutEl) t.debut = debutEl.value;
-                                if (finEl) t.fin = finEl.value;
                                 if (dateEl) t.date = dateEl.value;
                             }
 
-                            // Debounce : n'envoyer à Firebase qu'après 1.2 secondes d'inactivité
                             clearTimeout(window._tacheSaveTimers[id]);
                             window._tacheSaveTimers[id] = setTimeout(function () {
                                 const rec = window.tachesJournalieres.find(x => x.id === id);
                                 if (rec) {
-                                    window.db.collection('taches').doc(id).set({ ...rec });
+                                    window.db.collection('taches').doc(id).set({
+                                        texte: rec.texte || '',
+                                        date: rec.date || todayDate
+                                    });
                                 }
-                            }, 1200);
+                            }, 800);
                         };
 
-                        // Sauvegarde immédiate pour les champs date/heure avec indicateur visuel
                         window.saveTacheField = function (id, fieldEl) {
                             const texteEl = document.getElementById('tache_texte_' + id);
-                            const debutEl = document.getElementById('tache_debut_' + id);
-                            const finEl = document.getElementById('tache_fin_' + id);
                             const dateEl = document.getElementById('tache_date_' + id);
 
                             const t = window.tachesJournalieres.find(x => x.id === id);
                             if (t) {
                                 if (texteEl) t.texte = texteEl.value;
-                                if (debutEl) t.debut = debutEl.value;
-                                if (finEl) t.fin = finEl.value;
                                 if (dateEl) t.date = dateEl.value;
                             }
 
-                            // Annuler le debounce texte si actif
                             clearTimeout(window._tacheSaveTimers[id]);
 
                             const rec = window.tachesJournalieres.find(x => x.id === id);
                             if (rec) {
-                                window.db.collection('taches').doc(id).set({ ...rec })
-                                    .then(() => {
-                                        // Flash vert sur le champ modifié
-                                        if (fieldEl) {
-                                            const orig = fieldEl.style.borderColor;
-                                            fieldEl.style.borderColor = '#059669';
-                                            fieldEl.style.boxShadow = '0 0 0 2px rgba(5,150,105,0.25)';
-                                            setTimeout(() => {
-                                                fieldEl.style.borderColor = orig || '';
-                                                fieldEl.style.boxShadow = '';
-                                            }, 1500);
-                                        }
-                                        if (window.showToast) window.showToast('✅ Date/heure sauvegardée !', 'success', 2000);
-                                    })
-                                    .catch(e => { if (window.showToast) window.showToast('Erreur: ' + e.message, 'error'); });
+                                window.db.collection('taches').doc(id).set({
+                                    texte: rec.texte || '',
+                                    date: rec.date || todayDate
+                                }).then(() => {
+                                    if (fieldEl) {
+                                        const orig = fieldEl.style.borderColor;
+                                        fieldEl.style.borderColor = '#059669';
+                                        fieldEl.style.boxShadow = '0 0 0 2px rgba(5,150,105,0.25)';
+                                        setTimeout(() => {
+                                            fieldEl.style.borderColor = orig || '';
+                                            fieldEl.style.boxShadow = '';
+                                        }, 1500);
+                                    }
+                                    if (window.showToast) window.showToast('✅ Date enregistrée !', 'success', 2000);
+                                }).catch(e => { if (window.showToast) window.showToast('Erreur: ' + e.message, 'error'); });
                             }
                         };
-                        window.addTache = function (texte = '') {
-                            const now = new Date();
-                            const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+                        window.addTache = function (texte = '', targetDate = null) {
+                            const d = targetDate || todayDate;
                             const id = Date.now().toString() + Math.random().toString().slice(2, 5);
-                            window.db.collection('taches').doc(id).set({ texte: texte, debut: time, fin: '', date: todayDate });
+                            window.db.collection('taches').doc(id).set({ texte: texte, date: d });
+                            return id;
+                        };
+
+                        // ── SAISIE MULTI-TÂCHES (1 ligne = 1 tâche) ───────────────────
+                        window.addMultiTaches = function () {
+                            const input = document.getElementById('multiTachesInput');
+                            if (!input) return;
+                            const raw = input.value.trim();
+                            if (!raw) {
+                                if (window.showToast) window.showToast("Veuillez saisir au moins une tâche.", "warning", 2500);
+                                return;
+                            }
+                            const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                            if (lines.length === 0) return;
+
+                            const batch = window.db.batch();
+                            lines.forEach((line, idx) => {
+                                const clean = line.replace(/^[-*•\d+.)\]]+\s*/, '').trim() || line;
+                                const id = (Date.now() + idx).toString() + Math.random().toString().slice(2, 5);
+                                const ref = window.db.collection('taches').doc(id);
+                                batch.set(ref, { texte: clean, date: todayDate });
+                            });
+
+                            batch.commit().then(() => {
+                                input.value = '';
+                                if (window.showToast) window.showToast(`✅ ${lines.length} tâche(s) ajoutée(s) avec succès !`, 'success', 3000);
+                            }).catch(err => {
+                                console.error("addMultiTaches error:", err);
+                                if (window.showToast) window.showToast("Erreur : " + err.message, 'error', 4000);
+                            });
+                        };
+
+                        // Saut de ligne dans un champ tâche = nouvelle tâche créée instantanément
+                        window.handleTacheKeydown = function (e, id) {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                window.saveTache(id);
+                                const cur = window.tachesJournalieres.find(x => x.id === id);
+                                const tDate = cur ? cur.date : todayDate;
+                                const newId = window.addTache('', tDate);
+                                setTimeout(() => {
+                                    const nextEl = document.getElementById('tache_texte_' + newId);
+                                    if (nextEl) nextEl.focus();
+                                }, 150);
+                            }
+                        };
+
+                        // Copier-coller de plusieurs lignes dans un champ = création automatique de plusieurs tâches
+                        window.handleTachePaste = function (e, id) {
+                            const text = (e.clipboardData || window.clipboardData)?.getData('text');
+                            if (text && text.includes('\n')) {
+                                e.preventDefault();
+                                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                                if (lines.length <= 1) return;
+
+                                const cur = window.tachesJournalieres.find(x => x.id === id);
+                                const tDate = cur ? cur.date : todayDate;
+
+                                const firstLine = lines[0].replace(/^[-*•\d+.)\]]+\s*/, '').trim() || lines[0];
+                                const inputEl = document.getElementById('tache_texte_' + id);
+                                if (inputEl) inputEl.value = firstLine;
+                                window.saveTache(id);
+
+                                const batch = window.db.batch();
+                                lines.slice(1).forEach((line, idx) => {
+                                    const clean = line.replace(/^[-*•\d+.)\]]+\s*/, '').trim() || line;
+                                    const newId = (Date.now() + idx + 1).toString() + Math.random().toString().slice(2, 5);
+                                    const ref = window.db.collection('taches').doc(newId);
+                                    batch.set(ref, { texte: clean, date: tDate });
+                                });
+                                batch.commit().then(() => {
+                                    if (window.showToast) window.showToast(`✅ ${lines.length} tâches créées depuis le copier-coller !`, 'success', 3000);
+                                });
+                            }
                         };
 
                         // ── ENREGISTREMENT AUTOMATIQUE DE TÂCHE ─────────────────────
                         window.logTacheAuto = function(type, details) {
                             try {
                                 const now = new Date();
-                                const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
                                 const todayStr = now.toISOString().split('T')[0];
                                 const id = 'auto_' + Date.now().toString() + Math.random().toString().slice(2, 5);
                                 let texte = '';
@@ -17930,14 +17992,16 @@ window.setPrepExpiry = function (months) {
                                 } else {
                                     texte = details.texte || type;
                                 }
-                                window.db.collection('taches').doc(id).set({ texte: texte, debut: time, fin: time, date: todayStr, auto: true });
+                                window.db.collection('taches').doc(id).set({ texte: texte, date: todayStr, auto: true });
                             } catch(e) { console.warn('logTacheAuto error:', e); }
                         };
+
                         window.deleteTache = function (id) {
                             if (confirm("Supprimer cette tâche ?")) {
                                 window.db.collection('taches').doc(id).delete();
                             }
                         };
+
                         window.addShortcutFromInput = function () {
                             const v = document.getElementById('new_shortcut_text').value.trim();
                             if (v) {
@@ -17946,6 +18010,7 @@ window.setPrepExpiry = function (months) {
                                 window.render();
                             }
                         };
+
                         window.removeShortcut = function (idx) {
                             if (confirm('Supprimer ce raccourci ?')) {
                                 window.tacheShortcuts.splice(idx, 1);
@@ -17953,12 +18018,13 @@ window.setPrepExpiry = function (months) {
                                 window.render();
                             }
                         };
+
                         window.copierRapportTaches = function() {
                             try {
                                 const allChecked = [];
                                 document.querySelectorAll('.tache-chk').forEach(chk => { if (chk.checked) allChecked.push(chk.dataset.id); });
                                 const fq = (window.tacheFilterQuery || '').toLowerCase().trim();
-                                let candidate = [...window.tachesJournalieres].sort((a, b) => (a.date + a.debut).localeCompare(b.date + b.debut));
+                                let candidate = [...window.tachesJournalieres].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (a.id || '').localeCompare(b.id || ''));
                                 let toCopy = allChecked.length > 0
                                     ? candidate.filter(t => allChecked.includes(t.id))
                                     : candidate.filter(t => {
@@ -17977,10 +18043,7 @@ window.setPrepExpiry = function (months) {
                                 let msg = "Bonsoir,\n\nVeuillez trouver ci-dessous le rapport des tâches effectuées au cours de la journée :\n\n";
 
                                 toCopy.forEach((t, idx) => {
-                                    const timeStr = t.debut ? t.debut + (t.fin && t.fin !== t.debut ? " – " + t.fin : "") : "";
-                                    msg += (idx + 1) + ". " + (t.texte || "—");
-                                    if (timeStr) msg += "  (" + timeStr + ")";
-                                    msg += "\n";
+                                    msg += (idx + 1) + ". " + (t.texte || "—") + "\n";
                                 });
 
                                 msg += "\nCordialement,\nCHSO";
@@ -17996,6 +18059,7 @@ window.setPrepExpiry = function (months) {
                                 }
                             } catch(e) { console.error(e); }
                         };
+
                         window._fallbackCopy = function(text) {
                             const ta = document.createElement('textarea');
                             ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
@@ -18044,7 +18108,7 @@ window.setPrepExpiry = function (months) {
                                 const allChecked = [];
                                 document.querySelectorAll('.tache-chk').forEach(chk => { if (chk.checked) allChecked.push(chk.dataset.id); });
                                 const fq = (window.tacheFilterQuery || '').toLowerCase().trim();
-                                let candidate = [...window.tachesJournalieres].sort((a, b) => (a.date + a.debut).localeCompare(b.date + b.debut));
+                                let candidate = [...window.tachesJournalieres].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (a.id || '').localeCompare(b.id || ''));
                                 let toPrint = allChecked.length > 0 ? candidate.filter(t => allChecked.includes(t.id)) : candidate.filter(t => !fq || (t.texte && t.texte.toLowerCase().includes(fq)) || (t.date && t.date.includes(fq)));
                                 if (toPrint.length === 0) { if (window.showToast) window.showToast("Aucune tâche à imprimer.", "info"); return; }
 
@@ -18052,8 +18116,8 @@ window.setPrepExpiry = function (months) {
                                 doc.setFontSize(16);
                                 doc.text("Tâches journalières du " + printDate, 105, 22, null, null, "center");
                                 doc.setLineWidth(0.8); doc.line(10, 26, 200, 26);
-                                const headers = ["Date", "Heure", "Description de la tâche"];
-                                const colX = [12, 42, 80]; const colW = [28, 36, 110];
+                                const headers = ["Date", "Description de la tâche"];
+                                const colX = [14, 50]; const colW = [30, 140];
                                 let y = 35;
                                 doc.setFontSize(10); doc.setFillColor(220, 220, 220); doc.rect(10, y - 5, 190, 8, 'F');
                                 doc.setFont("helvetica", "bold");
@@ -18063,11 +18127,9 @@ window.setPrepExpiry = function (months) {
                                 toPrint.forEach((t) => {
                                     if (y > 275) { doc.addPage(); y = 20; }
                                     const dateFmt = t.date ? t.date.split('-').reverse().join('/') : '-';
-                                    const timeStr = `${t.debut || '-'} à ${t.fin || '-'}`;
-                                    const txtLines = doc.splitTextToSize(t.texte || '-', colW[2]);
+                                    const txtLines = doc.splitTextToSize(t.texte || '-', colW[1]);
                                     doc.text(dateFmt, colX[0], y);
-                                    doc.text(timeStr, colX[1], y);
-                                    doc.text(txtLines, colX[2], y);
+                                    doc.text(txtLines, colX[1], y);
                                     y += Math.max(8, txtLines.length * 5 + 3);
                                 });
                                 const fname = "Taches_Journalieres_" + printDate.replace(/\//g, '-') + ".pdf";
@@ -18080,7 +18142,7 @@ window.setPrepExpiry = function (months) {
                         // Filtre du ruban de dates
                         const _tdStart = (document.getElementById('dateFilterStart') || {}).value || '';
                         const _tdEnd = (document.getElementById('dateFilterEnd') || {}).value || '';
-                        let sorted = [...window.tachesJournalieres].sort((a, b) => (b.date + b.debut).localeCompare(a.date + a.debut));
+                        let sorted = [...window.tachesJournalieres].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (a.id || '').localeCompare(b.id || ''));
                         let filtered = sorted.filter(t => {
                             if (query && !(t.texte && t.texte.toLowerCase().includes(query)) && !(t.date && t.date.includes(query))) return false;
                             if (_tdStart && (t.date || '') < _tdStart) return false;
@@ -18110,7 +18172,21 @@ window.setPrepExpiry = function (months) {
                                 <button onclick="window.addTache()" style="background:#059669; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.8rem; flex:1; min-width:80px;">+ Nouvelle</button>
                                 <button onclick="document.querySelectorAll('.tache-chk').forEach(c=>c.checked=true)" style="background:#555; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.8rem; flex:1; min-width:80px;">✅ Tous</button>
                                 <button onclick="window.copierRapportTaches()" style="background:linear-gradient(135deg,#059669,#047857); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.72rem; font-weight:800; display:flex; align-items:center; gap:5px;">📋 Copier rapport</button>
-                                    <button onclick="window.printTaches()" style="background:#111; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.8rem; flex:1; min-width:80px;">📄 Imprimer</button>
+                                <button onclick="window.printTaches()" style="background:#111; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.8rem; flex:1; min-width:80px;">📄 Imprimer</button>
+                            </div>
+                        </div>
+
+                        <!-- ✍️ SAISIE RAPIDE MULTI-TÂCHES (Saut de ligne = Nouvelle tâche) -->
+                        <div style="background:#f0fdf4; border:1.5px solid #10b981; border-radius:12px; padding:12px 14px; margin-bottom:14px; box-shadow:0 2px 6px rgba(16,185,129,0.1);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
+                                <span style="font-size:0.82rem; font-weight:800; color:#065f46; display:flex; align-items:center; gap:4px;">✍️ Saisie Multi-Tâches <span style="font-size:0.68rem; font-weight:normal; color:#047857;">(1 ligne = 1 tâche)</span></span>
+                                <span style="font-size:0.65rem; color:#6b7280;">Sauter la ligne pour créer plusieurs tâches</span>
+                            </div>
+                            <textarea id="multiTachesInput" rows="3" placeholder="Écrivez ou collez plusieurs tâches ici... (saut de ligne = nouvelle tâche)&#10;Ex: Nettoyage paillasse&#10;Stérilisation matériel&#10;Relevé des températures" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:8px; border:1px solid #a7f3d0; background:#ffffff; font-size:0.88rem; font-family:inherit; resize:vertical; outline:none; transition:border-color 0.2s;"></textarea>
+                            <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                                <button onclick="window.addMultiTaches()" style="background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; padding:7px 18px; border-radius:8px; font-size:0.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(16,185,129,0.3); transition:transform 0.1s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
+                                    <span>➕</span><span>Ajouter toutes les tâches</span>
+                                </button>
                             </div>
                         </div>
 
@@ -18151,20 +18227,13 @@ window.setPrepExpiry = function (months) {
                                 groups[d].forEach(t => {
                                     html += `
                                 <div style="padding:10px 12px; border-bottom:1px dotted #e5e7eb; background:#fff;">
-                                    <div style="display:flex; align-items:flex-start; gap:8px;">
-                                        <input type="checkbox" class="tache-chk" data-id="${t.id}" style="width:18px; height:18px; cursor:pointer; flex-shrink:0; margin-top:6px;">
-                                        <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
-                                            <input type="text" id="tache_texte_${t.id}" value="${(t.texte || '').replace(/"/g, '&quot;')}" oninput="window.saveTache('${t.id}')" style="width:100%; box-sizing:border-box; padding:8px; border-radius:6px; border:1px solid #ccc; font-size:0.9rem;" placeholder="Description de la tâche...">
-                                            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                                                <input type="date" id="tache_date_${t.id}" value="${t.date}" onchange="window.saveTacheField('${t.id}', this)" style="flex:1; min-width:120px; padding:6px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb; font-size:0.82rem; transition:border-color 0.3s, box-shadow 0.3s;">
-                                                <div style="display:flex; align-items:center; gap:4px; flex-wrap:nowrap;">
-                                                    <input type="time" id="tache_debut_${t.id}" value="${t.debut}" onchange="window.saveTacheField('${t.id}', this)" style="padding:6px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb; font-size:0.82rem; width:90px; transition:border-color 0.3s, box-shadow 0.3s;">
-                                                    <span style="color:#888; font-size:0.8rem;">à</span>
-                                                    <input type="time" id="tache_fin_${t.id}" value="${t.fin}" onchange="window.saveTacheField('${t.id}', this)" style="padding:6px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb; font-size:0.82rem; width:90px; transition:border-color 0.3s, box-shadow 0.3s;">
-                                                </div>
-                                            </div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <input type="checkbox" class="tache-chk" data-id="${t.id}" style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
+                                        <div style="flex:1; display:flex; gap:8px; align-items:center;">
+                                            <input type="text" id="tache_texte_${t.id}" value="${(t.texte || '').replace(/"/g, '&quot;')}" oninput="window.saveTache('${t.id}')" onkeydown="window.handleTacheKeydown(event, '${t.id}')" onpaste="window.handleTachePaste(event, '${t.id}')" style="flex:1; box-sizing:border-box; padding:8px 10px; border-radius:6px; border:1px solid #ccc; font-size:0.9rem;" placeholder="Description de la tâche... (Entrée = nouvelle tâche)">
+                                            <input type="date" id="tache_date_${t.id}" value="${t.date}" onchange="window.saveTacheField('${t.id}', this)" style="width:125px; padding:6px 8px; border-radius:6px; border:1px solid #e5e7eb; background:#f9fafb; font-size:0.78rem; flex-shrink:0;">
                                         </div>
-                                        <button onclick="window.deleteTache('${t.id}')" style="background:none; border:none; color:red; cursor:pointer; font-size:1.1rem; flex-shrink:0; padding:4px;">🗑️</button>
+                                        <button onclick="window.deleteTache('${t.id}')" style="background:none; border:none; color:red; cursor:pointer; font-size:1.1rem; flex-shrink:0; padding:4px;" title="Supprimer cette tâche">🗑️</button>
                                     </div>
                                 </div>`;
                                 });
